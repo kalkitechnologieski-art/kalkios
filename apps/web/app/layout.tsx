@@ -9,7 +9,7 @@ import '@/styles/globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kalkios.com'),
+  metadataBase: new URL('https://www.kalki-intelligence.in'),
   title: { template: '%s | KALKI OS', default: 'KALKI OS — Temple of Technology' },
   description: 'Premium AI-powered digital services marketplace.',
 }
@@ -21,10 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <head>
         <meta name="google" content="notranslate" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body className={inter.className}>
-        {/* Single Suspense boundary for all client‑side hooks */}
+        {/* SINGLE SUSPENSE BOUNDARY — fixes insertBefore error */}
         <Suspense fallback={<div className="min-h-screen bg-[#0A0A0F]" />}>
           <div className="app-root min-h-screen bg-[#0A0A0F]">
             <ScrollProvider>

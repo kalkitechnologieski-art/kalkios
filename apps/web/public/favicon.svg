@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Infinity symbol with neon cyan glow -->
+  <text x="50" y="72" font-family="Arial, sans-serif" font-size="80" font-weight="bold" 
+        text-anchor="middle" fill="none" stroke="#00FFFF" stroke-width="4" 
+        filter="url(#neon-glow)">
+    ∞
+  </text>
+</svg>
