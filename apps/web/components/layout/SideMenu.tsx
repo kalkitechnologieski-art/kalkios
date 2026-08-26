@@ -59,26 +59,34 @@ export function SideMenu() {
   const [profile, setProfile] = useState<any>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const supabase = createClient()
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Hydration fix: only run on client
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     const saved = localStorage.getItem('sidebar-collapsed')
     if (saved !== null) setIsCollapsed(saved === 'true')
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [mounted])
 
   useEffect(() => {
+    if (!mounted) return
     const fetchProfile = async () => {
       const { data } = await supabase.from('profiles').select('*').maybeSingle()
       setProfile(data)
     }
     fetchProfile()
-  }, [supabase])
+  }, [supabase, mounted])
 
   const toggleCollapse = () => {
     const newState = !isCollapsed
@@ -86,9 +94,12 @@ export function SideMenu() {
     localStorage.setItem('sidebar-collapsed', String(newState))
   }
 
-  useEffect(() => setIsOpen(false), [pathname])
+  useEffect(() => {
+    if (mounted) setIsOpen(false)
+  }, [pathname, mounted])
 
   useEffect(() => {
+    if (!mounted) return
     const handleClickOutside = (e: MouseEvent) => {
       if (isMobile && isOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsOpen(false)
@@ -96,11 +107,16 @@ export function SideMenu() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isMobile, isOpen])
+  }, [isMobile, isOpen, mounted])
 
   const role = profile?.role || 'client'
   const visibleGroups = getVisibleItems(role)
   const allItems = visibleGroups.flatMap(g => g.items)
+
+  // Don't render during SSR to avoid hydration mismatches
+  if (!mounted) {
+    return <div className="w-64 flex-shrink-0" />
+  }
 
   // Mobile
   if (isMobile) {
@@ -148,7 +164,7 @@ export function SideMenu() {
     )
   }
 
-  // Desktop
+  // Desktop: enterprise-grade collapsible sidebar
   return (
     <aside
       ref={menuRef}
@@ -163,7 +179,7 @@ export function SideMenu() {
       style={{ transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
     >
       {/* Brand */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} h-16 border-b border-cyan-500/10 flex-shrink-0`}>
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} h-14 border-b border-cyan-500/10 flex-shrink-0`}>
         {!isCollapsed ? (
           <div className="flex items-center gap-2">
             <Image src="/images/logo.svg" alt="KALKI OS" width={28} height={28} />
@@ -174,25 +190,30 @@ export function SideMenu() {
         )}
       </div>
 
-      {/* Navigation — SCROLLABLE */}
+      {/* Navigation — SCROLLABLE with fixed height */}
       <nav
         className="
-          flex-1 py-4 space-y-6
-          overflow-y-auto scrollbar-hide
-          hover:scrollbar-thin hover:scrollbar-thumb-cyan-500/20
+          flex-1 py-3 space-y-4
+          overflow-y-auto
+          scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent
+          hover:scrollbar-thumb-cyan-500/40
         "
-        style={{ minHeight: 0, height: '100%' }}
+        style={{
+          minHeight: 0,
+          height: '100%',
+          overscrollBehavior: 'contain',
+        }}
       >
         {visibleGroups.map((group) => (
           <div key={group.category}>
             {!isCollapsed && (
-              <div className="px-4 mb-2">
+              <div className="px-4 mb-1.5">
                 <span className="text-[10px] font-mono tracking-widest text-cyan-400/30 uppercase">
                   {group.category}
                 </span>
               </div>
             )}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {group.items.map((item) => {
                 const globalIdx = allItems.indexOf(item)
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
@@ -203,7 +224,7 @@ export function SideMenu() {
                     href={item.href}
                     className={`
                       relative flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-4'}
-                      h-11 mx-2 rounded-lg transition-all duration-200 cursor-pointer
+                      h-10 mx-1.5 rounded-lg transition-all duration-200 cursor-pointer
                       ${isActive
                         ? 'bg-gradient-to-r from-cyan-600/20 to-purple-600/20 text-cyan-400 border border-cyan-500/20'
                         : 'text-white/60 hover:bg-white/10 hover:text-white hover:border hover:border-white/5'
@@ -212,7 +233,7 @@ export function SideMenu() {
                     onMouseEnter={() => setHoveredIndex(globalIdx)}
                     onMouseLeave={() => setHoveredIndex(null)}
                   >
-                    <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-400' : ''}`} />
+                    <item.icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-cyan-400' : ''}`} />
                     {!isCollapsed && <span className="text-sm font-mono truncate">{item.label}</span>}
                     {showTooltip && (
                       <div className="absolute left-full ml-3 px-3 py-1.5 bg-black/90 border border-cyan-500/20 rounded-lg text-white text-sm font-mono whitespace-nowrap shadow-xl z-50 pointer-events-none">
@@ -271,7 +292,7 @@ function renderNavItems(items: any[], pathname: string, collapsed: boolean, setH
         href={item.href}
         className={`
           relative flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-4'}
-          h-11 mx-2 rounded-lg transition-all duration-200 cursor-pointer
+          h-10 mx-1.5 rounded-lg transition-all duration-200 cursor-pointer
           ${isActive
             ? 'bg-gradient-to-r from-cyan-600/20 to-purple-600/20 text-cyan-400 border border-cyan-500/20'
             : 'text-white/60 hover:bg-white/10 hover:text-white hover:border hover:border-white/5'
@@ -280,7 +301,7 @@ function renderNavItems(items: any[], pathname: string, collapsed: boolean, setH
         onMouseEnter={() => setHoveredIndex(idx)}
         onMouseLeave={() => setHoveredIndex(null)}
       >
-        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-400' : ''}`} />
+        <item.icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-cyan-400' : ''}`} />
         {!collapsed && <span className="text-sm font-mono truncate">{item.label}</span>}
         {showTooltip && (
           <div className="absolute left-full ml-3 px-3 py-1.5 bg-black/90 border border-cyan-500/20 rounded-lg text-white text-sm font-mono whitespace-nowrap shadow-xl z-50 pointer-events-none">

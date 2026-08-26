@@ -1,16 +1,3 @@
-#!/usr/bin/env bash
-# KALKI OS — Fix Google OAuth "flow_state_already_used" error
-
-set -euo pipefail
-
-cd /d/kalkicore/apps/web || exit 1
-
-# ================================================================
-# 1. CREATE DIRECTORY AND REWRITE AUTH CALLBACK ROUTE
-# ================================================================
-mkdir -p app/auth/callback
-
-cat > app/auth/callback/route.ts << 'EOF'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -48,18 +35,3 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/login?error=auth_failed', origin))
   }
 }
-EOF
-
-echo ""
-echo "✅ Auth callback route created successfully."
-echo ""
-echo "📌 IMPORTANT: Ensure your Supabase Auth settings have:"
-echo "   - Site URL: https://www.kalki-intelligence.in (or localhost:3000 for dev)"
-echo "   - Redirect URLs:"
-echo "       https://www.kalki-intelligence.in/auth/callback"
-echo "       http://localhost:3000/auth/callback"
-echo ""
-echo "And in Google Cloud Console, the Authorized redirect URI must be:"
-echo "   https://<your-project-id>.supabase.co/auth/v1/callback"
-echo ""
-echo "🚀 Now test: login with Google should work without the state error."
