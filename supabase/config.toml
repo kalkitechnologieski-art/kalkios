@@ -1,0 +1,7 @@
+[project]
+id = "kalki-os"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://kalkios.com"]

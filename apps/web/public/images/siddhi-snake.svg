@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Neon glow filter -->
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Glitch filter -->
+    <filter id="glitch">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="3" result="noise">
+        <animate attributeName="baseFrequency" values="0.01 0.02;0.02 0.01;0.01 0.02" dur="2s" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    
+    <!-- Gradient for snake body -->
+    <linearGradient id="snake-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FFFF">
+        <animate attributeName="stop-color" values="#00FFFF;#8B5CF6;#FF0066;#00FFFF" dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="50%" stop-color="#8B5CF6">
+        <animate attributeName="stop-color" values="#8B5CF6;#FF0066;#00FFFF;#8B5CF6" dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#FF0066">
+        <animate attributeName="stop-color" values="#FF0066;#00FFFF;#8B5CF6;#FF0066" dur="6s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- Glow gradient -->
+    <radialGradient id="glow-grad">
+      <stop offset="0%" stop-color="#00FFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00FFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background glow -->
+  <circle cx="100" cy="100" r="80" fill="url(#glow-grad)">
+    <animate attributeName="r" values="60;90;60" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Snake body forming letter S — path tracing with stroke-dashoffset -->
+  <g filter="url(#neon-glow)">
+    <!-- Main snake path (letter S) -->
+    <path id="snake-path" 
+          d="M 60,40 C 40,40 30,50 30,65 C 30,80 45,88 60,88 C 80,88 90,78 90,65 C 90,52 80,42 60,42 C 45,42 38,50 38,62 C 38,74 48,82 60,82 C 72,82 80,74 80,62 C 80,50 70,42 60,42" 
+          fill="none" 
+          stroke="url(#snake-grad)" 
+          stroke-width="8" 
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-dasharray="300"
+          stroke-dashoffset="0">
+      <!-- Crawling animation: the dashoffset moves along the path -->
+      <animate attributeName="stroke-dashoffset" 
+               from="300" to="0" 
+               dur="2.5s" 
+               repeatCount="indefinite" 
+               easing="ease-in-out"/>
+    </path>
+    
+    <!-- Snake head (the 'S' starts with a head) -->
+    <circle cx="60" cy="40" r="10" fill="url(#snake-grad)">
+      <animate attributeName="r" values="10;12;10" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Snake eyes -->
+    <circle cx="56" cy="36" r="3" fill="#000">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="64" cy="36" r="3" fill="#000">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Snake tongue (flickering) -->
+    <g>
+      <line x1="50" y1="40" x2="40" y2="30" stroke="#FF0066" stroke-width="2" stroke-linecap="round">
+        <animate attributeName="opacity" values="1;0;1;0;1" dur="2s" repeatCount="indefinite"/>
+      </line>
+      <line x1="50" y1="40" x2="40" y2="50" stroke="#FF0066" stroke-width="2" stroke-linecap="round">
+        <animate attributeName="opacity" values="1;0;1;0;1" dur="2s" repeatCount="indefinite"/>
+      </line>
+    </g>
+  </g>
+  
+  <!-- Glitch overlay -->
+  <g filter="url(#glitch)" opacity="0.3">
+    <path d="M 60,40 C 40,40 30,50 30,65 C 30,80 45,88 60,88 C 80,88 90,78 90,65 C 90,52 80,42 60,42 C 45,42 38,50 38,62 C 38,74 48,82 60,82 C 72,82 80,74 80,62 C 80,50 70,42 60,42" 
+          fill="none" stroke="#00FFFF" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Cyberpunk corner brackets -->
+  <g stroke="#00FFFF" stroke-width="2" fill="none" opacity="0.4">
+    <path d="M 10,10 L 25,10 L 25,25"/>
+    <path d="M 190,10 L 175,10 L 175,25"/>
+    <path d="M 10,190 L 25,190 L 25,175"/>
+    <path d="M 190,190 L 175,190 L 175,175"/>
+  </g>
+  
+  <!-- Pulsing ring -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#00FFFF" stroke-width="1" opacity="0.2">
+    <animate attributeName="r" values="95;105;95" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.2;0.5;0.2" dur="3s" repeatCount="indefinite"/>
+  </circle>
+</svg>

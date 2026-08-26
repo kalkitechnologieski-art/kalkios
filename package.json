@@ -1,0 +1,32 @@
+{
+  "name": "kalki-os",
+  "version": "3.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "dev:webpack": "npm run dev:webpack --workspace=web",
+    "build": "npm run build --workspace=web",
+    "build:webpack": "npm run build:webpack --workspace=web",
+    "start": "npm run start --workspace=web",
+    "lint": "npm run lint --workspace=web",
+    "type-check": "npm run type-check --workspace=web",
+    "deploy": "npm run build && vercel --prod"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "npm@10.9.0",
+  "overrides": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "next": "16.2.11",
+    "sharp": "^0.35.3"
+  },
+  "allowScripts": {
+    "sharp": true
+  }
+}

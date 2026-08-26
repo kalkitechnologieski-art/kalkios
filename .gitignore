@@ -1,0 +1,14 @@
+node_modules
+package-lock.json
+.next
+out
+dist
+build
+.DS_Store
+*.log
+.env*.local
+.env
+.vercel
+supabase/.temp
+.vscode
+.idea
