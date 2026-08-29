@@ -1,9 +1,9 @@
 import { ChatMessage, ChatOptions, ChatResponse, ImageGenerationOptions, VideoGenerationOptions } from './types'
+import { ensureString } from '@/lib/utils/string'
 
 const AGNES_BASE = 'https://apihub.agnes-ai.com/v1'
 const AGNES_API_KEY = process.env.AGNES_API_KEY
 
-// Agnes models
 const CHAT_MODELS = ['agnes-2.5-flash', 'agnes-2.0-flash']
 const IMAGE_MODEL = 'agnes-image-2.1-flash'
 const VIDEO_MODEL = 'agnes-video-2.5-flash'
@@ -51,21 +51,22 @@ export async function generateChat(
       if (fallbackResponse.ok) {
         const data = await fallbackResponse.json()
         return {
-          content: data.choices[0]?.message?.content || '',
-          reasoning: data.choices[0]?.message?.reasoning || '',
-          tokens: data.usage?.total_tokens || 0,
+          content: ensureString(data.choices[0]?.message?.content, 'No response.'),
+          reasoning: ensureString(data.choices[0]?.message?.reasoning, ''),
+          tokens: typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : 0,
           provider: 'agnes-fallback',
         }
       }
     }
-    throw new Error(`Agnes chat failed: ${response.status}`)
+    const errorText = await response.text()
+    throw new Error(`Agnes chat failed (${response.status}): ${errorText}`)
   }
 
   const data = await response.json()
   return {
-    content: data.choices[0]?.message?.content || '',
-    reasoning: data.choices[0]?.message?.reasoning || '',
-    tokens: data.usage?.total_tokens || 0,
+    content: ensureString(data.choices[0]?.message?.content, 'No response.'),
+    reasoning: ensureString(data.choices[0]?.message?.reasoning, ''),
+    tokens: typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : 0,
     provider: 'agnes',
   }
 }
@@ -92,7 +93,6 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
     },
   }
 
-  // Add optional parameters
   if (negativePrompt) body.extra_body.negative_prompt = negativePrompt
   if (steps) body.extra_body.steps = steps
   if (image) body.extra_body.image = [image]
@@ -114,7 +114,7 @@ export async function generateImage(options: ImageGenerationOptions): Promise<st
   const data = await response.json()
   const url = data.data?.[0]?.url
   if (!url) throw new Error('No image URL returned from Agnes')
-  return url
+  return ensureString(url, '')
 }
 
 export async function generateVideo(options: VideoGenerationOptions): Promise<string> {
@@ -128,7 +128,6 @@ export async function generateVideo(options: VideoGenerationOptions): Promise<st
     motion,
   } = options
 
-  // Create task
   const taskBody: any = {
     model: VIDEO_MODEL,
     prompt,
@@ -138,13 +137,8 @@ export async function generateVideo(options: VideoGenerationOptions): Promise<st
     aspect_ratio: '16:9',
   }
 
-  if (image) {
-    taskBody.images = [image]
-  }
-
-  if (motion) {
-    taskBody.motion = motion
-  }
+  if (image) taskBody.images = [image]
+  if (motion) taskBody.motion = motion
 
   const taskResponse = await fetch(`${AGNES_BASE}/videos`, {
     method: 'POST',
@@ -164,9 +158,8 @@ export async function generateVideo(options: VideoGenerationOptions): Promise<st
   const videoId = taskData.video_id
   if (!videoId) throw new Error('No video_id returned from Agnes')
 
-  // Poll for completion with exponential backoff
   const maxAttempts = 60
-  let delay = 1500 // ms
+  let delay = 1500
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise(resolve => setTimeout(resolve, delay))
@@ -187,14 +180,13 @@ export async function generateVideo(options: VideoGenerationOptions): Promise<st
     if (statusData.status === 'completed') {
       const url = statusData.metadata?.url
       if (!url) throw new Error('No video URL in completed response')
-      return url
+      return ensureString(url, '')
     }
 
     if (statusData.status === 'failed') {
       throw new Error(`Video generation failed: ${statusData.error?.message || 'Unknown error'}`)
     }
 
-    // Exponential backoff: double delay up to 10s
     if (attempt % 5 === 0 && delay < 10000) {
       delay = Math.min(delay * 1.5, 10000)
     }

@@ -2,91 +2,130 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Notification, NotificationPreferences } from '@/types/notification'
+import { toast } from 'sonner'
+import { useUser } from '@/hooks/useAuth'  // ✅ fixed import path
+
+// ✅ Export this type for use in other components
+export interface Notification {
+  id: string
+  user_id: string
+  title: string
+  message: string
+  type: string
+  priority: 'low' | 'normal' | 'high' | 'critical'
+  link?: string
+  metadata?: any
+  read: boolean
+  created_at: string
+  sender_id?: string
+  is_push?: boolean
+}
 
 export function useNotifications() {
+  const { user } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([])
+      setUnreadCount(0)
+      setLoading(false)
+      return
+    }
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
-      
-      if (data) {
-        setNotifications(data)
-        setUnreadCount(data.filter((n: Notification) => !n.read).length)
-      }
-    } catch (e) {
-      console.warn('Could not fetch notifications:', e)
+      if (error) throw error
+      setNotifications(data || [])
+      setUnreadCount(data?.filter((n: Notification) => !n.read).length || 0)
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+      toast.error('Failed to load notifications')
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+  }, [user])
 
   useEffect(() => {
     fetchNotifications()
 
-    // Build channel with all callbacks before subscribing
-    let channel: any = null
-    try {
-      if (typeof supabase.channel === 'function') {
-        channel = supabase
-          .channel('notifications-changes')
-          .on(
-            'postgres_changes',
-            { event: 'INSERT', schema: 'public', table: 'notifications' },
-            (payload: any) => {
-              const newNotif = payload.new as Notification
-              setNotifications(prev => [newNotif, ...prev])
-              if (!newNotif.read) {
-                setUnreadCount(prev => prev + 1)
-              }
-            }
-          )
-          .subscribe()
-      } else {
-        console.log('Realtime not available — using polling fallback')
-      }
-    } catch (e) {
-      console.warn('Could not subscribe to realtime:', e)
-    }
+    if (!user) return
+
+    // Realtime subscription
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload: { new: Notification }) => {
+        const newNotif = payload.new
+        setNotifications(prev => [newNotif, ...prev])
+        setUnreadCount(prev => prev + 1)
+        // Show toast for high/critical priority
+        if (newNotif.priority === 'high' || newNotif.priority === 'critical') {
+          toast(newNotif.title, {
+            description: newNotif.message,
+            duration: 5000,
+          })
+        } else {
+          toast(newNotif.title, {
+            description: newNotif.message,
+            duration: 3000,
+          })
+        }
+      })
+      .subscribe()
 
     return () => {
-      if (channel && typeof channel.unsubscribe === 'function') {
-        channel.unsubscribe()
-      }
+      channel.unsubscribe()
     }
-  }, [fetchNotifications, supabase])
+  }, [user])
 
   const markAsRead = useCallback(async (id: string) => {
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id)
-    
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
-    setUnreadCount(prev => Math.max(0, prev - 1))
-  }, [supabase])
+    if (!user) return
+    try {
+      await supabase.from('notifications').update({ read: true }).eq('id', id).eq('user_id', user.id)
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      )
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
+  }, [user])
 
   const markAllAsRead = useCallback(async () => {
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('read', false)
-    
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    )
-    setUnreadCount(0)
-  }, [supabase])
+    if (!user) return
+    try {
+      await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read: true }))
+      )
+      setUnreadCount(0)
+    } catch (error) {
+      console.error('Error marking all as read:', error)
+    }
+  }, [user])
+
+  const deleteNotification = useCallback(async (id: string) => {
+    if (!user) return
+    try {
+      await supabase.from('notifications').delete().eq('id', id).eq('user_id', user.id)
+      setNotifications(prev => prev.filter(n => n.id !== id))
+      setUnreadCount(prev => (prev - (notifications.find(n => n.id === id)?.read ? 0 : 1)))
+    } catch (error) {
+      console.error('Error deleting notification:', error)
+    }
+  }, [user, notifications])
 
   return {
     notifications,
@@ -94,73 +133,74 @@ export function useNotifications() {
     loading,
     markAsRead,
     markAllAsRead,
-    refresh: fetchNotifications,
+    deleteNotification,
+    refetch: fetchNotifications,
   }
 }
 
-export function useNotificationPreferences() {
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-
-  const fetchPreferences = useCallback(async () => {
-    try {
-      const { data } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .single()
-      setPreferences(data)
-    } catch (e) {
-      console.warn('Could not fetch preferences:', e)
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    fetchPreferences()
-  }, [fetchPreferences])
-
-  const updatePreference = useCallback(async (key: keyof NotificationPreferences, value: boolean) => {
-    if (!preferences) return
-    await supabase
-      .from('notification_preferences')
-      .update({ [key]: value, updated_at: new Date().toISOString() })
-      .eq('id', preferences.id)
-    
-    setPreferences(prev => prev ? { ...prev, [key]: value } : null)
-  }, [preferences, supabase])
-
-  return {
-    preferences,
-    loading,
-    updatePreference,
-    refresh: fetchPreferences,
-  }
-}
-
+// ─── Token Usage ──────────────────────────────────────────────
 export function useTokenUsage() {
+  const { user } = useUser()
   const [tokens, setTokens] = useState(0)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  const fetchTokenUsage = useCallback(async () => {
-    try {
-      const { data } = await supabase
-        .from('user_token_usage')
-        .select('tokens_used')
-        .single()
-      setTokens(data?.tokens_used || 0)
-    } catch (e) {
-      console.warn('Could not fetch token usage:', e)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (!user) return
+    const fetchTokenUsage = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_token_usage')
+          .select('tokens_used')
+          .eq('user_id', user.id)
+          .single()
+        setTokens(data?.tokens_used || 0)
+      } catch {
+        setTokens(0)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [supabase])
+    fetchTokenUsage()
+  }, [user])
+
+  return { tokens, loading, refetch: () => {} }
+}
+
+// ─── Notification Preferences ────────────────────────────────
+export function useNotificationPreferences() {
+  const { user } = useUser()
+  const [preferences, setPreferences] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    fetchTokenUsage()
-  }, [fetchTokenUsage])
+    if (!user) return
+    const fetchPreferences = async () => {
+      try {
+        const { data } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+        setPreferences(data || {})
+      } catch {
+        setPreferences({})
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPreferences()
+  }, [user])
 
-  return { tokens, loading, refresh: fetchTokenUsage }
+  const updatePreference = async (key: string, value: boolean) => {
+    if (!user || !preferences) return
+    await supabase
+      .from('notification_preferences')
+      .update({ [key]: value })
+      .eq('user_id', user.id)
+    setPreferences((prev: any) => ({ ...prev, [key]: value })) // ✅ typed prev
+  }
+
+  return { preferences, loading, updatePreference }
 }

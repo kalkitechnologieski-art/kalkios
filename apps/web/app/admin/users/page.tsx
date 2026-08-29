@@ -1,43 +1,76 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useRealtime } from '@/lib/hooks/useRealtime'
+import { DataTable } from '@/components/ui/DataTable'
+import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/useAuth'
+import { toast } from 'sonner'
 
 export default function AdminUsersPage() {
-  const { user, loading: authLoading } = useUser()
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<any[]>([])
+  const { data: users, loading, refetch } = useRealtime('profiles')
   const supabase = createClient()
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return }
-    const fetchData = async () => {
-      // Replace with actual table name
-      const table = 'users'
-      const { data } = await supabase.from(table).select('*').limit(10)
-      setData(data || [])
-      setLoading(false)
+  const handleRoleChange = async (id: string, role: string) => {
+    try {
+      await supabase.from('profiles').update({ role }).eq('id', id)
+      await refetch()
+      toast.success('Role updated')
+    } catch {
+      toast.error('Failed to update role')
     }
-    fetchData()
-  }, [user, supabase])
+  }
 
-  if (authLoading || loading) return <div className="text-cyan-400/40 text-center py-20 font-mono">Loading...</div>
-  if (!user) return <div className="text-center py-20"><a href="/login" className="text-cyan-400 hover:text-cyan-300">Sign in required</a></div>
+  const handleBlock = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'blocked' : 'active'
+    try {
+      await supabase.from('profiles').update({ status: newStatus }).eq('id', id)
+      await refetch()
+      toast.success(`User ${newStatus}`)
+    } catch {
+      toast.error('Failed to update status')
+    }
+  }
+
+  const columns = [
+    { key: 'full_name', header: 'Name', searchable: true },
+    { key: 'email', header: 'Email', searchable: true },
+    { key: 'role', header: 'Role', render: (val: string) => <Badge variant="secondary">{val || 'client'}</Badge> },
+    { key: 'status', header: 'Status', render: (val: string) => <Badge variant={val === 'blocked' ? 'destructive' : 'default'}>{val || 'active'}</Badge> },
+    { key: 'created_at', header: 'Joined', render: (val: string) => new Date(val).toLocaleDateString() },
+  ]
+
+  const actions = (row: any) => (
+    <div className="flex gap-2">
+      <select
+        value={row.role || 'client'}
+        onChange={e => handleRoleChange(row.id, e.target.value)}
+        className="bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-xs"
+      >
+        <option value="client">Client</option>
+        <option value="admin">Admin</option>
+        <option value="manager">Manager</option>
+        <option value="employee">Employee</option>
+      </select>
+      <button
+        onClick={() => handleBlock(row.id, row.status)}
+        className="p-1 rounded hover:bg-white/10 text-white/40"
+      >
+        {row.status === 'blocked' ? '🔓' : '🔒'}
+      </button>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white font-mono capitalize">users</h1>
-        <span className="text-xs text-cyan-400/30 font-mono">{data.length} items</span>
-      </div>
-      <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-6">
-        {data.length === 0 ? (
-          <p className="text-cyan-400/30 text-sm font-mono">No users found.</p>
-        ) : (
-          <pre className="text-cyan-400/40 text-xs font-mono overflow-auto">{JSON.stringify(data, null, 2)}</pre>
-        )}
-      </div>
+      <h1 className="text-3xl font-bold text-white font-mono">Users</h1>
+      <DataTable
+        data={users}
+        columns={columns}
+        keyExtractor={row => row.id}
+        loading={loading}
+        actions={actions}
+        searchPlaceholder="Search users..."
+      />
     </div>
   )
 }

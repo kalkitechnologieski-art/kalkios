@@ -1,40 +1,51 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useAuth'
+import { useRealtime } from '@/lib/hooks/useRealtime'
+import { DataTable } from '@/components/ui/DataTable'
+import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export default function EmployeeTasksPage() {
-  const { user, loading: authLoading } = useUser()
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<any[]>([])
+  const { user } = useUser()
+  const { data: tasks, loading, refetch } = useRealtime('tasks', { column: 'assigned_to', value: user?.id || '' })
   const supabase = createClient()
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return }
-    const fetchData = async () => {
-      // Replace with actual table
-      const table = 'tasks'
-      const { data } = await supabase.from(table).select('*').limit(10)
-      setData(data || [])
-      setLoading(false)
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      await supabase.from('tasks').update({ status }).eq('id', id)
+      await refetch()
+      toast.success('Task updated')
+    } catch {
+      toast.error('Failed to update task')
     }
-    fetchData()
-  }, [user, supabase])
+  }
 
-  if (authLoading || loading) return <div className="text-cyan-400/40 text-center py-20 font-mono">Loading...</div>
-  if (!user) return <div className="text-center py-20"><a href="/login" className="text-cyan-400 hover:text-cyan-300">Sign in required</a></div>
+  const columns = [
+    { key: 'title', header: 'Task', searchable: true },
+    { key: 'priority', header: 'Priority', render: (val: string) => <Badge variant={val === 'high' ? 'destructive' : val === 'medium' ? 'secondary' : 'outline'}>{val}</Badge> },
+    { key: 'status', header: 'Status', render: (val: string) => <Badge>{val}</Badge> },
+    { key: 'due_date', header: 'Due', render: (val: string) => val ? new Date(val).toLocaleDateString() : '-' },
+  ]
+
+  const actions = (row: any) => (
+    <select
+      value={row.status || 'pending'}
+      onChange={e => updateStatus(row.id, e.target.value)}
+      className="bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-xs"
+    >
+      <option value="pending">Pending</option>
+      <option value="in_progress">In Progress</option>
+      <option value="review">Review</option>
+      <option value="completed">Completed</option>
+    </select>
+  )
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white font-mono capitalize">tasks</h1>
-      <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-6">
-        {data.length === 0 ? (
-          <p className="text-cyan-400/30 text-sm font-mono">No tasks assigned.</p>
-        ) : (
-          <pre className="text-cyan-400/40 text-xs font-mono overflow-auto">{JSON.stringify(data, null, 2)}</pre>
-        )}
-      </div>
+      <h1 className="text-3xl font-bold text-white font-mono">My Tasks</h1>
+      <DataTable data={tasks} columns={columns} keyExtractor={row => row.id} loading={loading} actions={actions} searchPlaceholder="Search tasks..." />
     </div>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
-import { useNotifications } from '@/lib/hooks/useNotifications'
-import type { Notification } from '@/types/notification'
+import { useNotifications, Notification } from '@/lib/hooks/useNotifications'
 import { Circle } from 'lucide-react'
 
 const TYPE_ICONS: Record<string, string> = {
@@ -11,6 +10,8 @@ const TYPE_ICONS: Record<string, string> = {
   project_update: '📁',
   system: '⚡',
   task: '📋',
+  meeting: '📅',
+  bug: '🐛',
 }
 
 export function NotificationItem({ notification }: { notification: Notification }) {

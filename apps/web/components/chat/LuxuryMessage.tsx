@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Copy, Pencil, RotateCcw, ThumbsUp, ThumbsDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toSafeString } from '@/lib/utils/string'
 
 interface LuxuryMessageProps {
   children: ReactNode
@@ -35,6 +36,7 @@ export function LuxuryMessage({
   showActions = true,
 }: LuxuryMessageProps) {
   const [copied, setCopied] = useState(false)
+
   const handleCopy = () => {
     if (onCopy) {
       onCopy()
@@ -48,15 +50,19 @@ export function LuxuryMessage({
   const showLike = role === 'assistant' && onLike
   const showDislike = role === 'assistant' && onDislike
 
-  // Render markdown for assistant messages
+  // SAFETY: Ensure children is a string for markdown rendering
+  const contentString = typeof children === 'string' ? children : toSafeString(children)
+
+  // For user messages, just render plain text (no markdown)
+  // For assistant messages, render markdown
   const content = role === 'assistant' ? (
     <div className="prose prose-invert prose-sm max-w-none dark:prose-invert">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {String(children)}
+        {contentString}
       </ReactMarkdown>
     </div>
   ) : (
-    children
+    <span>{contentString}</span>
   )
 
   return (

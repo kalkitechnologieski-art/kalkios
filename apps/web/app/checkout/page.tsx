@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/store/cartStore'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import { Loader2, CheckCircle, WifiOff } from 'lucide-react'
-import { checkSupabaseConnection } from '@/lib/services'
+import { Loader2, CheckCircle, ShoppingCart, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import type { Database } from '@/lib/supabase/types'
 
 type Service = Database['public']['Tables']['services']['Row']
@@ -15,23 +15,15 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const serviceId = searchParams.get('service')
-  const { items, totalPrice, clearCart } = useCartStore()
+  const { items, totalPrice, clearCart, removeItem } = useCartStore()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [serviceData, setServiceData] = useState<Service | null>(null)
-  const [online, setOnline] = useState<boolean>(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    const check = async () => {
-      const status = await checkSupabaseConnection()
-      setOnline(status)
-    }
-    check()
-  }, [])
-
+  // Fetch service details if single service purchase
   useEffect(() => {
     if (serviceId) {
       supabase
@@ -49,6 +41,7 @@ export default function CheckoutPage() {
     }
   }, [serviceId, supabase])
 
+  // Determine purchase items
   const purchaseItems = serviceId
     ? (serviceData ? [{ id: serviceData.id, name: serviceData.name, price: serviceData.price ?? 0, quantity: 1 }] : [])
     : items.map(item => ({ ...item, price: item.price ?? 0 }))
@@ -58,11 +51,6 @@ export default function CheckoutPage() {
     : totalPrice
 
   const handleCheckout = async () => {
-    if (!online) {
-      router.push('/contact?reason=offline&service=' + (serviceId || ''))
-      return
-    }
-
     if (purchaseItems.length === 0) {
       setError('Your cart is empty.')
       return
@@ -79,6 +67,7 @@ export default function CheckoutPage() {
         return
       }
 
+      // Create order in Supabase
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -95,8 +84,10 @@ export default function CheckoutPage() {
 
       setOrderId(order.id)
 
+      // Simulate payment gateway
       await new Promise(resolve => setTimeout(resolve, 1500))
 
+      // Update order to paid (in prod, webhook would do this)
       await supabase
         .from('orders')
         .update({ status: 'paid' })
@@ -105,6 +96,7 @@ export default function CheckoutPage() {
       if (!serviceId) clearCart()
       setSuccess(true)
 
+      // Redirect to client dashboard after 2s
       setTimeout(() => router.push('/client'), 2000)
 
     } catch (err) {
@@ -127,25 +119,13 @@ export default function CheckoutPage() {
     )
   }
 
-  if (!online) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <WifiOff className="w-16 h-16 text-yellow-400 mb-4" />
-        <h2 className="text-2xl font-bold text-white">Offline Mode</h2>
-        <p className="text-cyan-400/40 mt-2 max-w-md">
-          Payment processing is currently unavailable because Supabase is offline.
-          Please contact us directly to complete your purchase.
-        </p>
-        <div className="mt-6 flex gap-4">
-          <LuxuryButton variant="primary" size="lg" label="Contact Us" onClick={() => router.push('/contact')} />
-          <LuxuryButton variant="secondary" size="lg" label="Back to Marketplace" onClick={() => router.push('/marketplace')} />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-2xl mx-auto py-8">
+      <Link href={serviceId ? '/marketplace' : '/cart'} className="text-cyan-400/60 hover:text-cyan-400 text-sm flex items-center gap-2 mb-6">
+        <ArrowLeft className="w-4 h-4" />
+        {serviceId ? 'Back to Service' : 'Back to Cart'}
+      </Link>
+
       <h1 className="text-3xl font-bold text-white mb-6">Checkout</h1>
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl mb-4">
@@ -153,7 +133,10 @@ export default function CheckoutPage() {
         </div>
       )}
       <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-6 space-y-4">
-        <h2 className="text-white font-bold text-lg">Order Summary</h2>
+        <h2 className="text-white font-bold text-lg flex items-center gap-2">
+          <ShoppingCart className="w-5 h-5 text-cyan-400" />
+          Order Summary
+        </h2>
         {purchaseItems.length === 0 ? (
           <p className="text-white/40">No items to purchase.</p>
         ) : (
@@ -164,7 +147,7 @@ export default function CheckoutPage() {
                 <span>₹{(item.price ?? 0).toLocaleString()}</span>
               </div>
             ))}
-            <div className="flex justify-between text-white font-bold pt-2">
+            <div className="flex justify-between text-white font-bold pt-2 text-lg">
               <span>Total</span>
               <span>₹{totalAmount.toLocaleString()}</span>
             </div>

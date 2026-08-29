@@ -12,7 +12,7 @@ import {
   FolderKanban,
   Settings,
   LogOut,
-  User as UserIcon,      // renamed to avoid conflict
+  User as UserIcon,
   HelpCircle,
   Shield,
   Star,
@@ -24,6 +24,10 @@ import {
   Menu,
   X,
   ChevronRight,
+  Bell,
+  BarChart3,
+  CheckSquare,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -46,8 +50,10 @@ export function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false)
   const supabase = createClient()
 
-  // Fetch user and profile
+  // ── Fetch user and profile, and subscribe to real‑time changes ──
   useEffect(() => {
+    let channel: any = null
+
     const fetchUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -59,6 +65,18 @@ export function Sidebar() {
             .eq('id', user.id)
             .single()
           setProfile(profile)
+          // Subscribe to profile changes
+          channel = supabase
+            .channel(`profile:${user.id}`)
+            .on('postgres_changes', {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${user.id}`,
+            }, (payload: { new: UserProfile }) => {
+              setProfile(payload.new)
+            })
+            .subscribe()
         }
       } catch (e) {
         console.warn('Could not fetch user:', e)
@@ -66,15 +84,15 @@ export function Sidebar() {
         setLoading(false)
       }
     }
+
     fetchUser()
-  }, [supabase])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
+    return () => {
+      if (channel) channel.unsubscribe()
+    }
+  }, [])
 
-  // ── Navigation Items ──
+  // ── Navigation Items (dynamically built based on role) ──
   const mainItems = [
     { label: 'Home', icon: Home, href: '/' },
     { label: 'Explore', icon: Compass, href: '/explore' },
@@ -83,21 +101,28 @@ export function Sidebar() {
   ]
 
   const clientItems = [
-    { label: 'Client Panel', icon: FolderKanban, href: '/client' },
+    { label: 'Client Dashboard', icon: LayoutDashboard, href: '/client' },
+    { label: 'My Projects', icon: FolderKanban, href: '/client/projects' },
+    { label: 'My Orders', icon: ShoppingBag, href: '/client/orders' },
+    { label: 'Support', icon: MessageSquare, href: '/client/support' },
   ]
 
   const employeeItems = [
     { label: 'Employee Dashboard', icon: LayoutDashboard, href: '/employee' },
-    { label: 'My Tasks', icon: FileText, href: '/employee/tasks' },
-    { label: 'Timesheet', icon: Users, href: '/employee/timesheet' },
+    { label: 'My Tasks', icon: CheckSquare, href: '/employee/tasks' },
+    { label: 'Timesheet', icon: FileText, href: '/employee/timesheet' },
+    { label: 'Team Chat', icon: MessageSquare, href: '/employee/chat' },
   ]
 
   const adminItems = [
     { label: 'Admin Dashboard', icon: LayoutDashboard, href: '/admin' },
     { label: 'Users', icon: Users, href: '/admin/users' },
-    { label: 'Services', icon: Sparkles, href: '/admin/services' },
+    { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
     { label: 'Leads', icon: FileText, href: '/admin/leads' },
-    { label: 'Hiring', icon: Briefcase, href: '/admin/hiring' },
+    { label: 'Projects', icon: FolderKanban, href: '/admin/projects' },
+    { label: 'Services', icon: Sparkles, href: '/admin/services' },
+    { label: 'Notifications', icon: Bell, href: '/admin/notifications' },
+    { label: 'Analytics', icon: BarChart3, href: '/admin/analytics' },
   ]
 
   const bottomItems = [
@@ -107,7 +132,7 @@ export function Sidebar() {
     { label: 'Privacy', icon: Shield, href: '/privacy' },
   ]
 
-  // ── Compute visible items based on role ──
+  // ── Compute visible items based on role (reactive) ──
   const visibleItems = useMemo(() => {
     const role = profile?.role || 'client'
     const items = [...mainItems]
@@ -132,6 +157,12 @@ export function Sidebar() {
     if (href === '/') return pathname === '/'
     return pathname?.startsWith(href) ?? false
   }, [pathname])
+
+  // ── Logout ──
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
 
   // ── Render Navigation Item ──
   const renderItem = (item: { label: string; icon: any; href: string }) => {
@@ -173,7 +204,6 @@ export function Sidebar() {
     const avatar = profile?.avatar_url || null
     const isLoggedIn = !!user
 
-    // Clicking on the profile section goes to /profile
     const profileLink = isLoggedIn ? '/profile' : '/login'
 
     return (
@@ -221,7 +251,7 @@ export function Sidebar() {
     )
   }
 
-  // ── Expand/Collapse Toggle ──
+  // ── Expand/Collapse ──
   const toggleExpand = () => setIsExpanded(!isExpanded)
 
   return (

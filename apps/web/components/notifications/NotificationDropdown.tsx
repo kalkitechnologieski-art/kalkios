@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNotifications } from '@/lib/hooks/useNotifications'
+import { useNotifications, Notification } from '@/lib/hooks/useNotifications'  // ✅ import type from our hook
 import { NotificationItem } from './NotificationItem'
 import { CheckCheck, BellOff } from 'lucide-react'
 
@@ -33,7 +33,6 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean; onC
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="absolute top-full right-0 mt-2 w-96 max-h-[500px] bg-black/95 backdrop-blur-2xl border border-cyan-500/10 rounded-2xl shadow-2xl shadow-cyan-500/10 overflow-hidden z-50"
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-cyan-500/10">
             <div className="flex items-center gap-2">
               <span className="text-white font-mono text-sm font-bold">Notifications</span>
@@ -54,7 +53,6 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean; onC
             )}
           </div>
 
-          {/* List */}
           <div className="overflow-y-auto max-h-[400px] scrollbar-hide">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -66,7 +64,7 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean; onC
                 <p className="text-sm font-mono">No notifications</p>
               </div>
             ) : (
-              notifications.map((notif) => (
+              notifications.map((notif: Notification) => (
                 <NotificationItem key={notif.id} notification={notif} />
               ))
             )}

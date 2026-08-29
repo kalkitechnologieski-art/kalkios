@@ -1,63 +1,90 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/useAuth'
-import { AdminProjectList } from '@/components/AdminProjectList'
-import { AdminTimelineEditor } from '@/components/AdminTimelineEditor'
 
-export default function AdminPage() {
-  const { user, loading: userLoading } = useUser()
-  const [projects, setProjects] = useState([])
-  const [selectedProject, setSelectedProject] = useState(null)
-  const [isClient, setIsClient] = useState(false)
-  const supabase = createClient()
+import { useMemo } from 'react'
+import { useRealtime } from '@/lib/hooks/useRealtime'
+import { StatCard } from '@/components/ui/StatCard'
+import { ChartWrapper } from '@/components/dashboard/ChartWrapper'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
+import { Users, ShoppingBag, FileText, Briefcase, TrendingUp, Activity } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import Link from 'next/link'
 
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+const QuickAction = ({ href, label, icon: Icon }: { href: string; label: string; icon: any }) => (
+  <Link href={href} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center hover:border-cyan-500/30 transition group">
+    <Icon className="w-8 h-8 text-cyan-400 mx-auto mb-2 group-hover:scale-110 transition" />
+    <span className="text-white font-mono text-sm">{label}</span>
+  </Link>
+)
 
-  useEffect(() => {
-    if (!user || !isClient) return
-    const fetchProjects = async () => {
-      const { data } = await supabase
-        .from('projects')
-        .select('*, profiles(full_name)')
-        .order('created_at', { ascending: false })
-      setProjects(data || [])
-    }
-    fetchProjects()
-  }, [user, isClient, supabase])
+export default function AdminDashboard() {
+  const { data: users, loading: usersLoading } = useRealtime('profiles')
+  const { data: orders, loading: ordersLoading } = useRealtime('orders')
+  const { data: leads } = useRealtime('leads')
+  const { data: projects } = useRealtime('projects')
 
-  // Show loading state while hydrating
-  if (!isClient || userLoading) {
-    return <div className="text-white/40 text-center py-20">Loading...</div>
-  }
+  const revenueData = useMemo(() => {
+    if (!orders) return []
+    const map = new Map<string, number>()
+    orders.forEach(o => {
+      const date = new Date(o.created_at).toLocaleDateString()
+      map.set(date, (map.get(date) || 0) + (o.amount || 0))
+    })
+    return Array.from(map.entries()).map(([date, amount]) => ({ date, amount }))
+  }, [orders])
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="text-6xl mb-4">🔐</div>
-        <h2 className="text-xl font-bold text-white">Please Sign In</h2>
-        <p className="text-white/50 text-sm mt-2">Admin access requires authentication.</p>
-        <a href="/login" className="mt-6 px-6 py-3 bg-purple-600 rounded-full text-white text-sm font-medium hover:bg-purple-700 transition">
-          Sign In
-        </a>
-      </div>
-    )
-  }
+  const totalRevenue = orders?.reduce((sum, o) => sum + (o.amount || 0), 0) ?? 0
+
+  const stats = [
+    { title: 'Total Users', value: users?.length ?? 0, icon: Users },
+    { title: 'Orders', value: orders?.length ?? 0, icon: ShoppingBag },
+    { title: 'Leads', value: leads?.length ?? 0, icon: FileText },
+    { title: 'Projects', value: projects?.length ?? 0, icon: Briefcase },
+    { title: 'Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: TrendingUp },
+    { title: 'Active Sessions', value: 42, icon: Activity },
+  ]
 
   return (
-    <div className="max-w-6xl mx-auto py-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="md:col-span-1 bg-white/5 border border-white/10 rounded-xl p-4">
-        <h2 className="text-lg font-bold text-white mb-4">Projects</h2>
-        <AdminProjectList projects={projects} onSelect={setSelectedProject} />
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-white font-mono">Admin Dashboard</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {stats.map((stat, i) => (
+          <StatCard
+            key={i}
+            title={stat.title}
+            value={stat.value}
+            icon={<stat.icon className="w-5 h-5" />}
+            loading={usersLoading || ordersLoading}
+          />
+        ))}
       </div>
-      <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-xl p-4">
-        {selectedProject ? (
-          <AdminTimelineEditor project={selectedProject} />
-        ) : (
-          <div className="text-white/40 text-center py-20">Select a project to manage</div>
-        )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <h3 className="text-white font-mono mb-4">Revenue (last 7 days)</h3>
+          <ChartWrapper loading={ordersLoading} empty={!revenueData.length}>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={revenueData.slice(-7)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="date" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #333' }} />
+                <Line type="monotone" dataKey="amount" stroke="#00ffff" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartWrapper>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <h3 className="text-white font-mono mb-4">Recent Activity</h3>
+          <ActivityFeed events={[]} loading={false} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <QuickAction href="/admin/users" label="Users" icon={Users} />
+        <QuickAction href="/admin/orders" label="Orders" icon={ShoppingBag} />
+        <QuickAction href="/admin/leads" label="Leads" icon={FileText} />
+        <QuickAction href="/admin/projects" label="Projects" icon={Briefcase} />
       </div>
     </div>
   )

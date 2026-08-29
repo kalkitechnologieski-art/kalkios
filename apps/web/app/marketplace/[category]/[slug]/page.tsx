@@ -1,9 +1,9 @@
 import { fetchServiceBySlug, getSupabaseStatus, checkSupabaseConnection } from '@/lib/services'
-import servicesData from '@/lib/mock/services.json'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import { Star, ShoppingCart, Heart, Share2, CheckCircle, Clock, Award, Users, TrendingUp, ChevronRight, Wifi, WifiOff } from 'lucide-react'
+import { Star, ShoppingCart, Heart, Share2, CheckCircle, Clock, Award, Users, TrendingUp, ChevronRight } from 'lucide-react'
+import AddToCartButton from '@/components/AddToCartButton'
 import type { Database } from '@/lib/supabase/types'
 
 type Service = Database['public']['Tables']['services']['Row'] & {
@@ -13,43 +13,41 @@ type Service = Database['public']['Tables']['services']['Row'] & {
 
 type PageProps = { params: Promise<{ category: string; slug: string }> }
 
-// Generate all possible paths from JSON data
 export async function generateStaticParams() {
-  const mockServices = servicesData as Service[]
-  const paths = mockServices.map(s => ({
-    category: s.category,
-    slug: s.slug,
-  }))
-  // Add a fallback for any other path
-  return paths
+  // We'll rely on dynamic routes; no static generation needed to avoid errors.
+  return []
 }
 
-// Enable dynamic params for paths not generated statically (fallback: true)
-export const dynamicParams = true
-
 async function getService(category: string, slug: string): Promise<Service | null> {
-  // Try Supabase first (with mock fallback)
   return fetchServiceBySlug(category, slug)
 }
 
 export default async function ServiceDetailPage({ params }: PageProps) {
   const { category, slug } = await params
-  
-  // Decode URL components (in case they are encoded)
   const decodedCategory = decodeURIComponent(category)
   const decodedSlug = decodeURIComponent(slug)
 
   const service = await getService(decodedCategory, decodedSlug)
   if (!service) notFound()
 
-  // Check online status
   const online = await checkSupabaseConnection()
-
   const features = Array.isArray(service.features) ? service.features : []
   const industries = service.target_industries || []
 
+  // Prepare service object for AddToCartButton
+  const cartService = {
+    id: service.id,
+    name: service.name,
+    price: service.price ?? 0,
+    category: service.category,
+    slug: service.slug,
+    icon: service.icon,
+    image_url: service.image_url,
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-white/40 mb-6">
         <Link href="/" className="hover:text-white transition">Home</Link>
         <ChevronRight className="w-4 h-4" />
@@ -58,21 +56,17 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         <Link href={`/marketplace?category=${encodeURIComponent(service.category)}`} className="hover:text-white transition">{service.category}</Link>
         <ChevronRight className="w-4 h-4" />
         <span className="text-white/80">{service.name}</span>
-        {!online && (
-          <span className="ml-4 flex items-center gap-1 text-xs text-yellow-400 border border-yellow-500/20 px-2 py-1 rounded-full">
-            <WifiOff className="w-3 h-3" /> Offline (Mock)
-          </span>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 rounded-2xl flex items-center justify-center relative border border-cyan-500/10 overflow-hidden">
+        {/* Left: Image / Icon */}
+        <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 rounded-2xl flex items-center justify-center relative border border-cyan-500/10">
           {service.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img 
-              src={service.image_url} 
+            <img
+              src={service.image_url}
               alt={service.name}
-              className="w-full h-full object-cover opacity-70"
+              className="w-full h-full object-cover rounded-2xl"
             />
           ) : (
             <span className="text-8xl opacity-40">{service.icon || '📦'}</span>
@@ -94,6 +88,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           )}
         </div>
 
+        {/* Right: Details */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-xs text-cyan-400/60 uppercase tracking-wider">{service.category}</span>
@@ -141,12 +136,14 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            {/* Buy Now – adds to cart and redirects to checkout */}
             <Link href={`/checkout?service=${service.id}`} className="flex-1">
               <LuxuryButton variant="primary" size="lg" label="Buy Now" icon={<ShoppingCart className="w-4 h-4" />} fullWidth />
             </Link>
-            <Link href={`/cart?add=${service.id}`} className="flex-1">
-              <LuxuryButton variant="secondary" size="lg" label="Add to Cart" fullWidth />
-            </Link>
+            {/* Add to Cart – silenty adds via client component */}
+            <div className="flex-1">
+              <AddToCartButton service={cartService} />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-4 pt-2 text-xs text-white/40">
@@ -157,6 +154,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         </div>
       </div>
 
+      {/* FAQ section */}
       <div className="mt-12 bg-white/5 border border-cyan-500/10 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Frequently Asked Questions</h2>
         <div className="space-y-4">

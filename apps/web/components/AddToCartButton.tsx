@@ -1,7 +1,9 @@
 'use client'
+
+import { useState } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { LuxuryButton } from './ui/LuxuryButton'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Check } from 'lucide-react'
 
 interface AddToCartButtonProps {
   service: {
@@ -13,13 +15,21 @@ interface AddToCartButtonProps {
     icon?: string | null
     image_url?: string | null
   }
+  variant?: 'primary' | 'secondary'
+  size?: 'sm' | 'md' | 'lg'
+  fullWidth?: boolean
 }
 
-export function AddToCartButton({ service }: AddToCartButtonProps) {
+export default function AddToCartButton({
+  service,
+  variant = 'secondary',
+  size = 'md',
+  fullWidth = false,
+}: AddToCartButtonProps) {
+  const [added, setAdded] = useState(false)
   const addItem = useCartStore((state) => state.addItem)
 
   const handleAdd = () => {
-    // Only include fields that are defined (to satisfy exactOptionalPropertyTypes)
     const item: any = {
       id: service.id,
       name: service.name,
@@ -31,16 +41,19 @@ export function AddToCartButton({ service }: AddToCartButtonProps) {
     if (service.image_url) item.image_url = service.image_url
 
     addItem(item)
+    setAdded(true)
+    setTimeout(() => setAdded(false), 2000)
   }
 
   return (
     <LuxuryButton
-      variant="secondary"
-      size="md"
-      label="Add to Cart"
-      icon={<ShoppingCart className="w-4 h-4" />}
-      iconPosition="left"
+      variant={variant}
+      size={size}
+      fullWidth={fullWidth}
       onClick={handleAdd}
+      label={added ? 'Added to Cart ✓' : 'Add to Cart'}
+      icon={added ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+      iconPosition="left"
     />
   )
 }

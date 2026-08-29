@@ -13,7 +13,8 @@ type Service = Database['public']['Tables']['services']['Row'] & {
 
 const CATEGORIES = [
   'All', 'Web Development', 'App Development', 'Marketing',
-  'Design', 'Media', 'AI Automation', 'AI Chatbots', 'Development'
+  'Design', 'Media', 'AI Automation', 'AI Chatbots', 'Development',
+  'Consulting', 'AI'
 ]
 
 export default function MarketplacePage() {
@@ -143,7 +144,7 @@ export default function MarketplacePage() {
             <Link
               key={service.id}
               href={`/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`}
-              className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10 flex flex-col"
+              className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10 flex flex-col cursor-pointer"
             >
               <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 flex items-center justify-center relative overflow-hidden">
                 {service.image_url ? (

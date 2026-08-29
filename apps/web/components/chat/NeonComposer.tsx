@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ImageIcon, Video, Search, Brain, X, Loader2, Paperclip } from 'lucide-react'
+import { ImageIcon, Video, Search, Brain, X, Loader2, Paperclip, Send } from 'lucide-react'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CosmicPromptBar } from '@/components/ui/CosmicPromptBar'
@@ -64,56 +64,57 @@ export function NeonComposer({
 
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
-      {/* Mode toggle row with Uiverse buttons */}
       <div className="flex flex-wrap items-center gap-3 px-1">
-        {/* DeepThink button */}
         <ModeToggleButton
           active={isDeepThink}
           onToggle={() => setIsDeepThink(!isDeepThink)}
           label="DeepThink"
-          tooltip="Enable deep reasoning with expanded thinking traces. Uses Zhipu's advanced reasoning model for complex analysis."
+          tooltip="Enable deep reasoning with Socratic questioning."
           colorScheme="gold"
         />
-
-        {/* SETU button */}
         <ModeToggleButton
           active={isSetuMode}
           onToggle={() => setIsSetuMode(!isSetuMode)}
           label="SETU"
-          tooltip="Activate lead generation mode. Siddhi will search the web and extract contact information for your target prospects."
+          tooltip="Activate lead generation mode."
           colorScheme="red"
         />
-
-        {/* Divider */}
         <div className="h-6 w-px bg-white/10 hidden sm:block" />
-
-        {/* Other mode toggles (small icons) */}
         <button
           onClick={() => setIsSearchMode(!isSearchMode)}
-          className={`p-1.5 rounded-lg transition-all duration-200 ${isSearchMode ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30 shadow-glow' : 'text-white/40 hover:text-white/70'}`}
+          className={`p-1.5 rounded-lg transition ${isSearchMode ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'text-white/40 hover:text-white/70'}`}
           title="Web Search"
         >
           <Search className="w-4 h-4" />
         </button>
-
         <button
           onClick={() => onModeChange(mode === 'image' ? 'chat' : 'image')}
-          className={`p-1.5 rounded-lg transition-all duration-200 ${mode === 'image' ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30 shadow-glow' : 'text-white/40 hover:text-white/70'}`}
+          className={`p-1.5 rounded-lg transition ${mode === 'image' ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30' : 'text-white/40 hover:text-white/70'}`}
           title="Image Mode"
         >
           <ImageIcon className="w-4 h-4" />
         </button>
-
         <button
           onClick={() => onModeChange(mode === 'video' ? 'chat' : 'video')}
-          className={`p-1.5 rounded-lg transition-all duration-200 ${mode === 'video' ? 'bg-red-600/30 text-red-400 border border-red-500/30 shadow-glow' : 'text-white/40 hover:text-white/70'}`}
+          className={`p-1.5 rounded-lg transition ${mode === 'video' ? 'bg-red-600/30 text-red-400 border border-red-500/30' : 'text-white/40 hover:text-white/70'}`}
           title="Video Mode"
         >
           <Video className="w-4 h-4" />
         </button>
-
-        <div className="flex-1" />
-
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition"
+          title="Attach file"
+        >
+          <Paperclip className="w-4 h-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,.pdf,.doc,.docx,.txt,.md"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
         {onClear && (
           <button onClick={onClear} className="text-red-400/60 hover:text-red-400 transition text-xs font-mono px-2 py-1">
             ✕ Clear
@@ -121,7 +122,6 @@ export function NeonComposer({
         )}
       </div>
 
-      {/* File preview */}
       <AnimatePresence>
         {file && previewUrl && (
           <motion.div
@@ -147,7 +147,6 @@ export function NeonComposer({
         )}
       </AnimatePresence>
 
-      {/* Prompt bar */}
       <CosmicPromptBar
         onSend={handleSend}
         isLoading={isLoading}

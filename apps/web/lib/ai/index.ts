@@ -3,6 +3,9 @@ import { generateChat as agnesChat, generateImage as agnesImage, generateVideo a
 import { generateChat as zhipuChat, webSearch as zhipuWebSearch, generateImageZhipu, generateVideoZhipu, performOCR } from './zhipu'
 import { generateChatGroq } from './groq'
 import { generateChatOpenRouter } from './openrouter'
+import { ensureString } from '@/lib/utils/string'
+import { QuantumPendulum } from './quantum-pendulum'
+import { deepThink, DeepThinkResult } from './deep-think'
 
 export * from './types'
 
@@ -24,51 +27,69 @@ function isBlob(value: any): value is Blob {
   return value && typeof value === 'object' && 'size' in value && 'type' in value && !('name' in value)
 }
 
+// Shared quantum pendulum instance (per request we can create new one, but we'll pass it)
 export async function chat(
   messages: ChatMessage[],
-  options: ChatOptions & { intent?: string } = {}
+  options: ChatOptions & { intent?: string; pendulum?: QuantumPendulum } = {}
 ): Promise<ChatResponse> {
-  const { intent = 'chat', deep = false, search = false, ...rest } = options
+  const { intent = 'chat', deep = false, search = false, pendulum, ...rest } = options
 
-  if (search) {
-    const lastMsg = messages[messages.length - 1]?.content || ''
-    const results = await zhipuWebSearch(lastMsg)
-    const snippet = results.map(r => `- ${r.title}: ${r.snippet}`).join('\n')
-    return {
-      content: `I found the following information:\n${snippet}\n\nFor more details, visit: ${results.map(r => r.url).join(', ')}`,
-      tokens: 0,
-      provider: 'zhipu-search',
-    }
-  }
-
-  // Deep thinking: try Zhipu first
+  // If deep mode is enabled, use deepThink with questioning
   if (deep) {
-    try {
-      return await zhipuChat(messages, { ...rest, deep: true })
-    } catch (e) {
-      try {
-        return await agnesChat(messages, rest)
-      } catch (e2) {
-        try {
-          return await generateChatGroq(messages, rest)
-        } catch (e3) {
-          return await generateChatOpenRouter(messages, rest)
-        }
+    const result: DeepThinkResult = await deepThink(messages, { ...options, pendulum })
+    if (result.questions && result.questions.length > 0) {
+      // Return the questions as the response (the caller will handle)
+      return {
+        content: "I need some clarification:\n\n" + result.questions.map((q, i) => `${i+1}. ${q}`).join('\n'),
+        reasoning: 'Asking clarifying questions',
+        tokens: 0,
+        provider: 'deep-think-question',
       }
     }
+    return {
+      content: result.finalAnswer,
+      reasoning: result.reasoning,
+      tokens: result.tokens,
+      provider: result.provider,
+    }
   }
 
-  // Default chat: Agnes → Zhipu → Groq → OpenRouter
-  try {
-    return await agnesChat(messages, rest)
-  } catch (e) {
+  // Web Search mode
+  if (search) {
     try {
-      return await zhipuChat(messages, { ...rest, deep: false })
-    } catch (e2) {
+      const lastMsg = messages[messages.length - 1]?.content || ''
+      const results = await zhipuWebSearch(lastMsg)
+      const snippet = results.map(r => `- ${r.title}: ${r.snippet}`).join('\n')
+      return {
+        content: `I found the following information:\n${snippet}\n\nFor more details, visit: ${results.map(r => r.url).join(', ')}`,
+        tokens: 0,
+        provider: 'zhipu-search',
+      }
+    } catch (error) {
+      throw new Error(`Web search failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  // Default chat: try Agnes first, then Zhipu, then Groq, then OpenRouter
+  // Use quantum pendulum to adjust parameters
+  const pendulumInstance = pendulum || new QuantumPendulum()
+  const lastQuery = messages.filter(m => m.role === 'user').pop()?.content || ''
+  pendulumInstance.update(lastQuery)
+  const params = pendulumInstance.getModelParams()
+
+  try {
+    const response = await agnesChat(messages, { ...rest, temperature: params.temperature })
+    return response
+  } catch (error) {
+    try {
+      const response = await zhipuChat(messages, { ...rest, deep: false, temperature: params.temperature })
+      return response
+    } catch (error2) {
       try {
-        return await generateChatGroq(messages, rest)
-      } catch (e3) {
-        return await generateChatOpenRouter(messages, rest)
+        const response = await generateChatGroq(messages, { ...rest, temperature: params.temperature })
+        return response
+      } catch (error3) {
+        return await generateChatOpenRouter(messages, { ...rest, temperature: params.temperature })
       }
     }
   }
@@ -86,15 +107,14 @@ export async function generateImage(options: ImageGenerationOptions & { image?: 
     ...options,
     image: imageData as string | undefined,
   }
+
   try {
     return await agnesImage(opts)
-  } catch (e) {
+  } catch (error) {
     try {
       return await generateImageZhipu(opts)
-    } catch (e2) {
-      // Ultimate fallback: a placeholder
-      console.warn('All image providers failed, returning placeholder.')
-      return `https://picsum.photos/seed/${Date.now()}/1024/768`
+    } catch (error2) {
+      throw new Error(`Image generation failed on all providers: ${error2 instanceof Error ? error2.message : String(error2)}`)
     }
   }
 }
@@ -111,15 +131,14 @@ export async function generateVideo(options: VideoGenerationOptions & { image?: 
     ...options,
     image: imageData as string | undefined,
   }
+
   try {
     return await agnesVideo(opts)
-  } catch (e) {
+  } catch (error) {
     try {
       return await generateVideoZhipu(opts)
-    } catch (e2) {
-      // Ultimate fallback: a sample video
-      console.warn('All video providers failed, returning sample video.')
-      return 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
+    } catch (error2) {
+      throw new Error(`Video generation failed on all providers: ${error2 instanceof Error ? error2.message : String(error2)}`)
     }
   }
 }
@@ -143,7 +162,7 @@ export async function generateLeads(query: string): Promise<Lead[]> {
 
   try {
     const response = await chat(messages, { intent: 'deep', deep: true })
-    const data = JSON.parse(response.content)
+    const data = JSON.parse(ensureString(response.content, '[]'))
     const leads: Lead[] = data.map((item: any) => ({
       name: item.name || null,
       email: item.email || null,
