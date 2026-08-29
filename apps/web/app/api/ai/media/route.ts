@@ -8,11 +8,8 @@ export async function POST(req: NextRequest) {
     const prompt = formData.get('prompt') as string
     const mode = formData.get('mode') as 'image' | 'video'
 
-    if (!file) {
-      return NextResponse.json({ error: 'File is required' }, { status: 400 })
-    }
+    if (!file) return NextResponse.json({ error: 'File required' }, { status: 400 })
 
-    // Convert file to base64
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     const base64 = buffer.toString('base64')
@@ -23,7 +20,7 @@ export async function POST(req: NextRequest) {
       result = await generateImage({
         prompt: prompt || 'Transform this image creatively',
         image: dataUrl,
-        resolution: '2K',
+        size: '2K',
         steps: 40,
       })
     } else {
@@ -37,10 +34,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ url: result.url, provider: result.provider })
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Media generation failed' },
-      { status: 500 }
-    )
+  } catch (error) {
+    console.error('Media API error:', error)
+    return NextResponse.json({ error: 'Media generation failed' }, { status: 500 })
   }
 }

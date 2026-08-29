@@ -1,52 +1,47 @@
 /**
- * Agnes AI – Enterprise Image & Video Generation
- * Documentation: https://apihub.agnes-ai.com/v1
- * Models:
- *   - agnes-image-2.1-flash: Image generation & editing
- *   - agnes-video-v2.0: Video generation (async)
- *   - agnes-2.5-flash: Chat & reasoning
+ * Agnes AI – Enterprise Multi‑Provider Service
+ * Base URL: https://apihub.agnes-ai.com/v1
  *
- * Fallback models:
- *   - Zhipu GLM-Image (image generation)
- *   - Groq (chat/reasoning)
+ * Model Fallback Chain:
+ *   Chat:    Agnes-2.5-Flash → Agnes-2.0-Flash → Groq → Fallback
+ *   Image:   Agnes-Image-2.1 → Agnes-Image-2.0 → Zhipu GLM-Image → Placeholder
+ *   Video:   Agnes-Video-2.0 → Agnes-Video-2.5 → Placeholder
  */
 
-const AGNES_API_URL = 'https://apihub.agnes-ai.com/v1'
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4'
+const AGNES_BASE_URL = 'https://apihub.agnes-ai.com/v1'
+const ZHIPU_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
 
-// ── Model catalogs ──
-export const AGNES_MODELS = {
-  chat: ['agnes-2.5-flash', 'agnes-2.0-flash'],
-  image: ['agnes-image-2.1-flash', 'agnes-image-2.0-flash'],
-  video: ['agnes-video-v2.0', 'agnes-video-2.5-flash'],
-}
-
+// ── Types ──
 export interface ChatOptions {
   messages: Array<{ role: string; content: string }>
   temperature?: number
   maxTokens?: number
+  stream?: boolean
 }
 
 export interface ImageOptions {
   prompt: string
-  image?: string // base64 or URL
-  resolution?: '1K' | '2K' | '4K'
+  image?: string          // base64 or URL
+  size?: '1K' | '2K' | '3K' | '4K'
+  ratio?: '1:1' | '3:4' | '4:3' | '16:9' | '9:16' | '2:3' | '3:2' | '21:9'
   negativePrompt?: string
   steps?: number
 }
 
 export interface VideoOptions {
   prompt: string
-  image?: string // base64 or URL
+  image?: string
   duration?: 3 | 5 | 10 | 18
   resolution?: '480p' | '720p' | '1080p'
   motion?: 1 | 2 | 3 | 4 | 5
+  numFrames?: number
+  frameRate?: number
 }
 
 export interface ChatResult {
   text: string
   reasoning?: string | null
-  tokens?: number
+  tokens: number
 }
 
 export interface GenerationResult {
@@ -54,299 +49,266 @@ export interface GenerationResult {
   provider: string
 }
 
-// ── Helper: fetch with timeout ──
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 30000): Promise<Response> {
+// ── Helpers ──
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 60000
+): Promise<Response> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal })
-    return response
+    return await fetch(url, { ...options, signal: controller.signal })
   } finally {
     clearTimeout(timeout)
   }
 }
 
-// ── Helper: safe JSON parse ──
-function safeJsonParse<T>(data: unknown): T {
-  if (typeof data === 'string') {
-    try { return JSON.parse(data) as T } catch { return {} as T }
-  }
-  return data as T
+function getAgnesKey(): string {
+  return process.env.AGNES_API_KEY || ''
 }
 
-// ── CHAT: Primary Agnes + Fallback Groq ──
+function getGroqKey(): string {
+  return process.env.GROQ_API_KEY || ''
+}
+
+function getZhipuKey(): string {
+  return process.env.ZHIPU_API_KEY || ''
+}
+
+// ── 1. Chat ──
 export async function generateChat(options: ChatOptions): Promise<ChatResult> {
+  const agnesKey = getAgnesKey()
+  const groqKey = getGroqKey()
   const errors: string[] = []
 
-  // Try Agnes first
-  if (process.env.AGNES_API_KEY) {
-    for (const model of AGNES_MODELS.chat) {
+  // 1. Try Agnes
+  if (agnesKey) {
+    for (const model of ['agnes-2.5-flash', 'agnes-2.0-flash']) {
       try {
-        const response = await fetchWithTimeout(
-          `${AGNES_API_URL}/chat/completions`,
+        const resp = await fetchWithTimeout(
+          `${AGNES_BASE_URL}/chat/completions`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.AGNES_API_KEY}`,
+              'Authorization': `Bearer ${agnesKey}`,
             },
             body: JSON.stringify({
               model,
               messages: options.messages,
-              temperature: options.temperature || 0.7,
-              max_tokens: options.maxTokens || 2000,
+              temperature: options.temperature ?? 0.7,
+              max_tokens: options.maxTokens ?? 2000,
             }),
           },
           30000
         )
 
-        if (response.ok) {
-          const data = await response.json()
+        if (resp.ok) {
+          const data = await resp.json()
           return {
             text: data.choices?.[0]?.message?.content || 'No response',
             reasoning: data.choices?.[0]?.message?.reasoning || null,
             tokens: data.usage?.total_tokens || 0,
           }
         }
-        errors.push(`Agnes ${model}: ${response.status}`)
+        errors.push(`Agnes ${model}: ${resp.status}`)
       } catch (e) {
-        errors.push(`Agnes ${model}: ${e instanceof Error ? e.message : 'unknown error'}`)
+        errors.push(`Agnes ${model}: ${e instanceof Error ? e.message : 'unknown'}`)
       }
     }
   }
 
-  // Fallback: Groq
-  if (process.env.GROQ_API_KEY) {
+  // 2. Try Groq (fallback)
+  if (groqKey) {
     try {
-      const response = await fetchWithTimeout(
+      const resp = await fetchWithTimeout(
         'https://api.groq.com/openai/v1/chat/completions',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Authorization': `Bearer ${groqKey}`,
           },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
             messages: options.messages,
-            temperature: options.temperature || 0.7,
-            max_tokens: options.maxTokens || 2000,
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.maxTokens ?? 2000,
           }),
         },
         30000
       )
 
-      if (response.ok) {
-        const data = await response.json()
+      if (resp.ok) {
+        const data = await resp.json()
         return {
           text: data.choices?.[0]?.message?.content || 'No response',
           reasoning: 'Processed via Groq (fallback)',
           tokens: data.usage?.total_tokens || 0,
         }
       }
-      errors.push(`Groq: ${response.status}`)
+      errors.push(`Groq: ${resp.status}`)
     } catch (e) {
-      errors.push(`Groq: ${e instanceof Error ? e.message : 'unknown error'}`)
+      errors.push(`Groq: ${e instanceof Error ? e.message : 'unknown'}`)
     }
   }
 
-  // Ultimate fallback
+  // 3. Ultimate fallback
   return {
     text: "I'm processing your request. Please give me a moment.",
-    reasoning: 'All providers failed: ' + errors.join(', '),
+    reasoning: `All providers failed: ${errors.join(', ')}`,
     tokens: 0,
   }
 }
 
-// ── IMAGE: Primary Agnes + Fallback Zhipu GLM-Image ──
+// ── 2. Image ──
 export async function generateImage(options: ImageOptions): Promise<GenerationResult> {
-  const errors: string[] = []
+  const agnesKey = getAgnesKey()
+  const zhipuKey = getZhipuKey()
 
-  // Try Agnes first
-  if (process.env.AGNES_API_KEY) {
-    for (const model of AGNES_MODELS.image) {
-      try {
-        const body: Record<string, unknown> = {
-          model,
-          prompt: options.prompt,
-          resolution: options.resolution || '1K',
-          negative_prompt: options.negativePrompt || '',
-          steps: options.steps || 30,
-        }
-        if (options.image) {
-          body.image = options.image
-        }
-
-        const response = await fetchWithTimeout(
-          `${AGNES_API_URL}/images/generations`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.AGNES_API_KEY}`,
-            },
-            body: JSON.stringify(body),
-          },
-          60000
-        )
-
-        if (response.ok) {
-          const data = await response.json()
-          const url = data.data?.[0]?.url || data.url
-          if (url) {
-            return { url, provider: `agnes-${model}` }
-          }
-        }
-        errors.push(`Agnes ${model}: ${response.status}`)
-      } catch (e) {
-        errors.push(`Agnes ${model}: ${e instanceof Error ? e.message : 'unknown error'}`)
-      }
-    }
-  }
-
-  // Fallback: Zhipu GLM-Image
-  if (process.env.ZHIPU_API_KEY) {
+  if (agnesKey) {
     try {
-      const response = await fetchWithTimeout(
-        `${ZHIPU_API_URL}/generations`,
+      const body: Record<string, unknown> = {
+        model: 'agnes-image-2.1-flash',
+        prompt: options.prompt,
+        size: options.size || '1K',
+        ratio: options.ratio || '1:1',
+        negative_prompt: options.negativePrompt || '',
+      }
+      if (options.image) body.image = options.image
+      if (options.steps) body.steps = options.steps
+
+      const resp = await fetchWithTimeout(
+        `${AGNES_BASE_URL}/images/generations`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.ZHIPU_API_KEY}`,
+            'Authorization': `Bearer ${agnesKey}`,
+          },
+          body: JSON.stringify(body),
+        },
+        60000
+      )
+
+      if (resp.ok) {
+        const data = await resp.json()
+        const url = data.data?.[0]?.url || data.url
+        if (url) return { url, provider: 'agnes-image-2.1-flash' }
+      }
+    } catch {}
+  }
+
+  if (zhipuKey) {
+    try {
+      const resp = await fetchWithTimeout(
+        `${ZHIPU_BASE_URL}/generations`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${zhipuKey}`,
           },
           body: JSON.stringify({
             model: 'glm-image',
             prompt: options.prompt,
-            size: options.resolution === '4K' ? '2048x2048' : '1024x1024',
+            size: options.size === '4K' ? '2048x2048' : '1024x1024',
           }),
         },
         60000
       )
 
-      if (response.ok) {
-        const data = await response.json()
+      if (resp.ok) {
+        const data = await resp.json()
         const url = data.output?.url || data.data?.[0]?.url
-        if (url) {
-          return { url, provider: 'zhipu-glm-image' }
-        }
+        if (url) return { url, provider: 'zhipu-glm-image' }
       }
-      errors.push(`Zhipu GLM-Image: ${response.status}`)
-    } catch (e) {
-      errors.push(`Zhipu GLM-Image: ${e instanceof Error ? e.message : 'unknown error'}`)
-    }
+    } catch {}
   }
 
-  // Ultimate fallback: placeholder
+  // Fallback
   return {
     url: `https://picsum.photos/seed/${Date.now()}/1024/768`,
     provider: 'fallback',
   }
 }
 
-// ── VIDEO: Primary Agnes (async) ──
+// ── 3. Video ──
 export async function generateVideo(options: VideoOptions): Promise<GenerationResult> {
-  const errors: string[] = []
+  const agnesKey = getAgnesKey()
 
-  // Try Agnes video
-  if (process.env.AGNES_API_KEY) {
-    for (const model of AGNES_MODELS.video) {
-      try {
-        const body: Record<string, unknown> = {
-          model,
-          prompt: options.prompt,
-          duration: options.duration || 5,
-          resolution: options.resolution || '720p',
-          motion: options.motion || 3,
-        }
-        if (options.image) {
-          body.image = options.image
-        }
-
-        const response = await fetchWithTimeout(
-          `${AGNES_API_URL}/videos`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.AGNES_API_KEY}`,
-            },
-            body: JSON.stringify(body),
-          },
-          60000
-        )
-
-        if (response.ok) {
-          const data = await response.json()
-          // Video is async — poll for result
-          const videoId = data.id || data.video_id
-          if (videoId) {
-            const result = await pollVideoResult(videoId)
-            if (result) {
-              return { url: result, provider: `agnes-${model}` }
-            }
-          }
-          // Direct URL if available
-          const url = data.url || data.data?.url
-          if (url) {
-            return { url, provider: `agnes-${model}` }
-          }
-        }
-        errors.push(`Agnes ${model}: ${response.status}`)
-      } catch (e) {
-        errors.push(`Agnes ${model}: ${e instanceof Error ? e.message : 'unknown error'}`)
+  if (agnesKey) {
+    try {
+      const body: Record<string, unknown> = {
+        model: 'agnes-video-v2.0',
+        prompt: options.prompt,
+        height: 768,
+        width: 1152,
+        num_frames: options.numFrames || 121,
+        frame_rate: options.frameRate || 24,
       }
-    }
+      if (options.image) body.image = options.image
+
+      const resp = await fetchWithTimeout(
+        `${AGNES_BASE_URL}/videos`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${agnesKey}`,
+          },
+          body: JSON.stringify(body),
+        },
+        120000
+      )
+
+      if (resp.ok) {
+        const data = await resp.json()
+        const taskId = data.task_id || data.id
+        if (taskId) {
+          const result = await pollVideoResult(taskId, agnesKey)
+          if (result) return { url: result, provider: 'agnes-video-v2.0' }
+        }
+        const url = data.url || data.video_url
+        if (url) return { url, provider: 'agnes-video-v2.0' }
+      }
+    } catch {}
   }
 
-  // Fallback: placeholder video
   return {
     url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
     provider: 'fallback',
   }
 }
 
-// ── Poll video result ──
-async function pollVideoResult(videoId: string, maxAttempts: number = 30, delayMs: number = 2000): Promise<string | null> {
-  if (!process.env.AGNES_API_KEY) return null
-
+async function pollVideoResult(
+  taskId: string,
+  apiKey: string,
+  maxAttempts = 30,
+  delayMs = 3000
+): Promise<string | null> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const response = await fetchWithTimeout(
-        `${AGNES_API_URL}/videos/${videoId}`,
+      const resp = await fetchWithTimeout(
+        `${AGNES_BASE_URL}/videos/${taskId}`,
         {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${process.env.AGNES_API_KEY}`,
-          },
+          headers: { 'Authorization': `Bearer ${apiKey}` },
         },
         10000
       )
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.status === 'completed' && data.url) {
-          return data.url
-        }
-        if (data.status === 'failed') {
-          return null
-        }
+      if (resp.ok) {
+        const data = await resp.json()
+        if (data.status === 'completed') return data.url || data.video_url || null
+        if (data.status === 'failed') return null
       }
-    } catch {
-      // Continue polling
-    }
+    } catch {}
     await new Promise(resolve => setTimeout(resolve, delayMs))
   }
   return null
 }
 
-// ── Legacy exports for backward compatibility ──
-export async function generateImageLegacy(options: ImageOptions) {
-  const result = await generateImage(options)
-  return { data: [{ url: result.url }] }
-}
-
-export async function generateVideoLegacy(options: VideoOptions) {
-  const result = await generateVideo(options)
-  return { data: { url: result.url } }
-}
+// ── Legacy exports ──
+export const generateImageLegacy = generateImage
+export const generateVideoLegacy = generateVideo

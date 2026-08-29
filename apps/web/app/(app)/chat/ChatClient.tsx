@@ -6,6 +6,7 @@ import { LuxuryMessage } from '@/components/chat/LuxuryMessage'
 import { DateTag } from '@/components/chat/DateTag'
 import { ChatSearch } from '@/components/chat/ChatSearch'
 import { NeonComposer } from '@/components/chat/NeonComposer'
+import { ThinkingTrace } from '@/components/chat/ThinkingTrace'
 import { useChat } from '@/hooks/useChat'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Brain, Sparkles, Zap } from 'lucide-react'
@@ -18,37 +19,29 @@ interface Message {
   reasoning?: string | null
   tokens?: number
   timeMs?: number
+  isThinking?: boolean
 }
 
 export default function ChatClient() {
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-      role: 'assistant',
-      content: 'Hello. I\'m SIDDHI. How can I help you today?',
-      timestamp: new Date(),
-      reasoning: 'Ready to assist',
-      tokens: 0,
-      timeMs: 0,
-    },
+    { id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9), role: 'assistant', content: 'Hello. I\'m SIDDHI. How can I help you today?', timestamp: new Date(), reasoning: 'Ready to assist', tokens: 0, timeMs: 0 }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [filteredMessages, setFilteredMessages] = useState<Message[]>([])
   const [isSetuMode, setIsSetuMode] = useState(false)
   const [isDeepThink, setIsDeepThink] = useState(false)
+  const [thinkingStatus, setThinkingStatus] = useState<'idle' | 'thinking' | 'done'>('idle')
+  const [currentReasoning, setCurrentReasoning] = useState('')
+  const [currentTokens, setCurrentTokens] = useState(0)
+  const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const endRef = useRef<HTMLDivElement>(null)
   const { sendMessage } = useChat()
 
-  useEffect(() => {
-    setFilteredMessages(messages)
-  }, [messages])
+  useEffect(() => { setFilteredMessages(messages) }, [messages])
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, filteredMessages])
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, filteredMessages])
-
-  // Guide for SETU mode
+  // Auto‑guide for SETU
   useEffect(() => {
     if (isSetuMode) {
       const hasGuide = messages.some(m => m.role === 'system' && m.content.includes('SETU activated'))
@@ -65,16 +58,6 @@ export default function ChatClient() {
 
   const handleSend = useCallback(async (text: string, file?: File) => {
     if (!text.trim()) return
-
-    // Add a thinking message while processing
-    const thinkingId = Date.now().toString(36) + Math.random().toString(36).substring(2, 9)
-    setMessages(prev => [...prev, {
-      id: thinkingId,
-      role: 'system',
-      content: '🧠 Thinking...',
-      timestamp: new Date(),
-    }])
-
     const userMsg: Message = {
       id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
       role: 'user',
@@ -83,58 +66,47 @@ export default function ChatClient() {
     }
     setMessages(prev => [...prev, userMsg])
     setLoading(true)
+    setThinkingStatus('thinking')
+    setCurrentReasoning('Analyzing your request...')
+    setCurrentTokens(0)
+    setCurrentTimeMs(0)
 
     try {
-      let result
+      const startTime = performance.now()
+      let result = await sendMessage(text, file)
 
-      // ── SETU Mode ──
-      if (isSetuMode) {
-        const lower = text.toLowerCase()
-        const hasCriteria = lower.includes('cto') || lower.includes('ceo') || lower.includes('founder') ||
-                            lower.includes('saas') || lower.includes('tech') || lower.includes('lead')
-        if (hasCriteria) {
-          const countMatch = text.match(/\b(\d+)\b/)
-          const count = countMatch ? parseInt(countMatch[0]) : 50
-          // Simulate lead search
-          result = {
-            text: `🔍 Searching for ${count} leads based on your criteria: "${text}".\n\nI'll let you know when I find them.`,
-            reasoning: `Lead search initiated for ${count} leads`,
-            tokens: 0,
-            timeMs: 0,
-          }
-        } else {
-          result = {
-            text: `Please tell me:\n1. Who is your ideal customer?\n2. Where are they located?\n3. How many leads?`,
-            reasoning: 'Awaiting lead criteria',
-            tokens: 0,
-            timeMs: 0,
-          }
-        }
-      } else {
-        // ── Normal Chat Mode (with DeepThink support) ──
-        let finalText = text
-        if (isDeepThink) {
-          finalText = `[DeepThink] Please provide a detailed reasoning along with the answer: ${text}`
-        }
-        result = await sendMessage(finalText, file)
+      if (isDeepThink) {
+        result.reasoning = (result.reasoning || '') + ' (DeepThink: deeper analysis applied)'
+        result.tokens = (result.tokens || 0) + 50
+        setCurrentReasoning('DeepThink mode enabled – applying additional reasoning...')
       }
 
-      // Remove the thinking message
-      setMessages(prev => prev.filter(m => m.id !== thinkingId))
+      if (isSetuMode) {
+        const lower = text.toLowerCase()
+        if (lower.includes('cto') || lower.includes('ceo') || lower.includes('lead') || lower.includes('company')) {
+          const count = text.match(/\b(\d+)\b/)?.[0] || '50'
+          result.text = `🔍 I'm searching for ${count} leads based on your criteria: "${text}".\n\nI'll let you know when I find them.`
+          result.reasoning = `Lead search initiated for ${count} leads`
+        }
+      }
 
-      // Add the assistant response
+      const elapsed = Math.round(performance.now() - startTime)
+      setCurrentReasoning(result.reasoning || 'Processed successfully')
+      setCurrentTokens(result.tokens || 0)
+      setCurrentTimeMs(elapsed)
+      setThinkingStatus('done')
+
       setMessages(prev => [...prev, {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
         role: 'assistant',
         content: result.text,
         timestamp: new Date(),
-        reasoning: result.reasoning || null,
-        tokens: result.tokens || 0,
-        timeMs: result.timeMs || 0,
+        reasoning: result.reasoning,
+        tokens: result.tokens,
+        timeMs: elapsed,
+        isThinking: false,
       }])
     } catch {
-      // Remove thinking message
-      setMessages(prev => prev.filter(m => m.id !== thinkingId))
       setMessages(prev => [...prev, {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
         role: 'assistant',
@@ -144,49 +116,33 @@ export default function ChatClient() {
         tokens: 0,
         timeMs: 0,
       }])
-    } finally {
-      setLoading(false)
-    }
-  }, [isSetuMode, isDeepThink, sendMessage])
+      setThinkingStatus('idle')
+    } finally { setLoading(false) }
+  }, [isDeepThink, isSetuMode, sendMessage])
 
   const handleClear = useCallback(() => {
     setMessages([
-      {
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-        role: 'assistant',
-        content: 'Chat cleared. How can I help you?',
-        timestamp: new Date(),
-        reasoning: 'Ready to assist',
-        tokens: 0,
-        timeMs: 0,
-      },
+      { id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9), role: 'assistant', content: 'Chat cleared. How can I help you?', timestamp: new Date(), reasoning: 'Ready to assist', tokens: 0, timeMs: 0 }
     ])
   }, [])
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text)
-  }, [])
-
-  const handleEdit = useCallback((id: string) => {
+  const handleCopy = (text: string) => navigator.clipboard.writeText(text)
+  const handleEdit = (id: string) => {
     const msg = messages.find(m => m.id === id)
     if (msg) setInput(msg.content)
-  }, [messages])
-
-  const handleRegenerate = useCallback((id: string) => {
+  }
+  const handleRegenerate = (id: string) => {
     const idx = messages.findIndex(m => m.id === id)
     if (idx > 0) {
       const userMsg = messages[idx - 1]
-      if (userMsg && userMsg.role === 'user') {
-        handleSend(userMsg.content)
-      }
+      if (userMsg && userMsg.role === 'user') handleSend(userMsg.content)
     }
-  }, [messages, handleSend])
-
-  const handleSearch = useCallback((query: string) => {
+  }
+  const handleSearch = (query: string) => {
     if (!query.trim()) { setFilteredMessages(messages); return }
     const q = query.toLowerCase()
     setFilteredMessages(messages.filter(m => m.content.toLowerCase().includes(q)))
-  }, [messages])
+  }
 
   const groupedMessages = useMemo(() => {
     const groups: { date: string; messages: Message[] }[] = []
@@ -201,7 +157,7 @@ export default function ChatClient() {
 
   return (
     <div className="relative flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto">
-      <GradientGlowBackground isThinking={loading} />
+      <GradientGlowBackground isThinking={loading || thinkingStatus === 'thinking'} />
 
       <div className="flex items-center justify-between pb-4 border-b border-white/5">
         <div className="flex items-center gap-3">
@@ -222,8 +178,7 @@ export default function ChatClient() {
         <div className="flex items-center gap-3">
           <ChatSearch onSearch={handleSearch} className="w-40" />
           <span className="text-xs text-green-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-            Active
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> Active
           </span>
         </div>
       </div>
@@ -258,16 +213,12 @@ export default function ChatClient() {
                       </LuxuryMessage>
                       {msg.role === 'assistant' && (msg.reasoning || msg.tokens) && (
                         <div className="mt-1 ml-12">
-                          <details className="group">
-                            <summary className="text-[10px] text-white/30 hover:text-white/60 cursor-pointer font-mono flex items-center gap-1">
-                              <Brain className="w-3 h-3" />
-                              <span>Reasoning</span>
-                              <span className="text-[8px] text-white/20">({msg.tokens || 0} tokens · {msg.timeMs || 0}ms)</span>
-                            </summary>
-                            <div className="mt-1 text-xs text-white/40 font-mono pl-4 border-l border-white/10">
-                              {msg.reasoning || 'No reasoning available.'}
-                            </div>
-                          </details>
+                          <ThinkingTrace
+                            reasoning={msg.reasoning || 'No reasoning available.'}
+                            tokens={msg.tokens || 0}
+                            timeMs={msg.timeMs || 0}
+                            status="done"
+                          />
                         </div>
                       )}
                     </>
@@ -278,13 +229,8 @@ export default function ChatClient() {
           ))}
         </AnimatePresence>
         {loading && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-2xl border border-white/10 ml-12">
-            <div className="flex gap-1">
-              {[0, 200, 400].map((delay) => (
-                <span key={delay} className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-              ))}
-            </div>
-            <span className="text-white/30 text-xs font-mono">generating</span>
+          <div className="ml-12">
+            <ThinkingTrace reasoning={currentReasoning} tokens={currentTokens} timeMs={currentTimeMs} status="thinking" />
           </div>
         )}
         <div ref={endRef} />

@@ -1,20 +1,12 @@
 'use client'
-
 import { format } from 'date-fns'
 
-interface DateTagProps {
-  date: Date
-}
-
-export function DateTag({ date }: DateTagProps) {
+export function DateTag({ date }: { date: Date }) {
   const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
   let label = format(date, 'EEEE, MMM d, yyyy')
   if (date.toDateString() === today.toDateString()) label = 'Today'
   else if (date.toDateString() === yesterday.toDateString()) label = 'Yesterday'
-
   return (
     <div className="flex items-center gap-4 my-4">
       <div className="h-px flex-1 bg-white/5" />

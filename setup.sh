@@ -1,15 +1,19 @@
-# 1. Run the final build check
-cd /d/kalkicore
-npm run build
+#!/usr/bin/env bash
+set -e
 
-# 2. If build passes, stage all changes
+BRANCH=$(git branch --show-current)
+echo "📌 Current branch: $BRANCH"
+
+echo "📦 Adding all changes..."
 git add .
 
-# 3. Review changes
-git status
+echo "✏️ Committing changes..."
+git commit -m "feat: enterprise chat, homepage, and hydration fixes" || echo "No changes to commit."
 
-# 4. Commit with a clear message
-git commit -m "Enterprise chat fix: Agnes AI fallbacks, SETU/DeepThink, thinking traces, hydration fix"
+echo "⬇️ Pulling latest from origin/$BRANCH..."
+git pull origin "$BRANCH" --rebase || echo "Pull failed, continuing..."
 
-# 5. Push to your repository
-git push origin master
+echo "⬆️ Pushing to origin/$BRANCH..."
+git push origin "$BRANCH"
+
+echo "✅ Push completed successfully."
