@@ -1,6 +1,19 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 export default function NotFound() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return <div className="text-white/40 text-center py-20">Loading...</div>
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
       <div className="text-6xl mb-4">🔍</div>

@@ -4,14 +4,13 @@ import type { Database } from '@/lib/supabase/types'
 type Service = Database['public']['Tables']['services']['Row']
 
 export default async function sitemap() {
-  const baseUrl = 'https://kalkios.com'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'
   const supabase = await createClient()
   const { data: services } = await supabase
     .from('services')
     .select('slug, category, updated_at')
     .eq('is_active', true)
 
-  // Type assertion to handle the never[] issue
   const typedServices = (services || []) as Service[]
 
   const serviceUrls = typedServices.map((s) => ({

@@ -27,46 +27,40 @@ function scrambleText(text: string, duration: number = 800): string {
 }
 
 export function CinematicHero() {
+  const [mounted, setMounted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
   const scanlineRef = useRef<HTMLDivElement>(null)
   const [displayText, setDisplayText] = useState('KALKI OS')
-  const [tagline] = useState('WELCOME TO TEMPLE OF TECHNOLOGY')
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Lenis smooth scroll
+  // Mount guard
   useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.8,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      smoothWheel: true,
-    })
-
-    const raf = (time: number) => {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-    requestAnimationFrame(raf)
-
-    return () => lenis.destroy()
+    setMounted(true)
   }, [])
 
-  // Glitch text loop for KALKI OS
+  // Glitch text loop — only if mounted
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!mounted) return
+    intervalRef.current = setInterval(() => {
       const glitched = scrambleText('KALKI OS', 600)
       setDisplayText(glitched)
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setDisplayText('KALKI OS')
       }, 800)
     }, 4000)
-    return () => clearInterval(interval)
-  }, [])
 
-  // GSAP animations with scroll scrub
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [mounted])
+
+  // GSAP animations — only if mounted
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!mounted || !containerRef.current) return
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -83,40 +77,18 @@ export function CinematicHero() {
         defaults: { ease: 'power1.inOut' },
       })
 
-      // Tagline fade in (stays visible)
       if (textRef.current) {
-        const taglineEl = textRef.current.querySelector('.tagline')
-        const titleEl = textRef.current.querySelector('.title')
-        const subtitleEl = textRef.current.querySelector('.subtitle')
-
-        if (taglineEl) {
-          tl.fromTo(taglineEl,
-            { opacity: 0, y: 20, filter: 'blur(5px)' },
-            { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.3 }
-          )
-        }
-        if (titleEl) {
-          tl.fromTo(titleEl,
-            { opacity: 0, y: 40, scale: 0.95, filter: 'blur(10px)' },
-            { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: 0.4 },
-            '+=0.1'
-          )
-        }
-        if (subtitleEl) {
-          tl.fromTo(subtitleEl,
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 0.3 },
-            '+=0.2'
-          )
-        }
-
-        // Subtle parallax — keep everything visible, just slight movement
-        tl.to(taglineEl, { y: -10, opacity: 0.8, duration: 0.3 }, '+=0.3')
-        tl.to(titleEl, { y: -15, opacity: 0.9, duration: 0.3 }, '-=0.2')
-        tl.to(subtitleEl, { y: -5, opacity: 0.7, duration: 0.3 }, '-=0.1')
+        tl.fromTo(textRef.current,
+          { opacity: 0, y: 40, scale: 0.98, filter: 'blur(8px)' },
+          { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: 0.4 }
+        )
+        tl.to(textRef.current, {
+          y: -20,
+          opacity: 0.9,
+          duration: 0.3,
+        }, '+=0.1')
       }
 
-      // Glow pulse
       if (glowRef.current) {
         tl.fromTo(glowRef.current,
           { opacity: 0, scale: 0.8 },
@@ -124,7 +96,6 @@ export function CinematicHero() {
         )
       }
 
-      // Scanline
       if (scanlineRef.current) {
         tl.fromTo(scanlineRef.current,
           { opacity: 0 },
@@ -134,29 +105,47 @@ export function CinematicHero() {
     }, containerRef)
 
     return () => ctx.revert()
-  }, [])
+    // Also kill all ScrollTriggers to prevent removeChild errors
+    ScrollTrigger.getAll().forEach(st => st.kill());
+  }, [mounted])
+
+  // Lenis smooth scroll — only if mounted
+  useEffect(() => {
+    if (!mounted) return
+    const lenis = new Lenis({
+      duration: 1.8,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      smoothWheel: true,
+    })
+
+    const raf = (time: number) => {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+    requestAnimationFrame(raf)
+
+    return () => lenis.destroy()
+  }, [mounted])
+
+  if (!mounted) {
+    return (
+      <section className="relative h-screen w-full overflow-hidden bg-[#0A0A0F] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-cyan-400/40 mt-4 font-mono">Loading experience...</p>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section
       ref={containerRef}
       className="relative h-screen w-full overflow-hidden bg-[#0A0A0F] flex items-center justify-center"
     >
-      {/* Neon glow */}
-      <div
-        ref={glowRef}
-        className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-600/20 to-pink-500/20 opacity-0 pointer-events-none"
-      />
-      
-      {/* Scanline overlay */}
-      <div
-        ref={scanlineRef}
-        className="absolute inset-0 pointer-events-none opacity-0"
-        style={{
-          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.03) 2px, rgba(0,255,255,0.03) 4px)',
-        }}
-      />
-
-      {/* Digital rain particles */}
+      <div ref={glowRef} className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-600/20 to-pink-500/20 opacity-0 pointer-events-none" />
+      <div ref={scanlineRef} className="absolute inset-0 pointer-events-none opacity-0" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.03) 2px, rgba(0,255,255,0.03) 4px)' }} />
       <div className="absolute inset-0 pointer-events-none opacity-30">
         {[...Array(40)].map((_, i) => (
           <div
@@ -172,64 +161,31 @@ export function CinematicHero() {
           />
         ))}
       </div>
-
-      {/* Main content */}
       <div ref={textRef} className="relative z-10 text-center px-6 max-w-4xl">
-        {/* Logo */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-6">
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-2xl animate-pulse" />
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-2xl shadow-cyan-500/30 relative">
-              <Image src="/images/logo.svg" alt="KALKI OS" width={48} height={48} className="object-contain" />
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-2xl shadow-cyan-500/30 relative">
+              <Image src="/images/logo.svg" alt="KALKI OS" width={56} height={56} className="object-contain" />
             </div>
           </div>
         </div>
-
-        {/* Tagline — WELCOME TO TEMPLE OF TECHNOLOGY */}
-        <p className="tagline text-xs md:text-sm font-mono tracking-[0.4em] text-cyan-400/60 mb-4">
-          {tagline.split('').map((char, i) => (
-            <span
-              key={i}
-              className="inline-block"
-              style={{
-                animation: `fade-in-char ${0.05}s ${0.1 + i * 0.03}s ease-out both`,
-              }}
-            >
-              {char}
-            </span>
-          ))}
-        </p>
-
-        {/* Main title — KALKI OS with glitch */}
-        <h1 className="title text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_30px_rgba(0,255,255,0.3)]">
+        <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_30px_rgba(0,255,255,0.3)]">
           {displayText}
         </h1>
-
-        {/* Subtitle */}
-        <p className="subtitle text-2xl md:text-3xl font-light mt-4 tracking-wider text-cyan-300/80 drop-shadow-[0_0_20px_rgba(0,255,255,0.2)]">
+        <p className="text-2xl md:text-3xl font-light mt-4 tracking-wider text-cyan-300/80 drop-shadow-[0_0_20px_rgba(0,255,255,0.2)]">
           <span className="inline-block border-r-2 border-cyan-400 pr-2 animate-pulse">█</span>
           Universe-Class AI Platform
         </p>
-
-        {/* Scroll indicator */}
         <p className="text-cyan-400/40 text-lg mt-6 max-w-2xl mx-auto font-mono tracking-wider">
           &lt; scroll to initialize /&gt;
         </p>
-
-        <div className="mt-8 flex justify-center">
-          <div className="w-0.5 h-12 bg-gradient-to-b from-cyan-400 to-transparent animate-pulse" />
-        </div>
       </div>
-
       <style jsx>{`
         @keyframes cyber-rain {
           0% { transform: translateY(-100px) scaleY(1); opacity: 0; }
           50% { opacity: 1; }
           100% { transform: translateY(100vh) scaleY(0.5); opacity: 0; }
-        }
-        @keyframes fade-in-char {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </section>

@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Upload, Loader2 } from 'lucide-react'
+import { LuxuryButton } from '@/components/ui/LuxuryButton'
 
 function ApplyContent() {
   const searchParams = useSearchParams()
@@ -118,20 +119,28 @@ function ApplyContent() {
           rows={4}
           className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono resize-none"
         />
-        <input
-          type="file"
-          accept=".pdf,.doc,.docx"
-          onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-          className="w-full text-cyan-400/40 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-mono file:bg-cyan-600/20 file:text-cyan-400 hover:file:bg-cyan-600/30"
-        />
+        <div className="flex items-center gap-4">
+          <label className="flex-1 flex items-center gap-2 px-4 py-3 bg-black/40 border border-cyan-500/20 rounded-xl cursor-pointer hover:border-cyan-500/50 transition text-sm font-mono text-white/60">
+            <Upload className="w-4 h-4" />
+            {resumeFile ? resumeFile.name : 'Upload Resume (PDF, DOC, DOCX)'}
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+              className="hidden"
+            />
+          </label>
+        </div>
         {error && <p className="text-red-400 text-xs font-mono">{error}</p>}
-        <button
+        <LuxuryButton
           type="submit"
+          variant="primary"
+          size="lg"
+          label={loading ? 'Submitting...' : 'Submit Application'}
+          icon={loading ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
+          fullWidth
           disabled={loading}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-300 bg-gradient-to-r from-cyan-600 to-purple-600 text-white hover:from-cyan-700 hover:to-purple-700 disabled:opacity-50 shadow-[0_0_30px_rgba(0,255,255,0.2)] hover:shadow-[0_0_40px_rgba(0,255,255,0.3)] px-6 py-3 text-base min-w-[120px]"
-        >
-          {loading ? 'Submitting...' : 'Submit Application'}
-        </button>
+        />
       </form>
     </div>
   )

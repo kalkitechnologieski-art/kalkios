@@ -1,17 +1,41 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/types'
 
 type FAQ = Database['public']['Tables']['faqs']['Row']
 
-export async function ServiceFAQ({ serviceId }: { serviceId: string }) {
-  const supabase = await createClient()
-  const { data: faqs } = await supabase
-    .from('faqs')
-    .select('*')
-    .eq('service_id', serviceId)
-    .order('order_index', { ascending: true })
+export function ServiceFAQ({ serviceId }: { serviceId: string }) {
+  const [faqs, setFaqs] = useState<FAQ[]>([])
+  const [loading, setLoading] = useState(true)
 
-  if (!faqs || faqs.length === 0) return null
+  useEffect(() => {
+    const supabase = createClient()
+    const fetchFaqs = async () => {
+      try {
+        const { data } = await supabase
+          .from('faqs')
+          .select('*')
+          .eq('service_id', serviceId)
+          .order('order_index', { ascending: true })
+        setFaqs(data || [])
+      } catch (error) {
+        console.error('Error fetching FAQs:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchFaqs()
+  }, [serviceId])
+
+  if (loading) {
+    return <div className="text-white/40 text-sm">Loading FAQs...</div>
+  }
+
+  if (!faqs.length) {
+    return null
+  }
 
   return (
     <section className="bg-white/5 border border-white/10 rounded-xl p-6">

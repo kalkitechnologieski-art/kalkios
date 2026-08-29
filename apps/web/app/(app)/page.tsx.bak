@@ -1,0 +1,122 @@
+import { ScrollReveal } from '@/components/ui/ScrollReveal'
+import { LuxuryButton } from '@/components/ui/LuxuryButton'
+import { AEOContent } from '@/components/AEOContent'
+import Link from 'next/link'
+import { Award, TrendingUp, ChevronRight, Building, Users, Globe, Zap, Sparkles, Shield, Clock } from 'lucide-react'
+
+const services = [
+  { id: '1', name: 'Enterprise SEO', category: 'Marketing', icon: '📈', description: 'Rank #1 on Google', price: 50000 },
+  { id: '2', name: 'AI Chatbot Development', category: 'AI', icon: '🤖', description: 'Custom LLM chatbot', price: 75000 },
+  { id: '3', name: 'E-commerce Website', category: 'Development', icon: '🛒', description: 'Full online store', price: 100000 },
+  { id: '4', name: 'Predictive Analytics', category: 'Data', icon: '📊', description: 'AI-driven forecasting', price: 80000 },
+  { id: '5', name: 'Social Media Marketing', category: 'Marketing', icon: '📱', description: 'Grow your audience', price: 40000 },
+  { id: '6', name: 'Mobile App Development', category: 'Development', icon: '📲', description: 'iOS & Android apps', price: 120000 },
+]
+
+const faqs = [
+  { question: 'What is KALKI OS?', answer: 'KALKI OS is an AI-powered digital services marketplace.' },
+  { question: 'How does the AI concierge work?', answer: 'Siddhi understands your needs through conversation.' },
+  { question: 'What services are available?', answer: 'SEO, AI, E-commerce, Analytics, Social Media, Mobile Apps.' },
+]
+
+export default function Homepage() {
+  return (
+    <>
+      {/* Simple Hero */}
+      <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden bg-gradient-to-br from-cyan-900/30 via-black to-purple-900/30 flex items-center justify-center">
+        <div className="relative z-10 text-center px-6 max-w-3xl">
+          <p className="text-cyan-400/60 text-sm font-mono tracking-[0.3em] mb-2">● KALKI INTELLIGENCE</p>
+          <h1 className="text-4xl md:text-6xl font-bold text-white font-mono leading-tight">
+            Welcome to the Temple of Technology
+          </h1>
+          <p className="text-white/60 text-lg md:text-xl mt-4 font-light">
+            AI-Powered Solutions for the Future
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link href="/chat"><LuxuryButton variant="primary" size="lg" label="Chat with Siddhi" /></Link>
+            <Link href="/marketplace"><LuxuryButton variant="secondary" size="lg" label="Explore Services" /></Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Trust Bar */}
+      <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap justify-center items-center gap-6 border-t border-white/5">
+        <div className="flex items-center gap-2 text-xs text-white/40"><Award className="w-4 h-4 text-cyan-400" /> 500+ Clients</div>
+        <div className="flex items-center gap-2 text-xs text-white/40"><Clock className="w-4 h-4 text-cyan-400" /> 30-60 Day Delivery</div>
+        <div className="flex items-center gap-2 text-xs text-white/40"><Sparkles className="w-4 h-4 text-cyan-400" /> AI-Powered</div>
+        <div className="flex items-center gap-2 text-xs text-white/40"><Shield className="w-4 h-4 text-cyan-400" /> 100% Secure</div>
+      </div>
+
+      {/* Services */}
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <ScrollReveal direction="up">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-cyan-400" /> Our Services
+            </h2>
+            <Link href="/marketplace" className="text-sm text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
+              View All <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {services.map((s) => (
+              <Link key={s.id} href="/marketplace" className="group bg-white/5 border border-white/5 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10">
+                <div className="aspect-square bg-gradient-to-br from-cyan-500/10 to-purple-500/10 flex items-center justify-center relative">
+                  <span className="text-6xl opacity-30">{s.icon}</span>
+                  <span className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white/80 text-xs px-2 py-1 rounded">{s.category}</span>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-white font-medium text-sm mt-1 line-clamp-2 group-hover:text-cyan-400 transition">{s.name}</h3>
+                  <p className="text-cyan-400/40 text-xs mt-1">{s.description}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-white font-bold">₹{s.price.toLocaleString()}</span>
+                    <span className="text-xs text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">Learn More</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* About */}
+      <section className="max-w-6xl mx-auto px-6 py-12 border-t border-white/5">
+        <ScrollReveal direction="up">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h2 className="text-2xl font-bold text-white font-mono">About KALKI Intelligence</h2>
+              <p className="text-white/60 text-base mt-3 leading-relaxed">We are India's future – a collective of innovators, engineers, and visionaries.</p>
+              <p className="text-white/40 text-sm mt-3">We deliver <span className="text-cyan-400">Digital Marketing</span>, <span className="text-purple-400">AI Automations</span>, <span className="text-pink-400">Data Analytics</span>, and <span className="text-blue-400">Development</span>.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center"><Building className="w-6 h-6 text-cyan-400 mx-auto mb-2" /><h4 className="text-white font-bold text-lg">500+</h4><p className="text-white/40 text-xs">Clients</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center"><Users className="w-6 h-6 text-purple-400 mx-auto mb-2" /><h4 className="text-white font-bold text-lg">50+</h4><p className="text-white/40 text-xs">Team Members</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center"><Globe className="w-6 h-6 text-pink-400 mx-auto mb-2" /><h4 className="text-white font-bold text-lg">20+</h4><p className="text-white/40 text-xs">Countries</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center"><Zap className="w-6 h-6 text-blue-400 mx-auto mb-2" /><h4 className="text-white font-bold text-lg">100%</h4><p className="text-white/40 text-xs">Satisfaction</p></div>
+            </div>
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-4xl mx-auto px-6 py-12 border-t border-white/5">
+        <ScrollReveal direction="up">
+          <div className="text-center mb-8"><h2 className="text-2xl font-bold text-white font-mono">AI-Powered FAQ</h2><p className="text-white/40 text-sm mt-2">Get instant answers with Siddhi</p></div>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <details key={i} className="group bg-white/5 border border-white/10 rounded-xl overflow-hidden transition hover:border-purple-500/30">
+                <summary className="flex items-center justify-between p-4 cursor-pointer text-white font-medium hover:text-purple-400 transition text-sm">
+                  <span>{faq.question}</span>
+                  <span className="text-white/30 group-open:rotate-180 transition">▼</span>
+                </summary>
+                <div className="px-4 pb-4 text-white/60 text-sm leading-relaxed">{faq.answer}</div>
+              </details>
+            ))}
+          </div>
+        </ScrollReveal>
+      </section>
+
+      <AEOContent title="KALKI OS — Digital Services" answer="KALKI OS provides enterprise-grade AI and digital services." faqs={faqs.slice(0, 3)} />
+    </>
+  )
+}

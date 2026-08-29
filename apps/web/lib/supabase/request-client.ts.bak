@@ -1,0 +1,15 @@
+import { connection } from 'next/server'
+import { createClient as createSupabaseClient } from './server'
+
+/**
+ * Creates a Supabase client bound to the current request.
+ * Use this in Server Components that need to fetch data.
+ * It calls `await connection()` to exclude the component from prerender.
+ */
+export async function createRequestClient() {
+  await connection()
+  return createSupabaseClient()
+}
+
+// Alias for backward compatibility
+export const createClient = createRequestClient

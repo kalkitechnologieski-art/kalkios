@@ -6,32 +6,31 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
-  // If there's an error or no code, redirect to home
+  // Use production URL if available, otherwise fallback to origin
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+
   if (error || !code) {
     console.warn('Auth callback error or missing code:', error)
-    return NextResponse.redirect(new URL('/', origin))
+    return NextResponse.redirect(new URL('/', baseUrl))
   }
 
   try {
     const supabase = await createClient()
-    // Exchange the code for a session
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
     if (exchangeError) {
-      // flow_state_already_used means the callback was called twice
-      // The user is likely already signed in, redirect to home
       if (exchangeError.message?.includes('flow_state_already_used')) {
-        console.warn('State already used — user may already be signed in. Redirecting to home.')
-        return NextResponse.redirect(new URL('/', origin))
+        console.warn('State already used — user may already be signed in.')
+        return NextResponse.redirect(new URL('/', baseUrl))
       }
       console.error('Auth exchange error:', exchangeError)
-      return NextResponse.redirect(new URL('/login?error=auth_failed', origin))
+      return NextResponse.redirect(new URL('/login?error=auth_failed', baseUrl))
     }
 
-    // Success: redirect to home
-    return NextResponse.redirect(new URL('/', origin))
+    // Redirect to dashboard after successful login
+    return NextResponse.redirect(new URL('/dashboard', baseUrl))
   } catch (err) {
     console.error('Auth callback exception:', err)
-    return NextResponse.redirect(new URL('/login?error=auth_failed', origin))
+    return NextResponse.redirect(new URL('/login?error=auth_failed', baseUrl))
   }
 }

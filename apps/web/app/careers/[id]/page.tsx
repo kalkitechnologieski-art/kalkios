@@ -1,28 +1,72 @@
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public-client'
 import { notFound } from 'next/navigation'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import Link from 'next/link'
 import { MapPin, Clock, DollarSign, ArrowLeft } from 'lucide-react'
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
+
+interface JobPosting {
+  id: string
+  title: string
+  location: string | null
+  employment_type: string | null
+  salary_range: string | null
+  description: string | null
+  requirements: string[] | null
+  status: string
+  created_at: string
+  updated_at: string
+}
 
 type PageProps = { params: Promise<{ id: string }> }
 
+export async function generateStaticParams() {
+  const supabase = createPublicClient()
+  const { data: jobs } = await supabase
+    .from('job_postings')
+    .select('id')
+    .eq('status', 'active')
+
+  if (!jobs || jobs.length === 0) {
+    return [{ id: 'none' }]
+  }
+
+  return jobs.map((job: { id: string }) => ({ id: job.id }))
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: job } = await supabase.from('job_postings').select('*').eq('id', id).single()
+  if (id === 'none') return { title: 'Careers | KALKI OS' }
+
+  const supabase = createPublicClient()
+  const { data: job } = await supabase
+    .from('job_postings')
+    .select('*')
+    .eq('id', id)
+    .single() as { data: JobPosting | null }
+
   if (!job) return { title: 'Job Not Found' }
   return { title: `${job.title} — KALKI OS Careers` }
 }
 
-export default async function JobDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const supabase = await createClient()
-  const { data: job } = await supabase.from('job_postings').select('*').eq('id', id).single()
+async function getJob(id: string): Promise<JobPosting | null> {
+  const supabase = createPublicClient()
+  const { data } = await supabase
+    .from('job_postings')
+    .select('*')
+    .eq('id', id)
+    .single() as { data: JobPosting | null }
+  return data
+}
+
+async function JobDetailContent({ id }: { id: string }) {
+  if (id === 'none') notFound()
+  const job = await getJob(id)
   if (!job) notFound()
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
+    <>
       <Link href="/careers" className="text-cyan-400/60 hover:text-cyan-400 text-sm font-mono flex items-center gap-2">
         <ArrowLeft className="w-4 h-4" /> Back to Careers
       </Link>
@@ -51,6 +95,15 @@ export default async function JobDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
-    </div>
+    </>
+  )
+}
+
+export default async function JobDetailPage({ params }: PageProps) {
+  const { id } = await params
+  return (
+    <Suspense fallback={<div className="text-cyan-400/40 text-center py-20 font-mono">Loading job details...</div>}>
+      <JobDetailContent id={id} />
+    </Suspense>
   )
 }

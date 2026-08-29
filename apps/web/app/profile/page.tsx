@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useAuth'
+import { useTokenUsage } from '@/lib/hooks/useNotifications'
 import Link from 'next/link'
 import { 
-  Settings, CreditCard, FileText, Shield, 
-  LogOut, Sparkles, Award, Clock, Cpu,
-  ChevronRight, Calendar
+  Settings, FileText, Shield, LogOut,
+  Award, Cpu, ChevronRight, Calendar, Bell,
+  TrendingUp, Zap
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -15,22 +16,33 @@ export default function ProfilePage() {
   const { user, loading: authLoading } = useUser()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [tokensUsed, setTokensUsed] = useState(0)
+  const [projectCount, setProjectCount] = useState(0)
+  const { tokens, loading: tokenLoading } = useTokenUsage()
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
     const fetchProfile = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      setProfile(data)
-      // Mock token usage — in production, fetch from actual usage table
-      setTokensUsed(Math.floor(Math.random() * 10000))
-      setLoading(false)
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profileData)
+
+        const { count } = await supabase
+          .from('projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', user.id)
+        setProjectCount(count || 0)
+
+        setLoading(false)
+      } catch (e) {
+        setProfile({ full_name: user.email?.split('@')[0] || 'User', role: 'client' })
+        setLoading(false)
+      }
     }
     fetchProfile()
   }, [user, supabase])
@@ -40,7 +52,7 @@ export default function ProfilePage() {
     router.push('/login')
   }
 
-  if (authLoading || loading) {
+  if (authLoading || loading || tokenLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -75,36 +87,28 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8">
-      {/* Profile Header — Cyberpunk Banner */}
-      <div className="relative rounded-2xl overflow-hidden border border-cyan-500/20">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-purple-600/20 to-pink-600/20" />
-        <div className="absolute inset-0 bg-[url('/images/grid-pattern.svg')] opacity-5" />
+      <div className="relative rounded-2xl overflow-hidden border border-white/5 bg-gradient-to-br from-white/5 to-transparent">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/10 via-purple-600/10 to-pink-600/10" />
         <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-          {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 blur-xl animate-pulse" />
             <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-600 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-2xl shadow-cyan-500/30">
               {displayName.charAt(0).toUpperCase()}
             </div>
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black shadow-[0_0_20px_rgba(0,255,0,0.3)]" />
           </div>
-
-          {/* User Info */}
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-2xl font-bold text-white font-mono">{displayName}</h1>
-            <p className="text-cyan-400/60 text-sm font-mono">{email}</p>
+            <p className="text-white/40 text-sm font-mono">{email}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2 justify-center md:justify-start">
               <span className={`text-xs px-3 py-1 rounded-full border font-mono ${roleColors[role] || 'text-white/40 border-white/10 bg-white/5'}`}>
                 {role.toUpperCase()}
               </span>
-              <span className="text-xs text-cyan-400/30 font-mono flex items-center gap-1">
+              <span className="text-xs text-white/30 font-mono flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Joined {new Date(user.created_at).toLocaleDateString()}
               </span>
             </div>
           </div>
-
-          {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-2">
             <Link href="/settings">
               <button className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm font-mono transition border border-white/10 flex items-center gap-2">
@@ -123,82 +127,80 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-4 text-center">
+        <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center hover:border-white/20 transition">
           <Award className="w-5 h-5 text-cyan-400 mx-auto mb-1" />
-          <div className="text-2xl font-bold text-white font-mono">0</div>
-          <div className="text-cyan-400/30 text-xs font-mono">Projects</div>
+          <div className="text-2xl font-bold text-white font-mono">{projectCount}</div>
+          <div className="text-white/30 text-xs font-mono">Projects</div>
         </div>
-        <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-4 text-center">
+        <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center hover:border-white/20 transition">
           <Cpu className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-          <div className="text-2xl font-bold text-white font-mono">{tokensUsed.toLocaleString()}</div>
-          <div className="text-cyan-400/30 text-xs font-mono">Tokens Used</div>
+          <div className="text-2xl font-bold text-white font-mono">{tokens.toLocaleString()}</div>
+          <div className="text-white/30 text-xs font-mono">Tokens Used</div>
         </div>
-        <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-4 text-center">
-          <Clock className="w-5 h-5 text-green-400 mx-auto mb-1" />
+        <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center hover:border-white/20 transition">
+          <TrendingUp className="w-5 h-5 text-green-400 mx-auto mb-1" />
           <div className="text-2xl font-bold text-white font-mono">0</div>
-          <div className="text-cyan-400/30 text-xs font-mono">Hours Saved</div>
+          <div className="text-white/30 text-xs font-mono">Hours Saved</div>
         </div>
-        <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-4 text-center">
-          <Sparkles className="w-5 h-5 text-pink-400 mx-auto mb-1" />
+        <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-center hover:border-white/20 transition">
+          <Zap className="w-5 h-5 text-pink-400 mx-auto mb-1" />
           <div className="text-2xl font-bold text-white font-mono">0</div>
-          <div className="text-cyan-400/30 text-xs font-mono">AI Credits</div>
+          <div className="text-white/30 text-xs font-mono">AI Credits</div>
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/settings" className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl p-4 transition flex items-center justify-between">
+        <Link href="/settings" className="group bg-white/5 border border-white/5 hover:border-white/20 rounded-xl p-4 transition flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-cyan-600/10 rounded-lg">
               <Settings className="w-5 h-5 text-cyan-400" />
             </div>
             <div>
               <h3 className="text-white font-mono text-sm">Settings</h3>
-              <p className="text-cyan-400/30 text-xs font-mono">Manage your account</p>
+              <p className="text-white/30 text-xs font-mono">Manage your account</p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-cyan-400/30 group-hover:text-cyan-400 transition" />
+          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/60 transition" />
         </Link>
 
-        <Link href="/settings/billing" className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl p-4 transition flex items-center justify-between">
+        <Link href="/settings/notifications" className="group bg-white/5 border border-white/5 hover:border-white/20 rounded-xl p-4 transition flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-600/10 rounded-lg">
-              <CreditCard className="w-5 h-5 text-purple-400" />
+              <Bell className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="text-white font-mono text-sm">Billing</h3>
-              <p className="text-cyan-400/30 text-xs font-mono">View invoices & usage</p>
+              <h3 className="text-white font-mono text-sm">Notifications</h3>
+              <p className="text-white/30 text-xs font-mono">Manage alerts</p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-cyan-400/30 group-hover:text-cyan-400 transition" />
+          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/60 transition" />
         </Link>
 
-        <Link href="/terms" className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl p-4 transition flex items-center justify-between">
+        <Link href="/terms" className="group bg-white/5 border border-white/5 hover:border-white/20 rounded-xl p-4 transition flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600/10 rounded-lg">
               <FileText className="w-5 h-5 text-blue-400" />
             </div>
             <div>
               <h3 className="text-white font-mono text-sm">Terms & Conditions</h3>
-              <p className="text-cyan-400/30 text-xs font-mono">Legal agreements</p>
+              <p className="text-white/30 text-xs font-mono">Legal agreements</p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-cyan-400/30 group-hover:text-cyan-400 transition" />
+          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/60 transition" />
         </Link>
 
-        <Link href="/support" className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl p-4 transition flex items-center justify-between">
+        <Link href="/support" className="group bg-white/5 border border-white/5 hover:border-white/20 rounded-xl p-4 transition flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-pink-600/10 rounded-lg">
               <Shield className="w-5 h-5 text-pink-400" />
             </div>
             <div>
               <h3 className="text-white font-mono text-sm">Support</h3>
-              <p className="text-cyan-400/30 text-xs font-mono">Get help</p>
+              <p className="text-white/30 text-xs font-mono">Get help</p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-cyan-400/30 group-hover:text-cyan-400 transition" />
+          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/60 transition" />
         </Link>
       </div>
     </div>

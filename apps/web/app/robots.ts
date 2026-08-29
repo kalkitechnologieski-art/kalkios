@@ -3,8 +3,8 @@ export default function robots() {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin/', '/_next/'],
+      disallow: ['/api/', '/admin/', '/_next/', '/unauthorized'],
     },
-    sitemap: 'https://kalkios.com/sitemap.xml',
+    sitemap: `${process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'}/sitemap.xml`,
   }
 }

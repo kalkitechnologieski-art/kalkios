@@ -15,54 +15,91 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-black/90 backdrop-blur-2xl border-t border-cyan-500/10 flex items-center justify-around px-2 safe-area-bottom">
-      {NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex flex-col items-center justify-center gap-0.5 w-12 h-full rounded-2xl transition relative group"
-          >
-            {isActive && (
-              <motion.span
-                layoutId="bottom-nav-indicator"
-                className="absolute -top-px w-6 h-0.5 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 shadow-lg shadow-cyan-500/50"
+    <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-black/80 backdrop-blur-xl border-t border-cyan/10 flex items-center px-2 safe-area-bottom">
+      <div className="flex items-center justify-around flex-1 max-w-[200px]">
+        {NAV_ITEMS.slice(0, 2).map((item) => {
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center justify-center gap-0.5 w-12 h-full rounded-2xl transition relative group"
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="bottom-nav-indicator-left"
+                  className="absolute -top-px w-6 h-0.5 rounded-full bg-cyan"
+                />
+              )}
+              <item.icon
+                className={`w-5 h-5 transition ${
+                  isActive ? 'text-cyan drop-shadow-glow' : 'text-white/30 group-hover:text-white/60'
+                }`}
+                strokeWidth={isActive ? 2 : 1.5}
               />
-            )}
-            <item.icon
-              className={`w-5 h-5 transition ${
-                isActive ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]' : 'text-white/30 group-hover:text-white/60'
-              }`}
-              strokeWidth={isActive ? 2.5 : 1.5}
-            />
-            <span className={`text-[8px] font-medium tracking-wider transition ${
-              isActive ? 'text-cyan-400' : 'text-white/25'
-            }`}>
-              {item.label}
-            </span>
-          </Link>
-        )
-      })}
+              <span className={`text-[8px] font-medium tracking-wider transition ${
+                isActive ? 'text-cyan' : 'text-white/25'
+              }`}>
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
 
-      {/* Simple SIDDHI text — no background, just letters */}
-      <Link href="/chat" className="flex items-center justify-center w-16 h-full relative group">
-        <motion.span
-          className="text-sm font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_15px_rgba(0,255,255,0.3)]"
+      <Link href="/chat" className="flex-1 flex items-center justify-center relative -mt-6 z-10">
+        <motion.div
+          className="relative w-16 h-16 rounded-full bg-gradient-to-br from-cyan via-cyan-600 to-purple-600
+                     shadow-glow-strong border border-cyan/40
+                     flex items-center justify-center cursor-pointer
+                     transition-all duration-300 hover:scale-105 active:scale-95
+                     animate-pulse-glow"
           animate={{
-            textShadow: [
-              '0 0 15px rgba(0,255,255,0.3)',
-              '0 0 30px rgba(0,255,255,0.5)',
-              '0 0 15px rgba(0,255,255,0.3)',
-            ],
+            y: [0, -4, 0],
           }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          whileHover={{ scale: 1.1 }}
+          transition={{
+            y: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' },
+          }}
         >
-          SIDDHI
-        </motion.span>
-        <span className="absolute -top-1 right-0 w-2 h-2 bg-green-400 rounded-full shadow-[0_0_20px_rgba(0,255,0,0.5)] border border-black animate-pulse" />
+          <div className="absolute inset-1 rounded-full bg-black/20" />
+          <div className="absolute inset-[-4px] rounded-full border border-cyan/20 animate-pulse-ring" />
+          <span className="text-xs font-black tracking-widest text-white drop-shadow-glow">
+            SIDDHI
+          </span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full shadow-glow border-2 border-black animate-pulse-ring" />
+        </motion.div>
       </Link>
+
+      <div className="flex items-center justify-around flex-1 max-w-[200px]">
+        {NAV_ITEMS.slice(2, 4).map((item) => {
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center justify-center gap-0.5 w-12 h-full rounded-2xl transition relative group"
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="bottom-nav-indicator-right"
+                  className="absolute -top-px w-6 h-0.5 rounded-full bg-cyan"
+                />
+              )}
+              <item.icon
+                className={`w-5 h-5 transition ${
+                  isActive ? 'text-cyan drop-shadow-glow' : 'text-white/30 group-hover:text-white/60'
+                }`}
+                strokeWidth={isActive ? 2 : 1.5}
+              />
+              <span className={`text-[8px] font-medium tracking-wider transition ${
+                isActive ? 'text-cyan' : 'text-white/25'
+              }`}>
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }

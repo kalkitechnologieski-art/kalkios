@@ -1,40 +1,34 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
-import { Suspense } from 'react'
-import { ScrollProvider } from '@/components/providers/ScrollProvider'
-import { GSAPProvider } from '@/components/providers/GSAPProvider'
+import { cn } from '@/lib/utils'
 import { AppLayout } from '@/components/ui/AppLayout'
 import '@/styles/globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.kalki-intelligence.in'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'),
   title: { template: '%s | KALKI OS', default: 'KALKI OS — Temple of Technology' },
   description: 'Premium AI-powered digital services marketplace.',
+  icons: { icon: '/favicon.svg', shortcut: '/favicon.ico' },
 }
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: true,
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <meta name="google" content="notranslate" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-      </head>
-      <body className={inter.className}>
-        {/* SINGLE SUSPENSE BOUNDARY — fixes insertBefore error */}
-        <Suspense fallback={<div className="min-h-screen bg-[#0A0A0F]" />}>
-          <div className="app-root min-h-screen bg-[#0A0A0F]">
-            <ScrollProvider>
-              <GSAPProvider>
-                <AppLayout>{children}</AppLayout>
-              </GSAPProvider>
-            </ScrollProvider>
-          </div>
-        </Suspense>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={cn('min-h-screen bg-black font-sans antialiased', inter.className)} suppressHydrationWarning>
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   )

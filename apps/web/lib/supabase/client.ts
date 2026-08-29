@@ -1,53 +1,60 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { Database } from './types'
 
-// Demo data for when Supabase is not configured
-const DEMO_SERVICES = [
-  { id: '1', name: 'Enterprise SEO', slug: 'enterprise-seo', category: 'Marketing', description: 'Rank #1 on Google with proven strategies.', price: 50000, icon: '📈', rating: 4.8, review_count: 120, is_active: true },
-  { id: '2', name: 'AI Chatbot Development', slug: 'ai-chatbot', category: 'AI', description: 'Custom LLM-powered chatbot for your business.', price: 75000, icon: '🤖', rating: 4.9, review_count: 85, is_active: true },
-  { id: '3', name: 'E-commerce Website', slug: 'ecommerce-website', category: 'Development', description: 'Full-featured online store with payment integration.', price: 100000, icon: '🛒', rating: 4.7, review_count: 210, is_active: true },
-  { id: '4', name: 'Social Media Marketing', slug: 'social-media-marketing', category: 'Marketing', description: 'Dominate social media with targeted campaigns.', price: 30000, icon: '📢', rating: 4.6, review_count: 95, is_active: true },
-  { id: '5', name: 'Predictive Analytics', slug: 'predictive-analytics', category: 'AI', description: 'Forecast trends and make data-driven decisions.', price: 90000, icon: '📊', rating: 4.8, review_count: 67, is_active: true },
-  { id: '6', name: 'Mobile App Development', slug: 'mobile-app-development', category: 'Development', description: 'Native iOS and Android apps.', price: 150000, icon: '📱', rating: 4.9, review_count: 143, is_active: true },
-]
+// Safe client that only initializes on the client side
+// This avoids the Math.random() issue during prerendering
+function isValidUrl(string: string): boolean {
+  try {
+    const url = new URL(string)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || ''
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || ''
 
-  if (!url || !key) {
-    console.warn('Supabase env vars missing — using demo data')
-    // Return a mock client that returns demo data
-    return new Proxy({} as any, {
-      get: (_target: any, prop: string) => {
-        if (prop === 'from') {
-          return (_table: string) => ({
-            select: () => ({
-              eq: (_col: string, _val: any) => ({
-                limit: (_n: number) => ({
-                  then: (cb: any) => cb({ data: DEMO_SERVICES, error: null }),
-                  catch: (cb: any) => cb(null),
-                }),
-                single: () => ({
-                  then: (cb: any) => cb({ data: DEMO_SERVICES[0], error: null }),
-                  catch: (cb: any) => cb(null),
-                }),
-              }),
-            }),
-          })
-        }
-        if (prop === 'auth') {
-          return {
-            getUser: () => ({ then: (cb: any) => cb({ data: { user: null }, error: null }) }),
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-          }
-        }
-        return () => ({
-          then: (cb: any) => cb({ data: null, error: null }),
-          catch: (cb: any) => cb(null),
-        })
+  const isInvalid = !isValidUrl(url) || !key || key === '' || key === 'your-anon-key'
+
+  // Return a safe dummy client during prerendering
+  if (isInvalid || typeof window === 'undefined') {
+    return {
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
+        signInWithOAuth: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
       },
-    })
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: null }),
+            order: () => ({
+              limit: () => Promise.resolve({ data: [], error: null }),
+            }),
+            limit: () => Promise.resolve({ data: [], error: null }),
+          }),
+          order: () => ({
+            limit: () => Promise.resolve({ data: [], error: null }),
+          }),
+          limit: () => Promise.resolve({ data: [], error: null }),
+        }),
+        insert: () => Promise.resolve({ data: null, error: null }),
+        update: () => Promise.resolve({ data: null, error: null }),
+        delete: () => Promise.resolve({ data: null, error: null }),
+      }),
+      channel: () => ({
+        on: () => ({
+          subscribe: () => ({
+            unsubscribe: () => {},
+          }),
+        }),
+      }),
+    } as any
   }
 
   return createBrowserClient<Database>(url, key)

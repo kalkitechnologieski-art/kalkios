@@ -1,0 +1,32 @@
+import type { NextConfig } from 'next'
+
+const config: NextConfig = {
+  cacheComponents: true,
+  partialPrefetching: true,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'supabase.co', pathname: '/storage/v1/object/public/**' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
+  },
+  typescript: { ignoreBuildErrors: false },
+  serverExternalPackages: [
+    'onnxruntime-node',
+    '@huggingface/transformers',
+  ],
+  outputFileTracingIncludes: {
+    '/api/**/*': [
+      'node_modules/onnxruntime-node/**/*.node',
+      'node_modules/onnxruntime-node/**/*.so',
+      'node_modules/onnxruntime-node/**/*.dll',
+    ],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = { ...config.externals, 'onnxruntime-node': 'commonjs onnxruntime-node' }
+    }
+    config.module.rules.push({ test: /\.node$/, use: 'null-loader' })
+    return config
+  },
+}
+export default config
