@@ -15,7 +15,7 @@ interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: Date
-  reasoning?: string
+  reasoning?: string | null
   tokens?: number
   timeMs?: number
 }
@@ -48,24 +48,33 @@ export default function ChatClient() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, filteredMessages])
 
-  // When SETU mode changes, show a guide
+  // Guide for SETU mode
   useEffect(() => {
     if (isSetuMode) {
-      const guideMsg: Message = {
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-        role: 'system',
-        content: '🔍 SETU activated! Tell me:\n1. Who is your ideal customer? (e.g., "CTOs in SaaS")\n2. Where are they located? (e.g., "US")\n3. How many leads? (e.g., "100")',
-        timestamp: new Date(),
-      }
       const hasGuide = messages.some(m => m.role === 'system' && m.content.includes('SETU activated'))
       if (!hasGuide) {
-        setMessages(prev => [...prev, guideMsg])
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
+          role: 'system',
+          content: '🔍 SETU activated! Tell me:\n1. Who is your ideal customer? (e.g., "CTOs in SaaS")\n2. Where are they located? (e.g., "US")\n3. How many leads? (e.g., "100")',
+          timestamp: new Date(),
+        }])
       }
     }
   }, [isSetuMode, messages])
 
   const handleSend = useCallback(async (text: string, file?: File) => {
     if (!text.trim()) return
+
+    // Add a thinking message while processing
+    const thinkingId = Date.now().toString(36) + Math.random().toString(36).substring(2, 9)
+    setMessages(prev => [...prev, {
+      id: thinkingId,
+      role: 'system',
+      content: '🧠 Thinking...',
+      timestamp: new Date(),
+    }])
+
     const userMsg: Message = {
       id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
       role: 'user',
@@ -76,32 +85,56 @@ export default function ChatClient() {
     setLoading(true)
 
     try {
-      let result = await sendMessage(text, file)
-      // If DeepThink mode is on, add extra reasoning
-      if (isDeepThink) {
-        result.reasoning = (result.reasoning || '') + ' (DeepThink: deeper analysis applied)'
-        result.tokens = (result.tokens || 0) + 50
-      }
-      // If SETU mode is on, try to extract lead info
+      let result
+
+      // ── SETU Mode ──
       if (isSetuMode) {
         const lower = text.toLowerCase()
-        if (lower.includes('cto') || lower.includes('ceo') || lower.includes('lead') || lower.includes('company')) {
+        const hasCriteria = lower.includes('cto') || lower.includes('ceo') || lower.includes('founder') ||
+                            lower.includes('saas') || lower.includes('tech') || lower.includes('lead')
+        if (hasCriteria) {
           const countMatch = text.match(/\b(\d+)\b/)
           const count = countMatch ? parseInt(countMatch[0]) : 50
-          result.text = `🔍 I'm searching for ${count} leads based on your criteria: "${text}".\n\nI'll let you know when I find them.`
-          result.reasoning = `Lead search initiated for ${count} leads`
+          // Simulate lead search
+          result = {
+            text: `🔍 Searching for ${count} leads based on your criteria: "${text}".\n\nI'll let you know when I find them.`,
+            reasoning: `Lead search initiated for ${count} leads`,
+            tokens: 0,
+            timeMs: 0,
+          }
+        } else {
+          result = {
+            text: `Please tell me:\n1. Who is your ideal customer?\n2. Where are they located?\n3. How many leads?`,
+            reasoning: 'Awaiting lead criteria',
+            tokens: 0,
+            timeMs: 0,
+          }
         }
+      } else {
+        // ── Normal Chat Mode (with DeepThink support) ──
+        let finalText = text
+        if (isDeepThink) {
+          finalText = `[DeepThink] Please provide a detailed reasoning along with the answer: ${text}`
+        }
+        result = await sendMessage(finalText, file)
       }
+
+      // Remove the thinking message
+      setMessages(prev => prev.filter(m => m.id !== thinkingId))
+
+      // Add the assistant response
       setMessages(prev => [...prev, {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
         role: 'assistant',
         content: result.text,
         timestamp: new Date(),
-        reasoning: result.reasoning,
-        tokens: result.tokens,
-        timeMs: result.timeMs,
+        reasoning: result.reasoning || null,
+        tokens: result.tokens || 0,
+        timeMs: result.timeMs || 0,
       }])
     } catch {
+      // Remove thinking message
+      setMessages(prev => prev.filter(m => m.id !== thinkingId))
       setMessages(prev => [...prev, {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
         role: 'assistant',
@@ -114,7 +147,7 @@ export default function ChatClient() {
     } finally {
       setLoading(false)
     }
-  }, [isDeepThink, isSetuMode, sendMessage])
+  }, [isSetuMode, isDeepThink, sendMessage])
 
   const handleClear = useCallback(() => {
     setMessages([

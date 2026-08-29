@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import { generateChat } from '@/lib/ai/agnes'
 
 const FALLBACK_RESPONSES = [
   "I'm processing your request. Please give me a moment.",
@@ -10,40 +11,36 @@ const FALLBACK_RESPONSES = [
 
 export interface ChatResult {
   text: string
-  reasoning?: string
+  reasoning?: string | null
   tokens: number
   timeMs: number
-  provider: string
 }
 
 export function useChat() {
   const sendMessage = useCallback(async (text: string, file?: File): Promise<ChatResult> => {
+    const startTime = performance.now()
+
     try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: text }],
-        }),
+      const result = await generateChat({
+        messages: [{ role: 'user', content: text }],
+        temperature: 0.7,
+        maxTokens: 2000,
       })
-      if (!response.ok) throw new Error('Cloud API failed')
-      const data = await response.json()
+
       return {
-        text: data.response || 'No response received.',
-        reasoning: `Processed via ${data.provider || 'cloud'} AI`,
-        tokens: data.usage?.total_tokens || 0,
-        timeMs: data.timeMs || 0,
-        provider: data.provider || 'cloud',
+        text: result.text || 'No response received.',
+        reasoning: result.reasoning || null,
+        tokens: result.tokens || 0,
+        timeMs: performance.now() - startTime,
       }
-    } catch {
-      // ✅ Ensure fallback is always a string
-      const fallback = FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)] || "I'm here to help. Please try again."
+    } catch (error) {
+      console.warn('Chat error, using fallback:', error)
+      const fallback = FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)] ?? "I'm here to help. Please try again."
       return {
         text: fallback,
         reasoning: 'Fallback response (service unavailable)',
         tokens: 0,
-        timeMs: 0,
-        provider: 'fallback',
+        timeMs: performance.now() - startTime,
       }
     }
   }, [])

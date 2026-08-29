@@ -36,12 +36,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const url = result.data?.url || result.data?.[0]?.url
-    if (!url) {
-      throw new Error('No URL returned from generation')
-    }
-
-    return NextResponse.json({ url })
+    return NextResponse.json({ url: result.url, provider: result.provider })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Media generation failed' },
