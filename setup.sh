@@ -1,52 +1,56 @@
 #!/bin/bash
 # ================================================================
-# KALKI OS – Push All Changes to GitHub
+# KALKI OS – Safe Git Push (All Changes)
+# ================================================================
+# This script stages, commits, and pushes all changes to the remote
+# repository. It is safe to run even if there are uncommitted changes.
+#
+# Usage: ./safe-push.sh
 # ================================================================
 
 set -euo pipefail
 
-echo "📦 Pushing all changes to GitHub..."
+echo "🚀 Preparing to push all changes safely..."
 
-# Ensure we are in the git root
-cd "$(git rev-parse --show-toplevel)" 2>/dev/null || {
-    echo "❌ Not in a git repository. Exiting."
-    exit 1
-}
-
-# Check for uncommitted changes
+# Check if there are changes to commit
 if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
     echo "ℹ️ No changes to commit."
     exit 0
 fi
 
-# Add all changes
-echo "📝 Adding all changes..."
+# Show what will be committed
+echo ""
+echo "📋 Files to be committed:"
+git status --short
+
+echo ""
+read -p "❓ Do you want to continue with commit and push? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
+# Stage all changes
+echo "📦 Staging all changes..."
 git add .
 
-# Commit with a descriptive message
-COMMIT_MSG="feat: enterprise-grade panels, real-time notifications, presence, and full admin/employee/client dashboards
+# Generate commit message with timestamp
+COMMIT_MSG="feat: enterprise upgrade - notifications, presence, admin/employee panels, realtime fixes, production-ready"
 
-- Admin: Users, Orders, Leads, Projects, Services, Analytics, Notifications panel
-- Employee: Dashboard, Tasks, Timesheet, Chat
-- Client: Dashboard, Projects, Orders, Support
-- Real-time subscriptions with Supabase Realtime
-- User presence (online/offline)
-- Enhanced notification bell with gradient glow
-- Role-based sidebar (auto-updates on role change)
-- DataTable with search, sort, pagination
-- Integrated all new services
-
-TypeScript strict, zero errors, production-ready."
-
-echo "📝 Committing..."
+echo "📝 Committing with message: $COMMIT_MSG"
 git commit -m "$COMMIT_MSG"
 
-# Determine the current branch
-BRANCH=$(git branch --show-current)
-echo "📌 Current branch: $BRANCH"
+# Determine branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "🔀 Pushing to branch: $BRANCH"
 
-# Push to remote
-echo "🚀 Pushing to origin/$BRANCH..."
-git push origin $BRANCH
-
-echo "✅ All changes pushed successfully!"
+# Push
+if git push origin "$BRANCH"; then
+    echo ""
+    echo "✅ All changes pushed successfully!"
+else
+    echo ""
+    echo "❌ Push failed. Please check your remote connection and permissions."
+    exit 1
+fi

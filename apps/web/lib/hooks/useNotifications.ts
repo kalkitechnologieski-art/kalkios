@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { useUser } from '@/hooks/useAuth'  // ✅ fixed import path
+import { useUser } from '@/hooks/useAuth'
 
-// ✅ Export this type for use in other components
 export interface Notification {
   id: string
   user_id: string
@@ -58,7 +57,7 @@ export function useNotifications() {
 
     if (!user) return
 
-    // Realtime subscription
+    // ✅ Correct order: .on() before .subscribe()
     const channel = supabase
       .channel(`notifications:${user.id}`)
       .on('postgres_changes', {
@@ -83,7 +82,13 @@ export function useNotifications() {
           })
         }
       })
-      .subscribe()
+      .subscribe((status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
+        if (status === 'SUBSCRIBED') {
+          console.log('📡 Notifications channel subscribed')
+        } else {
+          console.warn('📡 Notifications channel status:', status)
+        }
+      })
 
     return () => {
       channel.unsubscribe()
@@ -199,7 +204,7 @@ export function useNotificationPreferences() {
       .from('notification_preferences')
       .update({ [key]: value })
       .eq('user_id', user.id)
-    setPreferences((prev: any) => ({ ...prev, [key]: value })) // ✅ typed prev
+    setPreferences((prev: any) => ({ ...prev, [key]: value }))
   }
 
   return { preferences, loading, updatePreference }

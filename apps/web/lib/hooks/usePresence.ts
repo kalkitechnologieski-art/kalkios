@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/useAuth'  // ✅ fixed import path
+import { useUser } from '@/hooks/useAuth'
 
 export function usePresence() {
   const { user } = useUser()
@@ -33,7 +33,7 @@ export function usePresence() {
     // Initial status
     updatePresence('online')
 
-    // Subscribe to presence changes
+    // ✅ Correct order: .on() before .subscribe()
     const channel = supabase
       .channel('presence')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_presence' }, () => {
@@ -50,7 +50,13 @@ export function usePresence() {
         }
         fetchPresence()
       })
-      .subscribe()
+      .subscribe((status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
+        if (status === 'SUBSCRIBED') {
+          console.log('📡 Presence channel subscribed')
+        } else {
+          console.warn('📡 Presence channel status:', status)
+        }
+      })
 
     // Fetch initial presence
     const fetchPresence = async () => {
