@@ -4,90 +4,212 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useAuth'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import { 
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
   User, Shield, CreditCard, Bell, Palette, Sparkles,
   Save, RefreshCw, LogOut, ChevronRight,
-  Database, Globe, Share2,
-  Download, Upload, Key, Fingerprint, Eye,
-  Smartphone, Monitor, Zap, HardDrive,
-  AlertCircle
+  Database, Globe, Share2, Smartphone, Monitor, Zap, HardDrive,
+  AlertCircle, Eye, Fingerprint, Key,
+  CheckCircle, Loader2
 } from 'lucide-react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 type SettingsTab = 'profile' | 'security' | 'billing' | 'notifications' | 'preferences' | 'data'
+
+// Toast notification component (inline)
+function Toast({ message, type = 'success', onClose }: { message: string; type?: 'success' | 'error' | 'info'; onClose: () => void }) {
+  const colors = {
+    success: 'bg-green-500/20 border-green-500/30 text-green-400',
+    error: 'bg-red-500/20 border-red-500/30 text-red-400',
+    info: 'bg-blue-500/20 border-blue-500/30 text-blue-400',
+  }
+  return (
+    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl border backdrop-blur-lg flex items-center gap-3 ${colors[type]}`}>
+      {type === 'success' && <CheckCircle className="w-5 h-5" />}
+      {type === 'error' && <AlertCircle className="w-5 h-5" />}
+      <span className="text-sm font-mono">{message}</span>
+      <button onClick={onClose} className="text-white/40 hover:text-white transition">✕</button>
+    </div>
+  )
+}
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useUser()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
     company: '',
   })
+  const [preferences, setPreferences] = useState({
+    email_enabled: true,
+    push_enabled: true,
+    in_app_enabled: true,
+    chat_notifications: true,
+    token_milestones: true,
+    project_updates: true,
+    system_notifications: true,
+  })
   const supabase = createClient()
   const router = useRouter()
 
-  const [toggles, setToggles] = useState({
-    dataProcessing: true,
-    marketingComms: false,
-    thirdPartySharing: false,
-    researchParticipation: true,
-    darkMode: true,
-    aiVoice: true,
-    notifications: true,
-    twoFactor: false,
-    sessionTracking: true,
-    analytics: true,
-    autoSave: true,
-    compressUploads: false,
-  })
-
+  // Fetch profile and preferences
   useEffect(() => {
     if (!user) { setLoading(false); return }
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      setProfile(data)
-      setFormData({
-        fullName: data?.full_name || '',
-        email: user.email || '',
-        phone: data?.phone || '',
-        company: data?.company || '',
-      })
-      setLoading(false)
+    const fetchData = async () => {
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profileData)
+        setFormData({
+          fullName: profileData?.full_name || '',
+          email: user.email || '',
+          phone: profileData?.phone || '',
+          company: profileData?.company || '',
+        })
+
+        // Fetch preferences
+        const { data: prefData } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+        if (prefData) {
+          setPreferences({
+            email_enabled: prefData.email_enabled ?? true,
+            push_enabled: prefData.push_enabled ?? true,
+            in_app_enabled: prefData.in_app_enabled ?? true,
+            chat_notifications: prefData.chat_notifications ?? true,
+            token_milestones: prefData.token_milestones ?? true,
+            project_updates: prefData.project_updates ?? true,
+            system_notifications: prefData.system_notifications ?? true,
+          })
+        }
+      } catch (e) {
+        console.warn('Could not fetch data:', e)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetchProfile()
+    fetchData()
   }, [user, supabase])
 
-  const handleSave = async () => {
-    if (!user) return
-    await supabase
-      .from('profiles')
-      .update({
-        full_name: formData.fullName,
-        phone: formData.phone,
-        company: formData.company,
-      })
-      .eq('id', user.id)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
   }
 
+  // ── Save Profile ──
+  const handleSaveProfile = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.fullName,
+          phone: formData.phone,
+          company: formData.company,
+        })
+        .eq('id', user.id)
+      if (error) throw error
+      showToast('Profile updated successfully!', 'success')
+    } catch (err) {
+      showToast('Failed to update profile.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Reset Form ──
+  const handleReset = () => {
+    if (!profile) return
+    setFormData({
+      fullName: profile.full_name || '',
+      email: user?.email || '',
+      phone: profile.phone || '',
+      company: profile.company || '',
+    })
+    showToast('Form reset to current values.', 'info')
+  }
+
+  // ── Change Password ──
+  const handleChangePassword = async () => {
+    if (!user) return
+    const newPassword = prompt('Enter your new password:')
+    if (!newPassword || newPassword.length < 6) {
+      showToast('Password must be at least 6 characters.', 'error')
+      return
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      showToast('Password updated successfully!', 'success')
+    } catch (err) {
+      showToast('Failed to update password.', 'error')
+    }
+  }
+
+  // ── Delete Account ──
+  const handleDeleteAccount = async () => {
+    if (!user) return
+    const confirm = window.confirm(
+      '⚠️ Are you sure you want to delete your account? This action is irreversible.'
+    )
+    if (!confirm) return
+
+    // Call API route to delete account (admin or auth admin needed)
+    try {
+      const response = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete account')
+      }
+      // Sign out and redirect
+      await supabase.auth.signOut()
+      router.push('/login')
+      showToast('Account deleted successfully.', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete account.', 'error')
+    }
+  }
+
+  // ── Toggle Preference ──
+  const togglePreference = async (key: keyof typeof preferences) => {
+    if (!user) return
+    const newValue = !preferences[key]
+    // Optimistic update
+    setPreferences(prev => ({ ...prev, [key]: newValue }))
+    try {
+      const { error } = await supabase
+        .from('notification_preferences')
+        .update({ [key]: newValue })
+        .eq('user_id', user.id)
+      if (error) throw error
+      showToast(`${key.replace('_', ' ')} updated.`, 'success')
+    } catch (err) {
+      // Revert on error
+      setPreferences(prev => ({ ...prev, [key]: !newValue }))
+      showToast('Failed to update preference.', 'error')
+    }
+  }
+
+  // ── Logout ──
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
-  }
-
-  const toggleSwitch = (key: keyof typeof toggles) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   if (authLoading || loading) {
@@ -108,6 +230,7 @@ export default function SettingsPage() {
     )
   }
 
+  // ── Tab definitions ──
   const tabs: { id: SettingsTab; label: string; icon: any }[] = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
@@ -118,7 +241,9 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto py-8 px-4">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <div className="flex items-center gap-3 mb-8">
         <Sparkles className="w-6 h-6 text-cyan-400" />
         <h1 className="text-3xl font-bold text-white font-mono">Settings</h1>
@@ -128,6 +253,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Sidebar Tabs */}
         <div className="md:col-span-1 bg-white/5 border border-cyan-500/10 rounded-xl p-3 space-y-1">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -158,6 +284,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* Content Area */}
         <div className="md:col-span-3 bg-white/5 border border-cyan-500/10 rounded-xl p-6">
           {activeTab === 'profile' && (
             <div className="space-y-6">
@@ -207,12 +334,16 @@ export default function SettingsPage() {
                   <LuxuryButton
                     variant="primary"
                     size="md"
-                    label={saved ? '✓ Saved!' : 'Save Changes'}
-                    icon={saved ? undefined : <Save className="w-4 h-4" />}
+                    label={saving ? 'Saving...' : 'Save Changes'}
+                    icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     iconPosition="left"
-                    onClick={handleSave}
+                    onClick={handleSaveProfile}
+                    disabled={saving}
                   />
-                  <button className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 text-sm font-mono transition flex items-center gap-2">
+                  <button
+                    onClick={handleReset}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 text-sm font-mono transition flex items-center gap-2"
+                  >
                     <RefreshCw className="w-4 h-4" />
                     Reset
                   </button>
@@ -234,9 +365,9 @@ export default function SettingsPage() {
                       <Key className="w-4 h-4 text-cyan-400" />
                       Password
                     </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">Last changed: Never</p>
+                    <p className="text-cyan-400/30 text-xs font-mono">Change your password</p>
                   </div>
-                  <LuxuryButton variant="secondary" size="sm" label="Change" />
+                  <LuxuryButton variant="secondary" size="sm" label="Change" onClick={handleChangePassword} />
                 </div>
                 <div className="bg-white/5 border border-cyan-500/10 rounded-lg p-4 flex items-center justify-between">
                   <div>
@@ -247,32 +378,13 @@ export default function SettingsPage() {
                     <p className="text-cyan-400/30 text-xs font-mono">Add an extra layer of security</p>
                   </div>
                   <button
-                    onClick={() => toggleSwitch('twoFactor')}
+                    onClick={() => togglePreference('email_enabled')}
                     className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                      toggles.twoFactor ? 'bg-cyan-600' : 'bg-white/20'
+                      preferences.email_enabled ? 'bg-cyan-600' : 'bg-white/20'
                     }`}
                   >
                     <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                      toggles.twoFactor ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                <div className="bg-white/5 border border-cyan-500/10 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-mono text-sm flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-cyan-400" />
-                      Session Tracking
-                    </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">Monitor active sessions</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSwitch('sessionTracking')}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                      toggles.sessionTracking ? 'bg-cyan-600' : 'bg-white/20'
-                    }`}
-                  >
-                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                      toggles.sessionTracking ? 'translate-x-6' : 'translate-x-1'
+                      preferences.email_enabled ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </div>
@@ -284,7 +396,7 @@ export default function SettingsPage() {
                     </p>
                     <p className="text-cyan-400/30 text-xs font-mono">Permanently delete your account</p>
                   </div>
-                  <LuxuryButton variant="destructive" size="sm" label="Delete" />
+                  <LuxuryButton variant="destructive" size="sm" label="Delete" onClick={handleDeleteAccount} />
                 </div>
               </div>
             </div>
@@ -328,26 +440,20 @@ export default function SettingsPage() {
                 <p className="text-cyan-400/40 text-sm font-mono">Manage your notification preferences</p>
               </div>
               <div className="space-y-3">
-                {[
-                  { key: 'notifications', label: 'Email Updates', desc: 'Receive product updates and news' },
-                  { key: 'notifications', label: 'Project Updates', desc: 'Get notified about project changes' },
-                  { key: 'notifications', label: 'Billing Alerts', desc: 'Payment and invoice reminders' },
-                  { key: 'notifications', label: 'System Announcements', desc: 'Important platform updates' },
-                  { key: 'notifications', label: 'AI Insights', desc: 'Weekly AI-powered recommendations' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
+                {Object.entries(preferences).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
                     <div>
-                      <p className="text-white/80 text-sm font-mono">{item.label}</p>
-                      <p className="text-cyan-400/30 text-xs font-mono">{item.desc}</p>
+                      <p className="text-white/80 text-sm font-mono capitalize">{key.replace('_', ' ')}</p>
+                      <p className="text-cyan-400/30 text-xs font-mono">Toggle {key.replace('_', ' ')}</p>
                     </div>
                     <button
-                      onClick={() => toggleSwitch('notifications')}
+                      onClick={() => togglePreference(key as keyof typeof preferences)}
                       className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                        toggles.notifications ? 'bg-cyan-600' : 'bg-white/20'
+                        value ? 'bg-cyan-600' : 'bg-white/20'
                       }`}
                     >
                       <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                        toggles.notifications ? 'translate-x-6' : 'translate-x-1'
+                        value ? 'translate-x-6' : 'translate-x-1'
                       }`} />
                     </button>
                   </div>
@@ -364,69 +470,19 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
-                  <div>
-                    <p className="text-white/80 text-sm font-mono flex items-center gap-2">
-                      <Monitor className="w-4 h-4 text-cyan-400" />
-                      Dark Mode
-                    </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">Always enabled for cyberpunk experience</p>
-                  </div>
+                  <div><p className="text-white/80 text-sm font-mono flex items-center gap-2"><Monitor className="w-4 h-4 text-cyan-400" /> Dark Mode</p><p className="text-cyan-400/30 text-xs font-mono">Always enabled</p></div>
+                  <div className="text-cyan-400">On</div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
+                  <div><p className="text-white/80 text-sm font-mono flex items-center gap-2"><Smartphone className="w-4 h-4 text-cyan-400" /> AI Voice Input</p><p className="text-cyan-400/30 text-xs font-mono">Enable voice commands</p></div>
                   <button
-                    onClick={() => toggleSwitch('darkMode')}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                      toggles.darkMode ? 'bg-cyan-600' : 'bg-white/20'
+                    onClick={() => togglePreference('push_enabled')}
+                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${
+                      preferences.push_enabled ? 'bg-cyan-600' : 'bg-white/20'
                     }`}
                   >
                     <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                      toggles.darkMode ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
-                  <div>
-                    <p className="text-white/80 text-sm font-mono flex items-center gap-2">
-                      <Smartphone className="w-4 h-4 text-cyan-400" />
-                      AI Voice Input
-                    </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">Enable voice commands</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSwitch('aiVoice')}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                      toggles.aiVoice ? 'bg-cyan-600' : 'bg-white/20'
-                    }`}
-                  >
-                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                      toggles.aiVoice ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
-                  <div>
-                    <p className="text-white/80 text-sm font-mono flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-cyan-400" />
-                      Language
-                    </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">English (US)</p>
-                  </div>
-                  <LuxuryButton variant="secondary" size="sm" label="Change" />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
-                  <div>
-                    <p className="text-white/80 text-sm font-mono flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-cyan-400" />
-                      Auto‑Save
-                    </p>
-                    <p className="text-cyan-400/30 text-xs font-mono">Automatically save changes</p>
-                  </div>
-                  <button
-                    onClick={() => toggleSwitch('autoSave')}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                      toggles.autoSave ? 'bg-cyan-600' : 'bg-white/20'
-                    }`}
-                  >
-                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                      toggles.autoSave ? 'translate-x-6' : 'translate-x-1'
+                      preferences.push_enabled ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </div>
@@ -443,71 +499,28 @@ export default function SettingsPage() {
                 </h2>
                 <p className="text-cyan-400/40 text-sm font-mono">Manage your data privacy and consent</p>
               </div>
-
-              <div className="bg-gradient-to-r from-cyan-600/10 to-purple-600/10 border border-cyan-500/20 rounded-lg p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-white font-mono text-sm flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-cyan-400" />
-                    Data Processing Master Control
-                  </p>
-                  <p className="text-cyan-400/30 text-xs font-mono">Enable or disable all data processing</p>
-                </div>
-                <button
-                  onClick={() => toggleSwitch('dataProcessing')}
-                  className={`relative inline-flex items-center h-7 rounded-full w-12 transition-colors focus:outline-none ${
-                    toggles.dataProcessing ? 'bg-cyan-600' : 'bg-white/20'
-                  }`}
-                >
-                  <span className={`inline-block w-5 h-5 transform bg-white rounded-full transition ${
-                    toggles.dataProcessing ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
               <div className="space-y-3">
                 {[
-                  { key: 'dataProcessing', label: 'Data Processing Consent', desc: 'Allow processing of your data for core functionality', icon: Database },
-                  { key: 'marketingComms', label: 'Marketing Communications', desc: 'Receive promotional emails and offers', icon: Share2 },
-                  { key: 'thirdPartySharing', label: 'Third‑Party Data Sharing', desc: 'Share anonymized data with trusted partners', icon: Globe },
-                  { key: 'researchParticipation', label: 'Research Participation', desc: 'Contribute to AI research and improvement', icon: Zap },
-                  { key: 'analytics', label: 'Analytics & Performance', desc: 'Help us improve the platform with usage data', icon: Monitor },
-                  { key: 'compressUploads', label: 'Compress Uploads', desc: 'Automatically optimize images and files', icon: HardDrive },
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg hover:border-cyan-500/20 transition">
+                  { key: 'email_enabled', label: 'Email Communications', desc: 'Receive promotional emails' },
+                  { key: 'system_notifications', label: 'System Notifications', desc: 'Important platform updates' },
+                ].map(({ key, label, desc }) => (
+                  <div key={key} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/10 rounded-lg">
                     <div>
-                      <p className="text-white/80 text-sm font-mono flex items-center gap-2">
-                        <item.icon className="w-4 h-4 text-cyan-400" />
-                        {item.label}
-                      </p>
-                      <p className="text-cyan-400/30 text-xs font-mono">{item.desc}</p>
+                      <p className="text-white/80 text-sm font-mono">{label}</p>
+                      <p className="text-cyan-400/30 text-xs font-mono">{desc}</p>
                     </div>
                     <button
-                      onClick={() => toggleSwitch(item.key as keyof typeof toggles)}
-                      className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none ${
-                        toggles[item.key as keyof typeof toggles] ? 'bg-cyan-600' : 'bg-white/20'
+                      onClick={() => togglePreference(key as keyof typeof preferences)}
+                      className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${
+                        preferences[key as keyof typeof preferences] ? 'bg-cyan-600' : 'bg-white/20'
                       }`}
                     >
                       <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition ${
-                        toggles[item.key as keyof typeof toggles] ? 'translate-x-6' : 'translate-x-1'
+                        preferences[key as keyof typeof preferences] ? 'translate-x-6' : 'translate-x-1'
                       }`} />
                     </button>
                   </div>
                 ))}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 border-t border-cyan-500/10">
-                <button className="flex items-center gap-3 p-3 bg-white/5 border border-cyan-500/10 rounded-lg hover:border-cyan-500/30 transition text-white/80 hover:text-white">
-                  <Download className="w-4 h-4 text-cyan-400" />
-                  <span className="text-sm font-mono">Export My Data</span>
-                </button>
-                <button className="flex items-center gap-3 p-3 bg-white/5 border border-red-500/10 rounded-lg hover:border-red-500/30 transition text-red-400/80 hover:text-red-400">
-                  <Upload className="w-4 h-4 text-red-400" />
-                  <span className="text-sm font-mono">Request Data Deletion</span>
-                </button>
-              </div>
-
-              <div className="text-cyan-400/20 text-[10px] font-mono text-center pt-2 border-t border-cyan-500/5">
-                🔹 Your data is encrypted and stored securely. You have full control.
               </div>
             </div>
           )}

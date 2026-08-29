@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Loader2 } from 'lucide-react'
-import { LuxuryButton } from '@/components/ui/LuxuryButton'
+import { CyberpunkForm, CyberpunkInput, CyberpunkTextarea, CyberpunkButton } from '@/components/ui/CyberpunkForm'
 
 function ApplyContent() {
   const searchParams = useSearchParams()
@@ -88,38 +88,34 @@ function ApplyContent() {
       <h1 className="text-3xl font-bold text-white font-mono mt-6">
         Apply for {jobTitle || 'this position'}
       </h1>
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <input
+      <CyberpunkForm onSubmit={handleSubmit}>
+        <CyberpunkInput
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Full Name"
           required
-          className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
         />
-        <input
+        <CyberpunkInput
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
           required
-          className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
         />
-        <input
+        <CyberpunkInput
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Phone (optional)"
-          className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
         />
-        <textarea
+        <CyberpunkTextarea
           value={coverLetter}
           onChange={(e) => setCoverLetter(e.target.value)}
           placeholder="Cover Letter (optional)"
           rows={4}
-          className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono resize-none"
         />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full">
           <label className="flex-1 flex items-center gap-2 px-4 py-3 bg-black/40 border border-cyan-500/20 rounded-xl cursor-pointer hover:border-cyan-500/50 transition text-sm font-mono text-white/60">
             <Upload className="w-4 h-4" />
             {resumeFile ? resumeFile.name : 'Upload Resume (PDF, DOC, DOCX)'}
@@ -132,16 +128,11 @@ function ApplyContent() {
           </label>
         </div>
         {error && <p className="text-red-400 text-xs font-mono">{error}</p>}
-        <LuxuryButton
-          type="submit"
-          variant="primary"
-          size="lg"
-          label={loading ? 'Submitting...' : 'Submit Application'}
-          icon={loading ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
-          fullWidth
-          disabled={loading}
-        />
-      </form>
+        <CyberpunkButton type="submit" disabled={loading}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
+          {loading ? 'Submitting...' : 'Submit Application'}
+        </CyberpunkButton>
+      </CyberpunkForm>
     </div>
   )
 }

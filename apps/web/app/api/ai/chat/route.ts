@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateChat } from '@/lib/ai/agnes'
+import { chat } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,12 +8,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Messages required' }, { status: 400 })
     }
 
-    const result = await generateChat({ messages })
+    const result = await chat(messages)
 
     return NextResponse.json({
-      response: result.text,
+      response: result.content,
       reasoning: result.reasoning,
-      usage: { total_tokens: result.tokens || 0 },
+      usage: { total_tokens: result.tokens },
     })
   } catch (error) {
     console.error('Chat API error:', error)

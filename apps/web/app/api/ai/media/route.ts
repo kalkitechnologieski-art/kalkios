@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateImage, generateVideo } from '@/lib/ai/agnes'
+import { generateImage, generateVideo } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,27 +15,27 @@ export async function POST(req: NextRequest) {
     const base64 = buffer.toString('base64')
     const dataUrl = `data:${file.type};base64,${base64}`
 
-    let result
+    let url: string
     if (mode === 'image') {
-      result = await generateImage({
+      url = await generateImage({
         prompt: prompt || 'Transform this image creatively',
         image: dataUrl,
         size: '2K',
         steps: 40,
       })
     } else {
-      result = await generateVideo({
+      url = await generateVideo({
         prompt: prompt || 'Create a dynamic video from this image',
         image: dataUrl,
         duration: 5,
-        resolution: '720p',
+        resolution: '720P',
         motion: 4,
       })
     }
 
-    return NextResponse.json({ url: result.url, provider: result.provider })
-  } catch (error) {
+    return NextResponse.json({ url, provider: mode === 'image' ? 'agnes-image' : 'agnes-video' })
+  } catch (error: any) {
     console.error('Media API error:', error)
-    return NextResponse.json({ error: 'Media generation failed' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Media generation failed' }, { status: 500 })
   }
 }

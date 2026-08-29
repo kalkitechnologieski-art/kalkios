@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { cn } from '@/lib/utils'
 import { AppLayout } from '@/components/ui/AppLayout'
+import { GlobalLoader } from '@/components/ui/GlobalLoader'
 import '@/styles/globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={cn('min-h-screen bg-black font-sans antialiased', inter.className)} suppressHydrationWarning>
+        <GlobalLoader />
         <AppLayout>{children}</AppLayout>
       </body>
     </html>

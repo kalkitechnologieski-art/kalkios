@@ -1,13 +1,11 @@
 import { Metadata } from 'next'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
-import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import { MapPin, Mail, Phone, Clock, Building, Globe } from 'lucide-react'
-import Link from 'next/link'
+import { MapPin, Mail, Phone, Clock, Building } from 'lucide-react'
+import { ContactFormClient } from './ContactFormClient'
 
 export const metadata: Metadata = {
   title: 'Contact KALKI Intelligence — Indore, MP',
-  description: 'Get in touch with KALKI Intelligence. Visit us at 52, Swastik Nagar, Indore. Email ceo@kalki-intelligence.in or team@kalki-intelligence.in.',
-  keywords: 'contact, KALKI Intelligence, Indore, Madhya Pradesh, AI company, digital marketing',
+  description: 'Get in touch with KALKI Intelligence. Visit us at 52, Swastik Nagar, Indore.',
 }
 
 export default function ContactPage() {
@@ -67,38 +65,7 @@ export default function ContactPage() {
         </ScrollReveal>
 
         <ScrollReveal direction="right">
-          <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-6 backdrop-blur-sm">
-            <h2 className="text-xl font-bold text-white font-mono mb-4">Send a Message</h2>
-            <form className="space-y-4">
-              <input
-                type="text"
-                placeholder="Full Name"
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
-              />
-              <input
-                type="text"
-                placeholder="Subject"
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono"
-              />
-              <textarea
-                placeholder="Message"
-                rows={4}
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm font-mono resize-none"
-              />
-              <LuxuryButton
-                type="submit"
-                variant="primary"
-                size="lg"
-                label="Send Message"
-                fullWidth
-              />
-            </form>
-          </div>
+          <ContactFormClient />
         </ScrollReveal>
       </div>
 

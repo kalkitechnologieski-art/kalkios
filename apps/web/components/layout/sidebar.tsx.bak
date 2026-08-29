@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -51,16 +51,15 @@ const HR_ITEMS: NavItem[] = [
 ]
 
 export function Sidebar() {
-  const [isHovered, setIsHovered] = useState(false)
+  // Mount guard – prevents hydration mismatch
   const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  const [isHovered, setIsHovered] = useState(false)
   const pathname = usePathname()
   const supabase = createClient()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [profile, setProfile] = useState<{ role: string; full_name?: string } | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!mounted) return
@@ -79,7 +78,7 @@ export function Sidebar() {
   const role = profile?.role || 'client'
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Guest'
 
-  const items = useMemo(() => {
+  const items = (() => {
     const base = [...NAV_ITEMS]
     if (['ceo', 'admin', 'manager'].includes(role)) base.push(...ADMIN_ITEMS)
     if (['employee', 'developer', 'support'].includes(role)) base.push(...EMPLOYEE_ITEMS)
@@ -90,14 +89,12 @@ export function Sidebar() {
       seen.add(item.href)
       return true
     })
-  }, [role])
+  })()
 
   const collapsedWidth = 64
   const expandedWidth = 240
 
-  const isActive = useCallback((href: string) => {
-    return pathname === href || pathname?.startsWith(href + '/')
-  }, [pathname])
+  const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/')
 
   if (!mounted) {
     return <div className="w-16" />

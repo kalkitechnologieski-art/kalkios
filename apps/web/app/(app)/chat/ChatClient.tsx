@@ -1,252 +1,352 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground'
-import { LuxuryMessage } from '@/components/chat/LuxuryMessage'
-import { DateTag } from '@/components/chat/DateTag'
-import { ChatSearch } from '@/components/chat/ChatSearch'
-import { NeonComposer } from '@/components/chat/NeonComposer'
-import { ThinkingTrace } from '@/components/chat/ThinkingTrace'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useChat } from '@/hooks/useChat'
+import { useMemory } from '@/hooks/useMemory'
+import { LuxuryMessage } from '@/components/chat/LuxuryMessage'
+import { ThinkingTrace } from '@/components/chat/ThinkingTrace'
+import { NeonComposer } from '@/components/chat/NeonComposer'
+import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground'
+import { ThinkingLoader } from '@/components/ui/ThinkingLoader'
+import { MediaGenerationLoader } from '@/components/ui/MediaGenerationLoader'
+import { Bot, Brain, Search, Image as ImageIcon, Video, Users, Sparkles, Zap, Activity } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bot, Brain, Sparkles, Zap } from 'lucide-react'
 
 interface Message {
-  id: string
+  id: string | number
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: Date
-  reasoning?: string | null
+  reasoning?: string
   tokens?: number
   timeMs?: number
-  isThinking?: boolean
+  steps?: string[]
+  provider?: string
+  isMedia?: boolean
 }
 
 export default function ChatClient() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9), role: 'assistant', content: 'Hello. I\'m SIDDHI. How can I help you today?', timestamp: new Date(), reasoning: 'Ready to assist', tokens: 0, timeMs: 0 }
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [filteredMessages, setFilteredMessages] = useState<Message[]>([])
-  const [isSetuMode, setIsSetuMode] = useState(false)
-  const [isDeepThink, setIsDeepThink] = useState(false)
-  const [thinkingStatus, setThinkingStatus] = useState<'idle' | 'thinking' | 'done'>('idle')
-  const [currentReasoning, setCurrentReasoning] = useState('')
-  const [currentTokens, setCurrentTokens] = useState(0)
-  const [currentTimeMs, setCurrentTimeMs] = useState(0)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isThinking, setIsThinking] = useState(false)
+  const [reasoning, setReasoning] = useState('')
+  const [tokens, setTokens] = useState(0)
+  const [timeMs, setTimeMs] = useState(0)
+  const [provider, setProvider] = useState<string>('')
+  const [steps, setSteps] = useState<string[]>([])
+  const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat')
+  const [deepThink, setDeepThink] = useState(false)
+  const [setuMode, setSetuMode] = useState(false)
+  const [searchMode, setSearchMode] = useState(false)
+  const [generatingMedia, setGeneratingMedia] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(true)
+  const { sendMessage, generateImage, generateVideo, webSearch, runSETU, isProcessing } = useChat()
+  const { loadMemory, saveMemory, clearMemory } = useMemory()
   const endRef = useRef<HTMLDivElement>(null)
-  const { sendMessage } = useChat()
+  const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(() => { setFilteredMessages(messages) }, [messages])
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, filteredMessages])
-
-  // Auto‑guide for SETU
+  // Load memory
   useEffect(() => {
-    if (isSetuMode) {
-      const hasGuide = messages.some(m => m.role === 'system' && m.content.includes('SETU activated'))
-      if (!hasGuide) {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-          role: 'system',
-          content: '🔍 SETU activated! Tell me:\n1. Who is your ideal customer? (e.g., "CTOs in SaaS")\n2. Where are they located? (e.g., "US")\n3. How many leads? (e.g., "100")',
+    setIsMounted(true)
+    const load = async () => {
+      const saved = await loadMemory()
+      if (saved && saved.length > 0) {
+        setMessages(saved)
+        setShowOnboarding(false)
+      } else {
+        setMessages([{
+          id: 'welcome',
+          role: 'assistant',
+          content: `👋 I'm **Siddhi**, your AI concierge. I can help with:
+  • 💬 Chat & reasoning
+  • 🖼️ Generate images (Agnes/Zhipu)
+  • 🎬 Create videos
+  • 🔎 Web search (real‑time)
+  • 🧠 Deep thinking for complex analysis
+  • 🔍 Lead generation (SETU)
+
+  Tap a mode below or just ask!`,
           timestamp: new Date(),
         }])
+        setShowOnboarding(true)
       }
     }
-  }, [isSetuMode, messages])
+    load()
+  }, [loadMemory])
 
-  const handleSend = useCallback(async (text: string, file?: File) => {
-    if (!text.trim()) return
+  useEffect(() => {
+    if (isMounted && messages.length > 1) {
+      saveMemory(messages)
+    }
+  }, [messages, saveMemory, isMounted])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSend = async (text: string, file?: File) => {
+    if (!text.trim() && !file) return
+
     const userMsg: Message = {
-      id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
+      id: Date.now(),
       role: 'user',
       content: text,
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, userMsg])
-    setLoading(true)
-    setThinkingStatus('thinking')
-    setCurrentReasoning('Analyzing your request...')
-    setCurrentTokens(0)
-    setCurrentTimeMs(0)
+
+    // Determine if we are generating media
+    const isMediaMode = mode === 'image' || mode === 'video'
+    if (isMediaMode) {
+      setGeneratingMedia(true)
+    } else {
+      setIsThinking(true)
+    }
+
+    setReasoning('')
+    setTokens(0)
+    setTimeMs(0)
+    setProvider('')
+    setSteps([])
+    const start = performance.now()
 
     try {
-      const startTime = performance.now()
-      let result = await sendMessage(text, file)
+      let response: { content: string; reasoning?: string; tokens: number; provider: string; steps?: string[] }
 
-      if (isDeepThink) {
-        result.reasoning = (result.reasoning || '') + ' (DeepThink: deeper analysis applied)'
-        result.tokens = (result.tokens || 0) + 50
-        setCurrentReasoning('DeepThink mode enabled – applying additional reasoning...')
-      }
-
-      if (isSetuMode) {
-        const lower = text.toLowerCase()
-        if (lower.includes('cto') || lower.includes('ceo') || lower.includes('lead') || lower.includes('company')) {
-          const count = text.match(/\b(\d+)\b/)?.[0] || '50'
-          result.text = `🔍 I'm searching for ${count} leads based on your criteria: "${text}".\n\nI'll let you know when I find them.`
-          result.reasoning = `Lead search initiated for ${count} leads`
+      if (mode === 'image') {
+        const imageUrl = await generateImage(text, file)
+        response = {
+          content: `![Generated Image](${imageUrl})`,
+          reasoning: 'Image generated using AI',
+          tokens: 0,
+          provider: 'image',
         }
+      } else if (mode === 'video') {
+        const videoUrl = await generateVideo(text, file)
+        response = {
+          content: `<video src="${videoUrl}" controls style="max-width:100%;border-radius:12px;"></video>`,
+          reasoning: 'Video generated using AI',
+          tokens: 0,
+          provider: 'video',
+        }
+      } else if (searchMode) {
+        const results = await webSearch(text)
+        const snippet = results.map(r => `- **${r.title}** (${r.source}): ${r.snippet}\n  [Link](${r.url})`).join('\n\n')
+        response = {
+          content: `**Search results for:** "${text}"\n\n${snippet}`,
+          reasoning: `Found ${results.length} results`,
+          tokens: 0,
+          provider: 'search',
+        }
+      } else if (setuMode) {
+        const leads = await runSETU(text)
+        const leadList = leads.map(l => `- ${l.name || 'Unknown'} (${l.email || 'no email'}) - ${l.company || ''}`).join('\n')
+        response = {
+          content: `**🔍 SETU Lead Generation**\n\nFound ${leads.length} leads:\n${leadList}`,
+          reasoning: `Generated ${leads.length} leads`,
+          tokens: 0,
+          provider: 'setu',
+        }
+      } else {
+        const result = await sendMessage(text, { deep: deepThink })
+        response = result
+        if (response.reasoning) {
+          const rawSteps = response.reasoning.split('\n').filter(s => s.trim().length > 10)
+          setSteps(rawSteps)
+          response.steps = rawSteps
+        }
+        setProvider(response.provider || '')
       }
 
-      const elapsed = Math.round(performance.now() - startTime)
-      setCurrentReasoning(result.reasoning || 'Processed successfully')
-      setCurrentTokens(result.tokens || 0)
-      setCurrentTimeMs(elapsed)
-      setThinkingStatus('done')
+      const elapsed = Math.round(performance.now() - start)
+      setReasoning(response.reasoning || 'Processed')
+      setTokens(response.tokens || 0)
+      setTimeMs(elapsed)
+      setProvider(response.provider || '')
+      setIsThinking(false)
+      setGeneratingMedia(false)
 
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
+      const assistantMsg: Message = {
+        id: Date.now() + 1,
         role: 'assistant',
-        content: result.text,
+        content: response.content,
         timestamp: new Date(),
-        reasoning: result.reasoning,
-        tokens: result.tokens,
+        reasoning: response.reasoning,
+        tokens: response.tokens,
         timeMs: elapsed,
-        isThinking: false,
-      }])
-    } catch {
+        steps: response.steps,
+        provider: response.provider,
+        isMedia: isMediaMode,
+      }
+      setMessages(prev => [...prev, assistantMsg])
+    } catch (error) {
+      setIsThinking(false)
+      setGeneratingMedia(false)
       setMessages(prev => [...prev, {
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
+        id: Date.now() + 1,
         role: 'assistant',
-        content: "I'm processing your request. Please give me a moment.",
+        content: '⚠️ Something went wrong. Please try again.',
         timestamp: new Date(),
-        reasoning: 'Fallback response',
-        tokens: 0,
-        timeMs: 0,
       }])
-      setThinkingStatus('idle')
-    } finally { setLoading(false) }
-  }, [isDeepThink, isSetuMode, sendMessage])
-
-  const handleClear = useCallback(() => {
-    setMessages([
-      { id: Date.now().toString(36) + Math.random().toString(36).substring(2, 9), role: 'assistant', content: 'Chat cleared. How can I help you?', timestamp: new Date(), reasoning: 'Ready to assist', tokens: 0, timeMs: 0 }
-    ])
-  }, [])
-
-  const handleCopy = (text: string) => navigator.clipboard.writeText(text)
-  const handleEdit = (id: string) => {
-    const msg = messages.find(m => m.id === id)
-    if (msg) setInput(msg.content)
-  }
-  const handleRegenerate = (id: string) => {
-    const idx = messages.findIndex(m => m.id === id)
-    if (idx > 0) {
-      const userMsg = messages[idx - 1]
-      if (userMsg && userMsg.role === 'user') handleSend(userMsg.content)
     }
   }
-  const handleSearch = (query: string) => {
-    if (!query.trim()) { setFilteredMessages(messages); return }
-    const q = query.toLowerCase()
-    setFilteredMessages(messages.filter(m => m.content.toLowerCase().includes(q)))
+
+  const handleClear = async () => {
+    await clearMemory()
+    setMessages([])
+    setMessages([{
+      id: 'welcome',
+      role: 'assistant',
+      content: `👋 I'm **Siddhi**, your AI concierge. How can I help you today?`,
+      timestamp: new Date(),
+    }])
+    setShowOnboarding(true)
   }
 
-  const groupedMessages = useMemo(() => {
-    const groups: { date: string; messages: Message[] }[] = []
-    filteredMessages.forEach(msg => {
-      const date = new Date(msg.timestamp).toDateString()
-      const last = groups[groups.length - 1]
-      if (last && last.date === date) last.messages.push(msg)
-      else groups.push({ date, messages: [msg] })
-    })
-    return groups
-  }, [filteredMessages])
+  if (!isMounted) {
+    return <div className="flex items-center justify-center min-h-[60vh]"><div className="text-white/40">Loading Siddhi...</div></div>
+  }
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto">
-      <GradientGlowBackground isThinking={loading || thinkingStatus === 'thinking'} />
+    <div className="relative flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto px-2">
+      <GradientGlowBackground isThinking={isThinking || isProcessing || generatingMedia} />
 
-      <div className="flex items-center justify-between pb-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-md" />
-            <div className="relative p-2 bg-white/5 rounded-full border border-white/10">
-              <Bot className="w-5 h-5 text-cyan-400" />
-            </div>
+            <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-md animate-pulse" />
+            <Bot className="w-6 h-6 text-cyan-400 relative" />
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
-              SIDDHI
-              <span className="text-[8px] font-mono text-cyan-400/50 animate-pulse">● ONLINE</span>
-            </h1>
-            <p className="text-xs text-white/30 font-mono tracking-wider">⚡ ENTERPRISE AI</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <ChatSearch onSearch={handleSearch} className="w-40" />
-          <span className="text-xs text-green-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> Active
+          <span className="text-white font-semibold text-sm md:text-base">Siddhi</span>
+          <span className="text-[10px] text-green-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            Online
           </span>
+          {provider && (
+            <span className="text-[8px] text-cyan-400/30 font-mono border border-cyan-500/10 px-1.5 py-0.5 rounded-full">
+              {provider}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          <CyberToggle active={deepThink} onClick={() => setDeepThink(!deepThink)} icon={Brain} label="Deep" color="purple" />
+          <CyberToggle active={searchMode} onClick={() => setSearchMode(!searchMode)} icon={Search} label="Search" color="blue" />
+          <CyberToggle active={setuMode} onClick={() => setSetuMode(!setuMode)} icon={Users} label="SETU" color="amber" />
+          <CyberToggle active={mode === 'image'} onClick={() => setMode(mode === 'image' ? 'chat' : 'image')} icon={ImageIcon} label="Image" color="pink" />
+          <CyberToggle active={mode === 'video'} onClick={() => setMode(mode === 'video' ? 'chat' : 'video')} icon={Video} label="Video" color="red" />
         </div>
       </div>
 
+      {/* Onboarding */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white/5 border border-cyan-500/20 rounded-xl p-3 mb-2 text-xs text-white/60 flex items-center justify-between"
+          >
+            <span>💡 Tap <span className="text-cyan-400">Deep</span> for reasoning, <span className="text-amber-400">SETU</span> for leads, or just chat!</span>
+            <button onClick={() => setShowOnboarding(false)} className="text-white/30 hover:text-white/70">✕</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
-        <AnimatePresence>
-          {groupedMessages.map((group) => (
-            <div key={group.date}>
-              <DateTag date={new Date(group.date)} />
-              {group.messages.map((msg) => (
-                <div key={msg.id} className="mb-3">
-                  {msg.role === 'system' && (
-                    <div className="flex justify-center my-2">
-                      <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%]">
-                        {msg.content}
-                      </div>
-                    </div>
-                  )}
-                  {msg.role !== 'system' && (
-                    <>
-                      <LuxuryMessage
-                        role={msg.role as 'user' | 'assistant'}
-                        timestamp={msg.timestamp}
-                        onCopy={() => handleCopy(msg.content)}
-                        onEdit={msg.role === 'user' ? () => handleEdit(msg.id) : undefined}
-                        onRegenerate={msg.role === 'assistant' ? () => handleRegenerate(msg.id) : undefined}
-                        onLike={msg.role === 'assistant' ? () => console.log('👍 Liked:', msg.id) : undefined}
-                        onDislike={msg.role === 'assistant' ? () => console.log('👎 Disliked:', msg.id) : undefined}
-                        showActions={true}
-                      >
-                        {msg.content}
-                      </LuxuryMessage>
-                      {msg.role === 'assistant' && (msg.reasoning || msg.tokens) && (
-                        <div className="mt-1 ml-12">
-                          <ThinkingTrace
-                            reasoning={msg.reasoning || 'No reasoning available.'}
-                            tokens={msg.tokens || 0}
-                            timeMs={msg.timeMs || 0}
-                            status="done"
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
+        {messages.map((msg) => (
+          <motion.div
+            key={msg.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {msg.role === 'system' ? (
+              <div className="flex justify-center my-2">
+                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
+                  {msg.content}
                 </div>
-              ))}
-            </div>
-          ))}
-        </AnimatePresence>
-        {loading && (
-          <div className="ml-12">
-            <ThinkingTrace reasoning={currentReasoning} tokens={currentTokens} timeMs={currentTimeMs} status="thinking" />
+              </div>
+            ) : (
+              <LuxuryMessage role={msg.role} timestamp={msg.timestamp}>
+                <div dangerouslySetInnerHTML={{ __html: msg.content }} />
+              </LuxuryMessage>
+            )}
+            {msg.role === 'assistant' && msg.reasoning && (
+              <div className="ml-12 mt-1">
+                <ThinkingTrace
+                  reasoning={msg.reasoning}
+                  tokens={msg.tokens}
+                  timeMs={msg.timeMs}
+                  status="done"
+                  steps={msg.steps}
+                  provider={msg.provider}
+                />
+              </div>
+            )}
+          </motion.div>
+        ))}
+
+        {/* Thinking Loader (for chat/deep/search/SETU) */}
+        {isThinking && (
+          <div className="ml-12 mt-2">
+            <ThinkingLoader
+              status="thinking"
+              reasoning={reasoning}
+              tokens={tokens}
+              timeMs={timeMs}
+              steps={steps}
+              provider={provider}
+            />
           </div>
         )}
+
+        {/* Media Generation Loader (for image/video) */}
+        {generatingMedia && (
+          <div className="flex justify-center my-4">
+            <MediaGenerationLoader type={mode === 'image' ? 'image' : 'video'} />
+          </div>
+        )}
+
         <div ref={endRef} />
       </div>
 
+      {/* Input bar */}
       <div className="pt-2 border-t border-white/5">
         <NeonComposer
           onSend={handleSend}
-          isLoading={loading}
+          isLoading={isThinking || isProcessing || generatingMedia}
+          mode={mode}
+          onModeChange={setMode}
+          isDeepThink={deepThink}
+          setIsDeepThink={setDeepThink}
+          isSetuMode={setuMode}
+          setIsSetuMode={setSetuMode}
+          isSearchMode={searchMode}
+          setIsSearchMode={setSearchMode}
           onClear={handleClear}
-          isSetuMode={isSetuMode}
-          setIsSetuMode={setIsSetuMode}
-          isDeepThink={isDeepThink}
-          setIsDeepThink={setIsDeepThink}
         />
       </div>
     </div>
+  )
+}
+
+// CyberToggle component (same as before)
+function CyberToggle({ active, onClick, icon: Icon, label, color }: any) {
+  const colors: any = {
+    purple: 'active:bg-purple-600/30 active:text-purple-400 active:border-purple-500/30',
+    blue: 'active:bg-blue-600/30 active:text-blue-400 active:border-blue-500/30',
+    amber: 'active:bg-amber-600/30 active:text-amber-400 active:border-amber-500/30',
+    pink: 'active:bg-pink-600/30 active:text-pink-400 active:border-pink-500/30',
+    red: 'active:bg-red-600/30 active:text-red-400 active:border-red-500/30',
+  }
+  return (
+    <button
+      onClick={onClick}
+      className={`p-1.5 rounded-lg transition-all duration-200 ${active ? colors[color] + ' shadow-glow' : 'text-white/40 hover:text-white/70'}`}
+      title={label}
+    >
+      <Icon className="w-4 h-4" />
+    </button>
   )
 }

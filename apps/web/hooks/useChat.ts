@@ -1,51 +1,104 @@
-'use client'
-
-import { useCallback } from 'react'
-
-export interface ChatResult {
-  text: string
-  reasoning?: string | null
-  tokens: number
-}
+import { useState, useCallback } from 'react'
+import { chat, generateImage, generateVideo, webSearch, generateLeads, ChatMessage, ChatOptions, SearchResult, Lead } from '@/lib/ai'
+import { SIDDHI_SYSTEM_PROMPT, DEEP_THINK_SYSTEM, SETU_SYSTEM } from '@/lib/ai/prompts'
+import { buildMemoryContext } from '@/lib/ai/memory'
 
 export function useChat() {
-  const sendMessage = useCallback(async (text: string, file?: File): Promise<ChatResult> => {
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const sendMessage = useCallback(async (
+    text: string,
+    options: { deep?: boolean; search?: boolean; image?: boolean; video?: boolean } = {}
+  ): Promise<{ content: string; reasoning?: string; tokens: number; provider: string }> => {
+    setIsProcessing(true)
     try {
-      // Build request body
-      const body: any = { messages: [{ role: 'user', content: text }] }
-      if (file) {
-        // Convert file to base64
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
-        const base64 = buffer.toString('base64')
-        const dataUrl = `data:${file.type};base64,${base64}`
-        // For simplicity, we'll just send the text and note the file
-        body.file = { name: file.name, type: file.type, size: file.size }
-        body.fileData = dataUrl
+      let systemPrompt = SIDDHI_SYSTEM_PROMPT
+      if (options.deep) {
+        systemPrompt = DEEP_THINK_SYSTEM + '\n' + systemPrompt
       }
 
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      const baseMessages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text }
+      ]
+
+      // Build memory context if needed
+      const messages = await buildMemoryContext(baseMessages, systemPrompt)
+
+      const response = await chat(messages, {
+        deep: options.deep || false,
+        search: options.search || false,
+        intent: options.image ? 'image' : options.video ? 'video' : 'chat'
       })
-
-      if (!response.ok) throw new Error('Chat API failed')
-      const data = await response.json()
-
-      return {
-        text: data.response || 'No response',
-        reasoning: data.reasoning || null,
-        tokens: data.usage?.total_tokens || 0,
-      }
-    } catch {
-      return {
-        text: "I'm processing your request. Please give me a moment.",
-        reasoning: 'Fallback (API unavailable)',
-        tokens: 0,
-      }
+      return response
+    } finally {
+      setIsProcessing(false)
     }
   }, [])
 
-  return { sendMessage }
+  const generateImageFromPrompt = useCallback(async (
+    prompt: string,
+    file?: File,
+    options?: { size?: string; ratio?: string; negativePrompt?: string; steps?: number }
+  ): Promise<string> => {
+    setIsProcessing(true)
+    try {
+      return await generateImage({
+        prompt,
+        image: file,
+        size: options?.size,
+        ratio: options?.ratio,
+        negativePrompt: options?.negativePrompt,
+        steps: options?.steps,
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [])
+
+  const generateVideoFromPrompt = useCallback(async (
+    prompt: string,
+    file?: File,
+    options?: { duration?: number; resolution?: string; motion?: number }
+  ): Promise<string> => {
+    setIsProcessing(true)
+    try {
+      return await generateVideo({
+        prompt,
+        image: file,
+        duration: options?.duration,
+        resolution: options?.resolution,
+        motion: options?.motion,
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [])
+
+  const performWebSearch = useCallback(async (query: string): Promise<SearchResult[]> => {
+    setIsProcessing(true)
+    try {
+      return await webSearch(query)
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [])
+
+  const runSETU = useCallback(async (query: string): Promise<Lead[]> => {
+    setIsProcessing(true)
+    try {
+      return await generateLeads(query)
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [])
+
+  return {
+    sendMessage,
+    generateImage: generateImageFromPrompt,
+    generateVideo: generateVideoFromPrompt,
+    webSearch: performWebSearch,
+    runSETU,
+    isProcessing,
+  }
 }
