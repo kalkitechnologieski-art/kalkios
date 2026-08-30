@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, ReactNode } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface ModeToggleButtonProps {
   active: boolean
@@ -23,7 +23,6 @@ export function ModeToggleButton({
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  // Colors based on scheme
   const colors = {
     gold: {
       radialInner: '#ffd215',
@@ -51,7 +50,6 @@ export function ModeToggleButton({
 
   const c = colors[colorScheme]
 
-  // Handle hover with delay for tooltip
   const handleMouseEnter = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
     hoverTimerRef.current = setTimeout(() => {
@@ -67,7 +65,6 @@ export function ModeToggleButton({
     setShowTooltip(false)
   }
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (hoverTimerRef.current) {
@@ -75,11 +72,6 @@ export function ModeToggleButton({
       }
     }
   }, [])
-
-  // Animation only runs when active (add class 'active' to trigger animation)
-  // The button itself uses CSS transitions; we'll control the 'active' class.
-  // For the circle animations, they are always running via CSS, but we can pause them.
-  // We'll use a wrapper to toggle animation-play-state.
 
   return (
     <div className="relative inline-block" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
@@ -119,7 +111,6 @@ export function ModeToggleButton({
         </div>
       </button>
 
-      {/* Tooltip */}
       {showTooltip && (
         <div className="mode-tooltip">
           {tooltip}
@@ -166,11 +157,9 @@ export function ModeToggleButton({
           min-width: 100px;
           height: 42px;
         }
-
         .uiverse-mode-btn.active {
           --duration: 1400ms;
         }
-
         .uiverse-mode-btn:before {
           content: "";
           pointer-events: none;
@@ -185,7 +174,6 @@ export function ModeToggleButton({
             inset 0 3px 12px var(--c-shadow-inset-top),
             inset 0 -3px 4px var(--c-shadow-inset-bottom);
         }
-
         .uiverse-mode-btn .wrapper {
           -webkit-mask-image: -webkit-radial-gradient(white, black);
           overflow: hidden;
@@ -198,13 +186,11 @@ export function ModeToggleButton({
           align-items: center;
           justify-content: center;
         }
-
         .uiverse-mode-btn .wrapper span {
           display: inline-block;
           position: relative;
           z-index: 1;
         }
-
         .uiverse-mode-btn .wrapper .circle {
           position: absolute;
           left: 0;
@@ -218,12 +204,10 @@ export function ModeToggleButton({
           animation: none;
           opacity: 0.6;
         }
-
         .uiverse-mode-btn.active .wrapper .circle {
           animation: var(--animation, none) var(--duration) var(--easing) infinite;
           opacity: 1;
         }
-
         .uiverse-mode-btn .wrapper .circle.circle-1,
         .uiverse-mode-btn .wrapper .circle.circle-9,
         .uiverse-mode-btn .wrapper .circle.circle-10 {
@@ -247,8 +231,6 @@ export function ModeToggleButton({
           --background: var(--c-color-1);
           --blur: 12px;
         }
-
-        /* Circle positions and animations */
         .uiverse-mode-btn .wrapper .circle.circle-1 { --x: 0; --y: -40px; --animation: circle-1; }
         .uiverse-mode-btn .wrapper .circle.circle-2 { --x: 92px; --y: 8px; --animation: circle-2; }
         .uiverse-mode-btn .wrapper .circle.circle-3 { --x: -12px; --y: -12px; --animation: circle-3; }
@@ -261,7 +243,6 @@ export function ModeToggleButton({
         .uiverse-mode-btn .wrapper .circle.circle-10 { --x: 64px; --y: 16px; --animation: circle-10; }
         .uiverse-mode-btn .wrapper .circle.circle-11 { --x: 4px; --y: 4px; --animation: circle-11; }
         .uiverse-mode-btn .wrapper .circle.circle-12 { --blur: 14px; --x: 52px; --y: 4px; --animation: circle-12; }
-
         @keyframes circle-1 {
           33% { transform: translate(0px, 16px) translateZ(0); }
           66% { transform: translate(12px, 64px) translateZ(0); }
@@ -310,8 +291,6 @@ export function ModeToggleButton({
           33% { transform: translate(56px, 0px) translateZ(0); }
           66% { transform: translate(60px, -32px) translateZ(0); }
         }
-
-        /* Tooltip */
         .mode-tooltip {
           position: absolute;
           bottom: calc(100% + 10px);
@@ -334,7 +313,6 @@ export function ModeToggleButton({
           pointer-events: none;
           animation: tooltipFade 0.2s ease-out;
         }
-
         .mode-tooltip::after {
           content: '';
           position: absolute;
@@ -344,13 +322,10 @@ export function ModeToggleButton({
           border: 6px solid transparent;
           border-top-color: #1a1a2e;
         }
-
         @keyframes tooltipFade {
           from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
           to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-
-        /* Responsive */
         @media (max-width: 640px) {
           .uiverse-mode-btn {
             font-size: 12px;

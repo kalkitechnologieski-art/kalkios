@@ -150,7 +150,7 @@ export function CosmicPromptBar({
             <div className="text-overlay">{isLoading ? 'Sending...' : config.label}</div>
           </div>
 
-          {/* Input – RIGHT SIDE (fills remaining space) */}
+          {/* Input – RIGHT SIDE */}
           <div className="relative flex-1 min-w-0">
             <input
               ref={inputRef}
@@ -175,7 +175,6 @@ export function CosmicPromptBar({
           position: relative;
           padding: 4px 0;
         }
-
         .galaxy-bg {
           position: absolute;
           inset: -20px;
@@ -197,7 +196,6 @@ export function CosmicPromptBar({
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.8; }
         }
-
         #cosmic-search-container {
           display: flex;
           align-items: center;
@@ -206,7 +204,6 @@ export function CosmicPromptBar({
           z-index: 1;
           width: 100%;
         }
-
         .nebula-layer,
         .starfield-layer,
         .stardust-layer,
@@ -222,7 +219,6 @@ export function CosmicPromptBar({
           filter: blur(3px);
           pointer-events: none;
         }
-
         .stardust-layer {
           max-height: 63px;
           max-width: 307px;
@@ -252,7 +248,6 @@ export function CosmicPromptBar({
           );
           transition: all 2s;
         }
-
         .cosmic-ring-layer {
           max-height: 59px;
           max-width: 303px;
@@ -282,7 +277,6 @@ export function CosmicPromptBar({
           );
           transition: all 2s;
         }
-
         .starfield-layer {
           max-height: 65px;
           max-width: 312px;
@@ -309,7 +303,6 @@ export function CosmicPromptBar({
           );
           transition: all 2s;
         }
-
         .nebula-layer {
           overflow: hidden;
           filter: blur(30px);
@@ -339,7 +332,6 @@ export function CosmicPromptBar({
           );
           transition: all 2s;
         }
-
         #cosmic-search-container:hover .starfield-layer::before {
           transform: translate(-50%, -50%) rotate(-98deg);
         }
@@ -368,14 +360,12 @@ export function CosmicPromptBar({
           transform: translate(-50%, -50%) rotate(430deg);
           transition: all 4s;
         }
-
         #cosmic-main {
           position: relative;
           width: 100%;
           display: flex;
           align-items: center;
         }
-
         .cosmic-input {
           background-color: #05071b;
           border: none;
@@ -384,14 +374,13 @@ export function CosmicPromptBar({
           border-radius: 10px;
           color: #a9c7ff;
           padding-inline: 16px;
-          font-size: 14px sm:font-size: 18px;
+          font-size: 18px;
           font-family: inherit;
           position: relative;
           z-index: 2;
           outline: none;
           min-width: 0;
         }
-
         .cosmic-input::placeholder {
           color: #6e8cff;
         }
@@ -399,11 +388,9 @@ export function CosmicPromptBar({
           opacity: 0.7;
           cursor: not-allowed;
         }
-
         #cosmic-input-mask {
           display: none;
         }
-
         #cosmic-glow {
           pointer-events: none;
           width: 30px;
@@ -421,7 +408,6 @@ export function CosmicPromptBar({
         #cosmic-glow.opacity-100 {
           opacity: 0.4;
         }
-
         .wormhole-border {
           height: 42px;
           width: 40px;
@@ -465,8 +451,7 @@ export function CosmicPromptBar({
         @keyframes cosmic-rotate {
           100% { transform: translate(-50%, -50%) rotate(450deg); }
         }
-
-        /* ─── Gradient Button (Uiverse style, compact) ─── */
+        /* Gradient Button */
         .btn-wrapper {
           --rad: 20px;
           --color-wrapper-border: transparent;
@@ -480,7 +465,6 @@ export function CosmicPromptBar({
           --color-overlay-glow: #fff;
           --color-overlay-shadow: #0004;
           --color-overlay-highlight: #fff5;
-
           position: relative;
           display: flex;
           align-items: center;
@@ -497,7 +481,6 @@ export function CosmicPromptBar({
           height: 40px;
           flex-shrink: 0;
         }
-
         .gradient-btn {
           position: relative;
           z-index: -1;
@@ -539,7 +522,6 @@ export function CosmicPromptBar({
           mix-blend-mode: difference;
           z-index: 1;
         }
-
         .gradient-layer {
           position: absolute;
           pointer-events: none;
@@ -566,12 +548,10 @@ export function CosmicPromptBar({
         .gradient-layer:last-child {
           mix-blend-mode: color-dodge;
         }
-
         @keyframes rotate {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-
         .text-overlay {
           position: absolute;
           pointer-events: none;
@@ -592,7 +572,6 @@ export function CosmicPromptBar({
           animation: opacityPulse 5s ease infinite;
           white-space: nowrap;
         }
-
         .btn-wrapper:hover .text-overlay {
           transform: scale(1.05);
         }
@@ -607,7 +586,6 @@ export function CosmicPromptBar({
           color: #0000;
           text-shadow: 0 0 0 #0000;
         }
-
         .light {
           position: absolute;
           pointer-events: none;
@@ -620,7 +598,6 @@ export function CosmicPromptBar({
           filter: blur(5px);
           animation: pulse 3s ease-in-out infinite;
         }
-
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.1; }
@@ -629,8 +606,6 @@ export function CosmicPromptBar({
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
         }
-
-        /* Responsive */
         @media (max-width: 640px) {
           .cosmic-input {
             font-size: 14px;
