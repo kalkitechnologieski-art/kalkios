@@ -10,6 +10,7 @@ export class SiddhiAgent {
   private cot: ChainOfThought;
 
   constructor() {
+    console.log("[DIAGNOSTIC] SiddhiAgent constructor called");
     this.router = new IntelligentRouter();
     this.cot = new ChainOfThought();
   }
@@ -17,101 +18,121 @@ export class SiddhiAgent {
   async process(request: { messages: any[]; userId?: string; stream?: boolean }) {
     const { messages, userId, stream = true } = request;
     const lastMessage = messages[messages.length - 1]?.content || "";
+    console.log("[DIAGNOSTIC] SiddhiAgent.process called with lastMessage:", lastMessage);
 
     const intent = this.detectIntent(lastMessage);
+    console.log("[DIAGNOSTIC] Detected intent:", intent);
 
     try {
+      let result: any;
+
       if (intent === "deep_think") {
-        return this.handleDeepThink(lastMessage, stream);
-      }
-
-      if (intent === "web_search") {
-        return this.handleWebSearch(lastMessage, stream);
-      }
-
-      if (intent === "run_setu") {
-        return this.handleSETU(lastMessage, stream);
-      }
-
-      if (intent === "generate_image") {
-        return this.handleImageGeneration(lastMessage, stream);
-      }
-
-      if (intent === "generate_video") {
-        return this.handleVideoGeneration(lastMessage, stream);
-      }
-
-      const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
-      return this.router.route({
-        messages: enhancedMessages,
-        stream,
-        userId,
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "web_search",
-              description: "Search the web for real-time information.",
-              parameters: {
-                type: "object",
-                properties: {
-                  query: { type: "string", description: "The search query." },
+        console.log("[DIAGNOSTIC] Handling deep_think");
+        result = await this.handleDeepThink(lastMessage, stream);
+      } else if (intent === "web_search") {
+        console.log("[DIAGNOSTIC] Handling web_search");
+        result = await this.handleWebSearch(lastMessage, stream);
+      } else if (intent === "run_setu") {
+        console.log("[DIAGNOSTIC] Handling run_setu");
+        result = await this.handleSETU(lastMessage, stream);
+      } else if (intent === "generate_image") {
+        console.log("[DIAGNOSTIC] Handling generate_image");
+        result = await this.handleImageGeneration(lastMessage, stream);
+      } else if (intent === "generate_video") {
+        console.log("[DIAGNOSTIC] Handling generate_video");
+        result = await this.handleVideoGeneration(lastMessage, stream);
+      } else {
+        console.log("[DIAGNOSTIC] Handling general chat");
+        const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
+        result = await this.router.route({
+          messages: enhancedMessages,
+          stream,
+          userId,
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "web_search",
+                description: "Search the web for real-time information.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "The search query." },
+                  },
+                  required: ["query"],
                 },
-                required: ["query"],
               },
             },
-          },
-          {
-            type: "function",
-            function: {
-              name: "generate_image",
-              description: "Generate an image from a text prompt.",
-              parameters: {
-                type: "object",
-                properties: {
-                  prompt: { type: "string", description: "The image description." },
-                  size: { type: "string", enum: ["1K", "2K", "3K", "4K"] },
-                  ratio: { type: "string", enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"] },
+            {
+              type: "function",
+              function: {
+                name: "generate_image",
+                description: "Generate an image from a text prompt.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    prompt: { type: "string", description: "The image description." },
+                    size: { type: "string", enum: ["1K", "2K", "3K", "4K"] },
+                    ratio: { type: "string", enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"] },
+                  },
+                  required: ["prompt"],
                 },
-                required: ["prompt"],
               },
             },
-          },
-          {
-            type: "function",
-            function: {
-              name: "generate_video",
-              description: "Generate a short video from a text prompt.",
-              parameters: {
-                type: "object",
-                properties: {
-                  prompt: { type: "string", description: "The video description." },
-                  duration: { type: "string", enum: ["5", "10"] },
-                  resolution: { type: "string", enum: ["720P", "1080P", "4K"] },
+            {
+              type: "function",
+              function: {
+                name: "generate_video",
+                description: "Generate a short video from a text prompt.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    prompt: { type: "string", description: "The video description." },
+                    duration: { type: "string", enum: ["5", "10"] },
+                    resolution: { type: "string", enum: ["720P", "1080P", "4K"] },
+                  },
+                  required: ["prompt"],
                 },
-                required: ["prompt"],
               },
             },
-          },
-          {
-            type: "function",
-            function: {
-              name: "run_setu",
-              description: "Find business leads based on criteria.",
-              parameters: {
-                type: "object",
-                properties: {
-                  query: { type: "string", description: "The lead search query." },
-                  count: { type: "number", description: "Number of leads to find." },
+            {
+              type: "function",
+              function: {
+                name: "run_setu",
+                description: "Find business leads based on criteria.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "The lead search query." },
+                    count: { type: "number", description: "Number of leads to find." },
+                  },
+                  required: ["query"],
                 },
-                required: ["query"],
               },
             },
-          },
-        ],
-      });
+          ],
+        });
+      }
+
+      console.log("[DIAGNOSTIC] Result from handler:", result ? typeof result : "null");
+      if (result && typeof result === "object" && result.then) {
+        console.log("[DIAGNOSTIC] Result is a Promise, waiting...");
+        result = await result;
+        console.log("[DIAGNOSTIC] Result after await:", result ? typeof result : "null");
+      }
+
+      // If result is still null/undefined, return a fallback
+      if (!result) {
+        console.log("[DIAGNOSTIC] Result is null/undefined, returning fallback");
+        return {
+          type: "content",
+          content: "I'm having trouble processing your request. Please try again later.",
+        };
+      }
+
+      return result;
     } catch (error) {
-      console.error("[ADMIN] SiddhiAgent error:", error);
+      console.error("[DIAGNOSTIC] SiddhiAgent error:", error);
       return {
         type: "content",
         content: "I'm having trouble processing your request. Please try again later.",
