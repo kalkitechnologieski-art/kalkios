@@ -1,134 +1,59 @@
-'use client'
+'use client';
 
-import { motion } from 'framer-motion'
-import { ReactNode, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Copy, Pencil, RotateCcw, ThumbsUp, ThumbsDown, Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { toSafeString } from '@/lib/utils/string'
+import { ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 interface LuxuryMessageProps {
-  children: ReactNode
-  role: 'user' | 'assistant'
-  timestamp?: Date
-  className?: string
-  isStreaming?: boolean
-  onCopy?: () => void
-  onEdit?: () => void
-  onRegenerate?: () => void
-  onLike?: () => void
-  onDislike?: () => void
-  showActions?: boolean
+  children: ReactNode;
+  role: "user" | "assistant" | "system";
+  timestamp?: Date;
+  className?: string;
+  isStreaming?: boolean;
 }
 
-export function LuxuryMessage({
-  children,
-  role,
-  timestamp,
-  className = '',
-  isStreaming = false,
-  onCopy,
-  onEdit,
-  onRegenerate,
-  onLike,
-  onDislike,
-  showActions = true,
-}: LuxuryMessageProps) {
-  const [copied, setCopied] = useState(false)
+export function LuxuryMessage({ children, role, timestamp, className = "", isStreaming = false }: LuxuryMessageProps) {
+  const isUser = role === "user";
+  const isSystem = role === "system";
 
-  const handleCopy = () => {
-    if (onCopy) {
-      onCopy()
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+  // Convert children to string for markdown
+  const content = typeof children === "string" ? children : String(children);
+
+  // System messages are centered with special styling
+  if (isSystem) {
+    return (
+      <div className="flex justify-center my-2">
+        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
+          {content}
+        </div>
+      </div>
+    );
   }
 
-  const showEdit = role === 'user' && onEdit
-  const showRegenerate = role === 'assistant' && onRegenerate
-  const showLike = role === 'assistant' && onLike
-  const showDislike = role === 'assistant' && onDislike
-
-  // SAFETY: Ensure children is a string for markdown rendering
-  const contentString = typeof children === 'string' ? children : toSafeString(children)
-
-  // For user messages, just render plain text (no markdown)
-  // For assistant messages, render markdown
-  const content = role === 'assistant' ? (
-    <div className="prose prose-invert prose-sm max-w-none dark:prose-invert">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {contentString}
-      </ReactMarkdown>
-    </div>
-  ) : (
-    <span>{contentString}</span>
-  )
-
   return (
-    <motion.div
+    <div
       className={cn(
-        `max-w-[85%] rounded-2xl px-4 py-3 relative`,
-        role === 'user'
-          ? 'ml-auto bg-gradient-to-r from-cyan-600/20 to-purple-600/20 border border-cyan-500/20 text-white shadow-[0_0_30px_rgba(0,255,255,0.05)]'
-          : 'bg-white/5 border border-white/10 text-white/90 backdrop-blur-sm',
-        isStreaming && 'border-cyan-500/40',
+        "flex flex-col max-w-[85%] rounded-2xl px-4 py-3 relative",
+        isUser
+          ? "ml-auto bg-gradient-to-r from-cyan-600/20 to-purple-600/20 border border-cyan-500/20 text-white shadow-[0_0_30px_rgba(0,255,255,0.05)]"
+          : "bg-white/5 border border-white/10 text-white/90 backdrop-blur-sm",
+        isStreaming && "border-cyan-500/40",
         className
       )}
-      initial={{ opacity: 0, y: 15, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
     >
-      {content}
+      {isUser ? (
+        <span className="whitespace-pre-wrap break-words">{content}</span>
+      ) : (
+        <div className="prose prose-invert prose-sm max-w-none dark:prose-invert break-words">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      )}
       {timestamp && (
         <div className="text-[10px] text-white/30 mt-1 text-right">
-          {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       )}
-      {showActions && !isStreaming && (
-        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/5 justify-end">
-          {onCopy && (
-            <button
-              onClick={handleCopy}
-              className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          )}
-          {showEdit && (
-            <button
-              onClick={onEdit}
-              className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {showRegenerate && (
-            <button
-              onClick={onRegenerate}
-              className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {showLike && (
-            <button
-              onClick={onLike}
-              className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-green-400 transition"
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {showDislike && (
-            <button
-              onClick={onDislike}
-              className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-red-400 transition"
-            >
-              <ThumbsDown className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      )}
-    </motion.div>
-  )
+    </div>
+  );
 }
