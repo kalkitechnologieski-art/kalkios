@@ -10,7 +10,6 @@ export class SiddhiAgent {
   private cot: ChainOfThought;
 
   constructor() {
-    console.log("[DIAGNOSTIC] SiddhiAgent constructor called");
     this.router = new IntelligentRouter();
     this.cot = new ChainOfThought();
   }
@@ -18,112 +17,39 @@ export class SiddhiAgent {
   async process(request: { messages: any[]; userId?: string; stream?: boolean }) {
     const { messages, userId, stream = true } = request;
     const lastMessage = messages[messages.length - 1]?.content || "";
-    console.log("[DIAGNOSTIC] SiddhiAgent.process called with lastMessage:", lastMessage);
 
     const intent = this.detectIntent(lastMessage);
-    console.log("[DIAGNOSTIC] Detected intent:", intent);
+    console.log("[SiddhiAgent] Intent:", intent);
 
     try {
       let result: any;
 
-      if (intent === "deep_think") {
-        console.log("[DIAGNOSTIC] Handling deep_think");
-        result = await this.handleDeepThink(lastMessage, stream);
-      } else if (intent === "web_search") {
-        console.log("[DIAGNOSTIC] Handling web_search");
-        result = await this.handleWebSearch(lastMessage, stream);
-      } else if (intent === "run_setu") {
-        console.log("[DIAGNOSTIC] Handling run_setu");
-        result = await this.handleSETU(lastMessage, stream);
-      } else if (intent === "generate_image") {
-        console.log("[DIAGNOSTIC] Handling generate_image");
-        result = await this.handleImageGeneration(lastMessage, stream);
-      } else if (intent === "generate_video") {
-        console.log("[DIAGNOSTIC] Handling generate_video");
-        result = await this.handleVideoGeneration(lastMessage, stream);
-      } else {
-        console.log("[DIAGNOSTIC] Handling general chat");
-        const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
-        result = await this.router.route({
-          messages: enhancedMessages,
-          stream,
-          userId,
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "web_search",
-                description: "Search the web for real-time information.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    query: { type: "string", description: "The search query." },
-                  },
-                  required: ["query"],
-                },
-              },
-            },
-            {
-              type: "function",
-              function: {
-                name: "generate_image",
-                description: "Generate an image from a text prompt.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    prompt: { type: "string", description: "The image description." },
-                    size: { type: "string", enum: ["1K", "2K", "3K", "4K"] },
-                    ratio: { type: "string", enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"] },
-                  },
-                  required: ["prompt"],
-                },
-              },
-            },
-            {
-              type: "function",
-              function: {
-                name: "generate_video",
-                description: "Generate a short video from a text prompt.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    prompt: { type: "string", description: "The video description." },
-                    duration: { type: "string", enum: ["5", "10"] },
-                    resolution: { type: "string", enum: ["720P", "1080P", "4K"] },
-                  },
-                  required: ["prompt"],
-                },
-              },
-            },
-            {
-              type: "function",
-              function: {
-                name: "run_setu",
-                description: "Find business leads based on criteria.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    query: { type: "string", description: "The lead search query." },
-                    count: { type: "number", description: "Number of leads to find." },
-                  },
-                  required: ["query"],
-                },
-              },
-            },
-          ],
-        });
+      switch (intent) {
+        case "deep_think":
+          result = await this.handleDeepThink(lastMessage, stream);
+          break;
+        case "web_search":
+          result = await this.handleWebSearch(lastMessage, stream);
+          break;
+        case "run_setu":
+          result = await this.handleSETU(lastMessage, stream);
+          break;
+        case "generate_image":
+          result = await this.handleImageGeneration(lastMessage, stream);
+          break;
+        case "generate_video":
+          result = await this.handleVideoGeneration(lastMessage, stream);
+          break;
+        default:
+          const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
+          result = await this.router.route({
+            messages: enhancedMessages,
+            stream,
+            userId,
+          });
       }
 
-      console.log("[DIAGNOSTIC] Result from handler:", result ? typeof result : "null");
-      if (result && typeof result === "object" && result.then) {
-        console.log("[DIAGNOSTIC] Result is a Promise, waiting...");
-        result = await result;
-        console.log("[DIAGNOSTIC] Result after await:", result ? typeof result : "null");
-      }
-
-      // If result is still null/undefined, return a fallback
       if (!result) {
-        console.log("[DIAGNOSTIC] Result is null/undefined, returning fallback");
         return {
           type: "content",
           content: "I'm having trouble processing your request. Please try again later.",
@@ -131,11 +57,11 @@ export class SiddhiAgent {
       }
 
       return result;
-    } catch (error) {
-      console.error("[DIAGNOSTIC] SiddhiAgent error:", error);
+    } catch (error: any) {
+      console.error("[SiddhiAgent] Error:", error);
       return {
         type: "content",
-        content: "I'm having trouble processing your request. Please try again later.",
+        content: "I encountered an issue. Please try again.",
       };
     }
   }
@@ -145,15 +71,9 @@ export class SiddhiAgent {
 
     if (lower.includes("generate image") || lower.includes("create image") || lower.includes("draw")) return "generate_image";
     if (lower.includes("generate video") || lower.includes("create video") || lower.includes("animate")) return "generate_video";
-    if (lower.includes("lead") || lower.includes("prospect") || lower.includes("find customers")) return "run_setu";
-    if (lower.includes("search") || lower.includes("find") || lower.includes("latest news")) return "web_search";
-    if (
-      lower.includes("explain") ||
-      lower.includes("analyze") ||
-      lower.includes("why") ||
-      lower.includes("how") ||
-      lower.length > 30
-    ) {
+    if (lower.includes("lead") || lower.includes("prospect") || lower.includes("find customers") || lower.includes("find leads")) return "run_setu";
+    if (lower.includes("search") || lower.includes("find") || lower.includes("latest news") || lower.includes("today")) return "web_search";
+    if (lower.includes("explain") || lower.includes("analyze") || lower.includes("why") || lower.includes("how") || lower.length > 30) {
       return "deep_think";
     }
     return "general";
@@ -171,11 +91,7 @@ export class SiddhiAgent {
     const agent = new SETUAgent(query);
     const questions = await agent.generateQuestions();
     if (questions.length > 0) {
-      return {
-        type: "questions",
-        questions,
-        stream: false,
-      };
+      return { type: "questions", questions, stream: false };
     }
     return {
       type: "setu_pending",

@@ -21,15 +21,13 @@ export class ChainOfThought {
 
     if (deep) {
       try {
-        // Limit search to 5 results for speed (Vercel Hobby 60s limit)
         const searchResults = await this.zhipu.webSearch({
           search_query: query,
-          count: 5,
+          count: 8,
           search_recency_filter: "noLimit",
         });
 
-        // Read only first 3 pages
-        for (const result of (searchResults.search_result || []).slice(0, 3)) {
+        for (const result of searchResults.search_result || []) {
           try {
             const reader = await this.zhipu.webReader({
               url: result.link,
@@ -42,7 +40,7 @@ export class ChainOfThought {
         const context = sources.map((s) => `[${s.title}](${s.link}): ${s.content.slice(0, 500)}`).join("\n\n");
         groundedPrompt = `Answer the following question based on these sources:\n${context}\n\nQuestion: ${query}`;
       } catch (error) {
-        console.warn("Web grounding failed, falling back to regular query:", error);
+        console.warn("Web grounding failed, falling back:", error);
         groundedPrompt = query;
       }
     }
@@ -77,7 +75,7 @@ export class ChainOfThought {
 
     try {
       const timeoutPromise = new Promise((_, reject) => {
-        timeout = setTimeout(() => reject(new Error("Stream timeout")), 55000);
+        timeout = setTimeout(() => reject(new Error("Stream timeout")), 60000);
       });
 
       while (true) {

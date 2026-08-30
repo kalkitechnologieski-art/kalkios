@@ -30,20 +30,10 @@ export class IntelligentRouter {
   private clients: Record<Provider, any>;
 
   constructor() {
-    console.log("[DIAGNOSTIC] IntelligentRouter constructor");
-    try {
-      this.agnes = new AgnesClient();
-      console.log("[DIAGNOSTIC] Agnes client initialized");
-      this.groq = new GroqClient();
-      console.log("[DIAGNOSTIC] Groq client initialized");
-      this.openrouter = new OpenRouterClient();
-      console.log("[DIAGNOSTIC] OpenRouter client initialized");
-      this.zhipu = new ZhipuClient();
-      console.log("[DIAGNOSTIC] Zhipu client initialized");
-    } catch (error: any) {
-      console.error("[DIAGNOSTIC] Router constructor error:", error.message);
-      throw error;
-    }
+    this.agnes = new AgnesClient();
+    this.groq = new GroqClient();
+    this.openrouter = new OpenRouterClient();
+    this.zhipu = new ZhipuClient();
     this.rateLimiter = new RateLimiter();
     this.circuitBreaker = new CircuitBreaker();
     this.providerOrder = ["agnes", "groq", "openrouter", "zhipu"];
@@ -56,7 +46,6 @@ export class IntelligentRouter {
   }
 
   async route(request: RouteRequest): Promise<any> {
-    console.log("[DIAGNOSTIC] Router.route called");
     const { messages, stream = false, deep, tools, image_url, provider: preferred, userId } = request;
 
     let providers: Provider[];
@@ -65,40 +54,28 @@ export class IntelligentRouter {
     } else {
       providers = this.providerOrder;
     }
-    console.log("[DIAGNOSTIC] Provider order:", providers);
 
     let lastError: Error | null = null;
 
     for (const provider of providers) {
-      console.log("[DIAGNOSTIC] Trying provider:", provider);
-      if (this.circuitBreaker.isOpen(provider)) {
-        console.log("[DIAGNOSTIC] Circuit open for provider:", provider);
-        continue;
-      }
-      if (!(await this.rateLimiter.check(provider))) {
-        console.log("[DIAGNOSTIC] Rate limited for provider:", provider);
-        continue;
-      }
+      if (this.circuitBreaker.isOpen(provider)) continue;
+      if (!(await this.rateLimiter.check(provider))) continue;
 
       try {
-        console.log("[DIAGNOSTIC] Calling provider:", provider);
         const result = await withRetry(
           () => this.callProvider(provider, request),
           provider,
           this.circuitBreaker
         );
-        console.log("[DIAGNOSTIC] Provider succeeded:", provider);
         await auditLog(userId, "ai_chat_success", provider, result);
         return result;
       } catch (error) {
         const err = error as Error;
         lastError = err;
-        console.log("[DIAGNOSTIC] Provider failed:", provider, err.message);
         await auditLog(userId, "ai_chat_failure", provider, { error: err.message });
       }
     }
 
-    console.log("[DIAGNOSTIC] All providers failed, returning fallback");
     return this.fallbackResponse(messages, lastError, userId);
   }
 

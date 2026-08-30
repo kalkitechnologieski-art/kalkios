@@ -46,7 +46,6 @@ export class SETUAgent {
       count: 20,
     });
 
-    // Limit to first 5 results for speed (Vercel Hobby 60s limit)
     const pages = [];
     for (const result of (searchResults.search_result || []).slice(0, 5)) {
       try {
@@ -109,9 +108,7 @@ export class SETUAgent {
     return Array.from(seen.values());
   }
 
-  getLeads() {
-    return this.leads;
-  }
+  getLeads() { return this.leads; }
 
   getCSV(): string {
     if (!this.leads.length) return "No leads found.";
@@ -125,9 +122,7 @@ export class SETUAgent {
       l.source_url || "",
       `${Math.round(l.confidence * 100)}%`,
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join(
-      "\n"
-    );
+    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
     return "\uFEFF" + csv;
   }
 
