@@ -4,22 +4,23 @@ import { useState, useEffect, useRef } from "react";
 import { useStreamingChat } from "@/hooks/useStreamingChat";
 import { ReasoningTrace } from "@/components/chat/ReasoningTrace";
 import { SetuProgress } from "@/components/chat/SetuProgress";
+import { MediaSettings } from "@/components/chat/MediaSettings";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { LuxuryMessage } from "@/components/chat/LuxuryMessage";
 import { NeonComposer } from "@/components/chat/NeonComposer";
 import { ThinkingTrace } from "@/components/chat/ThinkingTrace";
 import { GradientGlowBackground } from "@/components/ui/GradientGlowBackground";
-import { Bot, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-
-// Re-export the existing components to keep the same look
 import { ThinkingLoader } from "@/components/ui/ThinkingLoader";
+import { Bot } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function ChatClient() {
-  const { messages, isLoading, error, sendMessage, abort, clearError } = useStreamingChat();
+  const { messages, isLoading, error, sendMessage, clearError } = useStreamingChat();
   const [deepThink, setDeepThink] = useState(false);
   const [setuMode, setSetuMode] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
   const [mode, setMode] = useState<"chat" | "image" | "video">("chat");
+  const [mediaSettings, setMediaSettings] = useState<any>(null);
   const [isMounted, setIsMounted] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -36,9 +37,13 @@ export default function ChatClient() {
     await sendMessage(text, { deep: deepThink, setu: setuMode });
   };
 
-  const handleClear = () => {
-    // Optionally clear chat
+  const handleMediaGenerate = async (settings: any) => {
+    console.log("Generating media with settings:", settings);
+    const prompt = `Generate ${mode} with settings: ${JSON.stringify(settings)}`;
+    await sendMessage(prompt, { deep: false, setu: false });
   };
+
+  const handleClear = () => {};
 
   if (!isMounted) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="text-white/40">Loading Siddhi...</div></div>;
@@ -49,7 +54,6 @@ export default function ChatClient() {
       <div className="relative flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto px-2">
         <GradientGlowBackground isThinking={isLoading} />
 
-        {/* Top Bar */}
         <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -65,10 +69,21 @@ export default function ChatClient() {
           <div className="flex gap-1 flex-wrap">
             <CyberToggle active={deepThink} onClick={() => setDeepThink(!deepThink)} label="Deep" color="purple" />
             <CyberToggle active={setuMode} onClick={() => setSetuMode(!setuMode)} label="SETU" color="amber" />
+            <CyberToggle active={searchMode} onClick={() => setSearchMode(!searchMode)} label="Search" color="blue" />
+            <CyberToggle active={mode === "image"} onClick={() => setMode(mode === "image" ? "chat" : "image")} label="Image" color="pink" />
+            <CyberToggle active={mode === "video"} onClick={() => setMode(mode === "video" ? "chat" : "video")} label="Video" color="red" />
           </div>
         </div>
 
-        {/* Messages */}
+        {(mode === "image" || mode === "video") && (
+          <MediaSettings
+            mode={mode}
+            onSettingsChange={setMediaSettings}
+            onGenerate={handleMediaGenerate}
+            isLoading={isLoading}
+          />
+        )}
+
         <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
           {messages.map((msg) => (
             <motion.div
@@ -135,7 +150,6 @@ export default function ChatClient() {
           <div ref={endRef} />
         </div>
 
-        {/* Input */}
         <div className="pt-2 border-t border-white/5">
           <NeonComposer
             onSend={handleSend}
@@ -146,6 +160,8 @@ export default function ChatClient() {
             setIsDeepThink={setDeepThink}
             isSetuMode={setuMode}
             setIsSetuMode={setSetuMode}
+            isSearchMode={searchMode}
+            setIsSearchMode={setSearchMode}
             onClear={handleClear}
           />
         </div>
@@ -154,11 +170,13 @@ export default function ChatClient() {
   );
 }
 
-// CyberToggle component (same as before)
 function CyberToggle({ active, onClick, label, color }: any) {
   const colors: any = {
     purple: "active:bg-purple-600/30 active:text-purple-400 active:border-purple-500/30",
     amber: "active:bg-amber-600/30 active:text-amber-400 active:border-amber-500/30",
+    blue: "active:bg-blue-600/30 active:text-blue-400 active:border-blue-500/30",
+    pink: "active:bg-pink-600/30 active:text-pink-400 active:border-pink-500/30",
+    red: "active:bg-red-600/30 active:text-red-400 active:border-red-500/30",
   };
   return (
     <button
