@@ -1,23 +1,38 @@
-import { redisClient } from "@/lib/cache/redis";
+import { memoryStore } from "@/lib/cache/redis";
 
-// RPM limits from Agnes AI documentation (Free tier)
-// https://wiki.agnes-ai.com/token-plan-faq
 const RPM_LIMITS: Record<string, number> = {
-  agnes: 20,      // Free tier
-  groq: 30,       // Groq free tier
-  openrouter: 20, // OpenRouter free tier
-  zhipu: 100,     // Zhipu paid tier
+  agnes: 20,
+  groq: 30,
+  openrouter: 20,
+  zhipu: 100,
 };
 
 export class RateLimiter {
   async check(provider: string): Promise<boolean> {
     const key = `ratelimit:${provider}`;
-    if (!redisClient) return true;
-    const current = await redisClient.incr(key);
-    if (current === 1) {
-      await redisClient.expire(key, 60);
-    }
     const limit = RPM_LIMITS[provider] || 10;
+    const current = memoryStore.increment(key, 60);
+
+    // Log when rate limit is close to being exceeded
+    if (current > limit * 0.8) {
+      console.warn(`[RateLimiter] ${provider} at ${current}/${limit} RPM`);
+    }
+
     return current <= limit;
+  }
+
+  // Reset rate limit for a provider (useful for testing)
+  reset(provider: string): void {
+    memoryStore.reset(`ratelimit:${provider}`);
+  }
+
+  // Get current usage
+  getUsage(provider: string): { current: number; limit: number } {
+    const key = `ratelimit:${provider}`;
+    const entry = memoryStore.get(key);
+    return {
+      current: entry?.count || 0,
+      limit: RPM_LIMITS[provider] || 10,
+    };
   }
 }

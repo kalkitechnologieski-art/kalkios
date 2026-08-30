@@ -384,7 +384,7 @@ export function CosmicPromptBar({
           border-radius: 10px;
           color: #a9c7ff;
           padding-inline: 16px;
-          font-size: 14px sm:font-size: 18px;
+          font-size: 18px;
           font-family: inherit;
           position: relative;
           z-index: 2;
