@@ -3,15 +3,22 @@ import { AgnesClient } from "@/lib/providers/agnes/client";
 import { GroqClient } from "@/lib/providers/groq/client";
 import { OpenRouterClient } from "@/lib/providers/openrouter/client";
 import { ZhipuClient } from "@/lib/providers/zhipu/client";
+import { validateEnv, getEnvStatusMessage, getProviderStatus } from "@/lib/env/validation";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const envStatus = validateEnv();
+  const providerStatus = getProviderStatus();
+
   const statuses: Record<string, string> = {};
   let allOk = true;
 
-  const providers = [
-    {
+  // Only ping providers that have keys
+  const providers = [];
+
+  if (providerStatus.agnes) {
+    providers.push({
       name: "agnes",
       ping: async () => {
         const client = new AgnesClient();
@@ -23,8 +30,13 @@ export async function GET() {
           stream: false,
         });
       },
-    },
-    {
+    });
+  } else {
+    statuses["agnes"] = "not configured (no API key)";
+  }
+
+  if (providerStatus.groq) {
+    providers.push({
       name: "groq",
       ping: async () => {
         const client = new GroqClient();
@@ -36,8 +48,13 @@ export async function GET() {
           stream: false,
         });
       },
-    },
-    {
+    });
+  } else {
+    statuses["groq"] = "not configured (no API key)";
+  }
+
+  if (providerStatus.openrouter) {
+    providers.push({
       name: "openrouter",
       ping: async () => {
         const client = new OpenRouterClient();
@@ -49,15 +66,22 @@ export async function GET() {
           stream: false,
         });
       },
-    },
-    {
+    });
+  } else {
+    statuses["openrouter"] = "not configured (no API key)";
+  }
+
+  if (providerStatus.zhipu) {
+    providers.push({
       name: "zhipu",
       ping: async () => {
         const client = new ZhipuClient();
         await client.webSearch({ search_query: "ping", count: 1 });
       },
-    },
-  ];
+    });
+  } else {
+    statuses["zhipu"] = "not configured (no API key)";
+  }
 
   for (const p of providers) {
     try {
@@ -71,11 +95,16 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      status: allOk ? "healthy" : "degraded",
+      status: allOk && envStatus.valid ? "healthy" : "degraded",
       timestamp: new Date().toISOString(),
+      environment: {
+        valid: envStatus.valid,
+        message: getEnvStatusMessage(),
+        providers: providerStatus,
+      },
       providers: statuses,
       uptime: process.uptime(),
     },
-    { status: allOk ? 200 : 503 }
+    { status: allOk && envStatus.valid ? 200 : 503 }
   );
 }

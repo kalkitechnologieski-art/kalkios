@@ -25,34 +25,21 @@ export type AgnesChatRequest = z.infer<typeof AgnesChatRequestSchema>;
 export class AgnesClient {
   private apiKey: string;
   private baseUrl: string;
-  private rpm: number;
-  private requests: number[] = [];
 
   constructor() {
     const key = process.env.AGNES_API_KEY;
-    if (!key) throw new Error("AGNES_API_KEY not set");
-    this.apiKey = key;
-    this.baseUrl = AGNES_BASE;
-    this.rpm = 20;
-  }
-
-  private async waitForRateLimit(): Promise<void> {
-    const now = Date.now();
-    this.requests = this.requests.filter((t) => now - t < 60000);
-    if (this.requests.length >= this.rpm) {
-      const oldest = this.requests[0] || 0;
-      const wait = 60000 - (now - oldest);
-      if (wait > 0) {
-        await new Promise((resolve) => setTimeout(resolve, wait + 100));
-      }
+    if (!key) {
+      console.warn("[DIAGNOSTIC] AGNES_API_KEY not set");
+      // We'll allow the client to be created but will fail gracefully on calls
     }
-    this.requests.push(now);
+    this.apiKey = key || "";
+    this.baseUrl = AGNES_BASE;
   }
 
   private async fetchWithTimeout(
     url: string,
     options: RequestInit,
-    timeout = 60000
+    timeout = 30000
   ): Promise<Response> {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -67,7 +54,9 @@ export class AgnesClient {
   }
 
   async chat(request: AgnesChatRequest): Promise<any> {
-    await this.waitForRateLimit();
+    if (!this.apiKey) {
+      throw new Error("AGNES_API_KEY is not set");
+    }
     const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -78,19 +67,22 @@ export class AgnesClient {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(`Agnes service unavailable (${response.status}): please try again later`);
+      }
       throw new Error(`Agnes chat error ${response.status}: ${text}`);
     }
     const data = await response.json();
-    // Agnes sometimes returns empty content with thinking mode
-    if (data.choices?.[0]?.message?.content === "" && data.choices?.[0]?.message?.reasoning_content) {
-      // If content is empty but reasoning exists, use a default message
-      data.choices[0].message.content = "I've processed your request. Please continue.";
+    if (!data.choices?.[0]?.message?.content && !data.choices?.[0]?.message?.reasoning_content) {
+      throw new Error("Agnes returned empty response");
     }
     return data;
   }
 
   async chatStream(request: AgnesChatRequest): Promise<ReadableStream | null> {
-    await this.waitForRateLimit();
+    if (!this.apiKey) {
+      throw new Error("AGNES_API_KEY is not set");
+    }
     const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -101,13 +93,18 @@ export class AgnesClient {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(`Agnes service unavailable (${response.status}): please try again later`);
+      }
       throw new Error(`Agnes stream error ${response.status}: ${text}`);
     }
     return response.body;
   }
 
   async image(body: any): Promise<any> {
-    await this.waitForRateLimit();
+    if (!this.apiKey) {
+      throw new Error("AGNES_API_KEY is not set");
+    }
     const response = await this.fetchWithTimeout(`${this.baseUrl}/images/generations`, {
       method: "POST",
       headers: {
@@ -118,13 +115,18 @@ export class AgnesClient {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(`Agnes image service unavailable (${response.status})`);
+      }
       throw new Error(`Agnes image error ${response.status}: ${text}`);
     }
     return response.json();
   }
 
   async video(body: any): Promise<any> {
-    await this.waitForRateLimit();
+    if (!this.apiKey) {
+      throw new Error("AGNES_API_KEY is not set");
+    }
     const response = await this.fetchWithTimeout(`${this.baseUrl}/videos`, {
       method: "POST",
       headers: {
@@ -135,13 +137,18 @@ export class AgnesClient {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(`Agnes video service unavailable (${response.status})`);
+      }
       throw new Error(`Agnes video error ${response.status}: ${text}`);
     }
     return response.json();
   }
 
   async videoStatus(videoId: string, modelName: string = "agnes-video-2.5-flash"): Promise<any> {
-    await this.waitForRateLimit();
+    if (!this.apiKey) {
+      throw new Error("AGNES_API_KEY is not set");
+    }
     const response = await this.fetchWithTimeout(
       `${this.baseUrl}/agnesapi?video_id=${videoId}&model_name=${modelName}`,
       {
@@ -150,25 +157,11 @@ export class AgnesClient {
     );
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(`Agnes video status service unavailable (${response.status})`);
+      }
       throw new Error(`Agnes video status error ${response.status}: ${text}`);
     }
     return response.json();
-  }
-
-  async pollVideo(videoId: string, modelName: string = "agnes-video-2.5-flash", maxAttempts: number = 120, interval: number = 2000): Promise<any> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, interval));
-      const status = await this.videoStatus(videoId, modelName);
-      if (status.status === "completed") {
-        return status;
-      }
-      if (status.status === "failed") {
-        throw new Error(`Video generation failed: ${status.error?.message || "Unknown error"}`);
-      }
-      if (attempt > 30) {
-        interval = 3000;
-      }
-    }
-    throw new Error("Video generation timed out");
   }
 }
