@@ -30,15 +30,20 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ type: "status", message: "Connecting to Siddhi..." })}\n\n`));
-
       const agent = new SiddhiAgent();
       const result = await agent.process({ messages, userId, stream: true });
 
       if (result && typeof result[Symbol.asyncIterator] === "function") {
+        let hasContent = false;
         for await (const chunk of result) {
-          if (chunk.type === "content" && (!chunk.content || chunk.content === "")) continue;
+          if (chunk.type === "content" && (!chunk.content || chunk.content === "")) {
+            continue;
+          }
+          hasContent = true;
           await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+        }
+        if (!hasContent) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: "content", content: "I'm having trouble generating a response. Please try again." })}\n\n`));
         }
       } else if (result?.type === "questions") {
         await writer.write(encoder.encode(`data: ${JSON.stringify({ type: "questions", questions: result.questions })}\n\n`));

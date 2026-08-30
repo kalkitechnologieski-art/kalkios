@@ -31,35 +31,42 @@ export function useStreamingChat() {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API error:", response.status, errorText);
         if (response.status >= 500) setError("I'm having trouble connecting. Please try again later.");
         else setError("Something went wrong. Please try again.");
-        console.error("API error:", response.status);
         return;
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullContent = "", fullReasoning = "";
+      let buffer = "";
 
       while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
             if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
-              if (parsed.type === "error") setError(parsed.message);
-              if (parsed.type === "content") {
+              if (parsed.type === "error") {
+                setError(parsed.message);
+                continue;
+              }
+              if (parsed.type === "content" && parsed.content) {
                 fullContent += parsed.content;
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, content: fullContent } : m
                 ));
               }
-              if (parsed.type === "reasoning") {
+              if (parsed.type === "reasoning" && parsed.content) {
                 fullReasoning += parsed.content;
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, reasoning: fullReasoning } : m
@@ -71,8 +78,15 @@ export function useStreamingChat() {
                 ));
               }
               if (parsed.type === "questions") {
+                const questionList = parsed.questions.map((q: string, i: number) => `${i+1}. ${q}`).join("\n");
                 setMessages(prev => prev.map(m =>
-                  m.id === assistantMsg.id ? { ...m, content: `Please answer:\n${parsed.questions.map((q: string, i: number) => `${i+1}. ${q}`).join("\n")}`, questions: parsed.questions } : m
+                  m.id === assistantMsg.id ? { ...m, content: `Please answer:\n${questionList}`, questions: parsed.questions } : m
+                ));
+              }
+              if (parsed.type === "setu_pending") {
+                const qList = parsed.questions.map((q: string, i: number) => `${i+1}. ${q}`).join("\n");
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsg.id ? { ...m, content: `Please answer:\n${qList}`, questions: parsed.questions } : m
                 ));
               }
               if (parsed.type === "status") {
@@ -83,7 +97,9 @@ export function useStreamingChat() {
                   m.id === assistantMsg.id ? { ...m, isStreaming: false } : m
                 ));
               }
-            } catch (_) {}
+            } catch (e) {
+              console.warn("Failed to parse SSE data:", data, e);
+            }
           }
         }
       }
