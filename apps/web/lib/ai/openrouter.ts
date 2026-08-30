@@ -1,4 +1,5 @@
 import { ChatMessage, ChatOptions, ChatResponse } from './types'
+import { ensureString } from '@/lib/utils/string'
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
@@ -16,6 +17,7 @@ export async function generateChatOpenRouter(
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com',
     },
     body: JSON.stringify({
       model: 'openai/gpt-4o-mini',
@@ -28,12 +30,15 @@ export async function generateChatOpenRouter(
     }),
   })
 
-  if (!response.ok) throw new Error(`OpenRouter chat failed: ${response.status}`)
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`OpenRouter chat failed (${response.status}): ${errorText}`)
+  }
 
   const data = await response.json()
   return {
-    content: data.choices[0]?.message?.content || '',
-    tokens: data.usage?.total_tokens || 0,
+    content: ensureString(data.choices[0]?.message?.content, 'No response.'),
+    tokens: typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : 0,
     provider: 'openrouter',
   }
 }

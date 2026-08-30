@@ -103,11 +103,10 @@ export function useChat() {
       }
     } catch (error: any) {
       console.error('Chat error:', error)
-      // Provide a helpful error message without mock
-      const errorMessage = error?.message || 'Unknown error'
+      const errorMsg = error?.message || 'Unknown error'
       return {
-        content: `⚠️ I encountered an issue: ${errorMessage}. Please check your API keys and try again.`,
-        reasoning: `Error: ${error?.stack || errorMessage}`,
+        content: `⚠️ I encountered an issue: ${errorMsg}. Please try again.`,
+        reasoning: `Error: ${error?.stack || errorMsg}`,
         tokens: 0,
         provider: 'error',
       }
@@ -124,6 +123,8 @@ export function useChat() {
     setIsProcessing(true)
     try {
       return await generateImage({ prompt, image: file, ...options })
+    } catch (error: any) {
+      throw new Error(`Image generation failed: ${error?.message || 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
     }
@@ -137,6 +138,8 @@ export function useChat() {
     setIsProcessing(true)
     try {
       return await generateVideo({ prompt, image: file, ...options })
+    } catch (error: any) {
+      throw new Error(`Video generation failed: ${error?.message || 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
     }
@@ -146,8 +149,10 @@ export function useChat() {
     setIsProcessing(true)
     try {
       const advSearch = AdvancedSearch.getInstance()
-      const results = await advSearch.search(query)
-      return results
+      return await advSearch.search(query)
+    } catch (error: any) {
+      console.error('Web search error:', error)
+      return []
     } finally {
       setIsProcessing(false)
     }
@@ -157,6 +162,9 @@ export function useChat() {
     setIsProcessing(true)
     try {
       return await generateLeads(query)
+    } catch (error: any) {
+      console.error('SETU error:', error)
+      return []
     } finally {
       setIsProcessing(false)
     }

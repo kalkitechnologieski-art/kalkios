@@ -1,4 +1,5 @@
 import { ChatMessage, ChatOptions, ChatResponse, SearchResult, ImageGenerationOptions, VideoGenerationOptions } from './types'
+import { ensureString } from '@/lib/utils/string'
 
 const ZHIPU_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY
@@ -40,6 +41,7 @@ export async function generateChat(
   })
 
   if (!response.ok) {
+    // Fallback to GLM-5.2 if available
     if (body.model === 'glm-5.3') {
       body.model = 'glm-5.2'
       const fallbackResponse = await fetch(`${ZHIPU_BASE}/chat/completions`, {
@@ -53,21 +55,22 @@ export async function generateChat(
       if (fallbackResponse.ok) {
         const data = await fallbackResponse.json()
         return {
-          content: data.choices[0]?.message?.content || '',
-          reasoning: data.choices[0]?.message?.reasoning_content || '',
-          tokens: data.usage?.total_tokens || 0,
+          content: ensureString(data.choices[0]?.message?.content, 'No response.'),
+          reasoning: ensureString(data.choices[0]?.message?.reasoning_content, ''),
+          tokens: typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : 0,
           provider: 'zhipu-fallback',
         }
       }
     }
-    throw new Error(`Zhipu chat failed: ${response.status}`)
+    const errorText = await response.text()
+    throw new Error(`Zhipu chat failed (${response.status}): ${errorText}`)
   }
 
   const data = await response.json()
   return {
-    content: data.choices[0]?.message?.content || '',
-    reasoning: data.choices[0]?.message?.reasoning_content || '',
-    tokens: data.usage?.total_tokens || 0,
+    content: ensureString(data.choices[0]?.message?.content, 'No response.'),
+    reasoning: ensureString(data.choices[0]?.message?.reasoning_content, ''),
+    tokens: typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : 0,
     provider: 'zhipu',
   }
 }
@@ -106,30 +109,15 @@ export async function webSearch(query: string, count = 10): Promise<SearchResult
 export async function generateImageZhipu(options: ImageGenerationOptions): Promise<string> {
   if (!ZHIPU_API_KEY) throw new Error('ZHIPU_API_KEY is not set')
 
-  const {
-    prompt,
-    image,
-    size = '1280x1280',
-    negativePrompt,
-    steps,
-  } = options
-
-  // Zhipu GLM-Image supports quality: 'hd' or 'standard'
-  const quality = steps && steps > 30 ? 'hd' : 'standard'
+  const { prompt, size = '1280x1280' } = options
 
   const body: any = {
     model: 'glm-image',
     prompt,
     size,
-    quality,
+    quality: 'hd',
     watermark_enabled: false,
   }
-
-  // If image is provided, we need to pass it as reference? Zhipu's image-to-image is different.
-  // Actually, Zhipu GLM-Image supports image-to-image via a different endpoint? The docs show an 'image' parameter.
-  // But the async image generation endpoint might not support it directly.
-  // We'll keep it simple: if image is provided, we'll ignore for Zhipu fallback.
-  // Agnes already handles image-to-image.
 
   const response = await fetch(`${ZHIPU_BASE}/images/generations`, {
     method: 'POST',
@@ -148,7 +136,7 @@ export async function generateImageZhipu(options: ImageGenerationOptions): Promi
   const data = await response.json()
   const url = data.data?.[0]?.url
   if (!url) throw new Error('No image URL returned from Zhipu')
-  return url
+  return ensureString(url, '')
 }
 
 export async function generateVideoZhipu(options: VideoGenerationOptions): Promise<string> {
@@ -159,18 +147,13 @@ export async function generateVideoZhipu(options: VideoGenerationOptions): Promi
   const body: any = {
     model: 'cogvideox-3',
     prompt,
-    quality: 'speed',
+    quality: duration > 5 ? 'quality' : 'speed',
     duration,
     size: '1920x1080',
   }
 
   if (image) {
     body.image_url = image
-  }
-
-  // For longer videos, maybe use quality mode
-  if (duration > 5) {
-    body.quality = 'quality'
   }
 
   const response = await fetch(`${ZHIPU_BASE}/videos/generations`, {
@@ -191,7 +174,6 @@ export async function generateVideoZhipu(options: VideoGenerationOptions): Promi
   const taskId = task.id
   if (!taskId) throw new Error('No task ID returned from Zhipu')
 
-  // Poll for completion (Zhipu async)
   const maxAttempts = 40
   let delay = 2000
 
@@ -211,7 +193,7 @@ export async function generateVideoZhipu(options: VideoGenerationOptions): Promi
     if (statusData.task_status === 'SUCCESS') {
       const url = statusData.video_url
       if (!url) throw new Error('No video URL returned from Zhipu')
-      return url
+      return ensureString(url, '')
     }
 
     if (statusData.task_status === 'FAIL') {
