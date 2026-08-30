@@ -28,5 +28,10 @@
   },
   "allowScripts": {
     "sharp": true
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.52",
+    "@ai-sdk/react": "^4.0.88",
+    "ai": "^7.0.85"
   }
 }

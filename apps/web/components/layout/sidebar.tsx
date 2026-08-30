@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,7 +17,6 @@ import {
   FolderKanban,
   BarChart3,
   Users,
-  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,13 +39,21 @@ export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + "/");
 
-  // Desktop sidebar
+  if (!isMounted) {
+    return <div className="w-16 md:w-64" />;
+  }
+
   return (
     <>
       {/* Mobile overlay */}
@@ -84,11 +91,21 @@ export function Sidebar() {
             <div className="flex-1 overflow-y-auto">
               <nav className="space-y-1">
                 {NAV_ITEMS.map((item) => (
-                  <SidebarLink key={item.href} item={item} isActive={isActive(item.href)} onClose={() => setIsMobileOpen(false)} />
+                  <SidebarLink
+                    key={item.href}
+                    item={item}
+                    isActive={isActive(item.href)}
+                    onClose={() => setIsMobileOpen(false)}
+                  />
                 ))}
                 <div className="h-px bg-white/5 my-3" />
                 {ADMIN_ITEMS.map((item) => (
-                  <SidebarLink key={item.href} item={item} isActive={isActive(item.href)} onClose={() => setIsMobileOpen(false)} />
+                  <SidebarLink
+                    key={item.href}
+                    item={item}
+                    isActive={isActive(item.href)}
+                    onClose={() => setIsMobileOpen(false)}
+                  />
                 ))}
               </nav>
             </div>
@@ -125,11 +142,21 @@ export function Sidebar() {
           </button>
           <nav className="space-y-0.5 px-2">
             {NAV_ITEMS.map((item) => (
-              <DesktopLink key={item.href} item={item} isActive={isActive(item.href)} collapsed={isCollapsed} />
+              <DesktopLink
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+                collapsed={isCollapsed}
+              />
             ))}
             <div className="h-px bg-white/5 my-2" />
             {ADMIN_ITEMS.map((item) => (
-              <DesktopLink key={item.href} item={item} isActive={isActive(item.href)} collapsed={isCollapsed} />
+              <DesktopLink
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+                collapsed={isCollapsed}
+              />
             ))}
           </nav>
         </div>

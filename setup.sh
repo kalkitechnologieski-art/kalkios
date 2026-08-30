@@ -1,27 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ============================================================================
-# SIDDHI AI – COMPLETE PRODUCTION REWRITE
-# ============================================================================
-# This script rewrites all critical files to ensure:
-# 1. Streaming chat works correctly
-# 2. UI layout is fixed (sidebar, chat bar, results)
-# 3. DeepThink, SETU, image/video all work
-# 4. Enterprise-grade error handling and state management
-# ============================================================================
-
 ROOT_DIR="$(pwd)"
 APP_DIR="${ROOT_DIR}/apps/web"
 BACKUP_SUFFIX=".bak"
 TIMESTAMP=$(date "+%Y%m%d_%H%M%S")
-LOG_FILE="${ROOT_DIR}/production_rewrite_${TIMESTAMP}.log"
+LOG_FILE="${ROOT_DIR}/siddhi_custom_sse_fix_${TIMESTAMP}.log"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
-log "Starting complete production rewrite..."
+log "Starting custom SSE fix (removing SDK conflicts)..."
 
 if [ ! -d "$APP_DIR" ]; then
   log "ERROR: $APP_DIR does not exist."
@@ -31,11 +21,250 @@ fi
 cd "$APP_DIR"
 
 # -----------------------------------------------------------------------------
-# 1. Rewrite useStreamingChat hook (robust SSE parser)
+# 1. Remove Vercel AI SDK packages to avoid version conflicts
 # -----------------------------------------------------------------------------
-log "Rewriting useStreamingChat hook..."
-cat > "${APP_DIR}/hooks/useStreamingChat.ts" << 'HOOK_EOF'
-import { useState, useCallback, useRef, useEffect } from "react";
+log "Removing Vercel AI SDK packages..."
+npm uninstall ai @ai-sdk/react @ai-sdk/openai @ai-sdk/provider --save 2>/dev/null || true
+
+# -----------------------------------------------------------------------------
+# 2. Rewrite stream route with custom SSE (proven working)
+# -----------------------------------------------------------------------------
+log "Rewriting stream route with custom SSE..."
+cat > "${APP_DIR}/app/api/ai/stream/route.ts" << 'STREAM_EOF'
+import { NextRequest } from "next/server";
+import { IntelligentRouter } from "@/lib/orchestration/router";
+import { ChainOfThought } from "@/lib/reasoning/chain-of-thought";
+import { SETUAgent } from "@/lib/agents/setu/agent";
+import { hasAnyProvider } from "@/lib/env/validation";
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function detectIntent(messages: any[]): string {
+  const lastMsg = messages[messages.length - 1]?.content || '';
+  const lower = lastMsg.toLowerCase();
+
+  if (lower.includes('generate image') || lower.includes('create image') || lower.includes('draw')) return 'image';
+  if (lower.includes('generate video') || lower.includes('create video') || lower.includes('animate')) return 'video';
+  if (lower.includes('lead') || lower.includes('prospect') || lower.includes('find customers')) return 'setu';
+  if (lower.includes('explain') || lower.includes('analyze') || lower.includes('why') || lower.includes('how') || lower.length > 30) {
+    return 'deep';
+  }
+  return 'chat';
+}
+
+export async function POST(req: NextRequest) {
+  const encoder = new TextEncoder();
+  const responseStream = new TransformStream();
+  const writer = responseStream.writable.getWriter();
+
+  const response = new Response(responseStream.readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+
+  // Start async work immediately after returning response
+  (async () => {
+    try {
+      const body = await req.json();
+      const { messages, userId } = body;
+
+      if (!messages || !Array.isArray(messages)) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Invalid request: messages array required.' })}\n\n`));
+        await writer.close();
+        return;
+      }
+
+      if (!hasAnyProvider()) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'No AI provider configured. Please contact support.' })}\n\n`));
+        await writer.close();
+        return;
+      }
+
+      const intent = detectIntent(messages);
+
+      // --- SETU ---
+      if (intent === 'setu') {
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        const agent = new SETUAgent(lastMsg);
+        const questions = await agent.generateQuestions();
+
+        if (questions.length > 0) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'questions', questions })}\n\n`));
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+          await writer.close();
+          return;
+        }
+
+        const userMessages = messages.filter((m: any) => m.role === 'user');
+        const answers = userMessages.slice(-questions.length).map((m: any) => m.content);
+        if (answers.length === questions.length) {
+          await agent.answerQuestions(answers);
+          await agent.executeSearch();
+          const leads = agent.getLeads();
+          const csv = agent.getCSV();
+          const summary = agent.getSummary();
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'leads', leads, csv, summary })}\n\n`));
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+          await writer.close();
+          return;
+        }
+
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'setu_pending', message: 'Please answer the clarifying questions.', questions })}\n\n`));
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        await writer.close();
+        return;
+      }
+
+      // --- DEEP THINK ---
+      if (intent === 'deep') {
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        const cot = new ChainOfThought();
+        const generator = await cot.generate(lastMsg, { stream: true, deep: true });
+
+        try {
+          for await (const chunk of generator) {
+            // Skip empty content chunks
+            if (chunk.type === 'content' && (!chunk.content || chunk.content === '')) continue;
+            await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          }
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        } catch (error) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'DeepThink failed' })}\n\n`));
+        } finally {
+          await writer.close();
+        }
+        return;
+      }
+
+      // --- IMAGE ---
+      if (intent === 'image') {
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        const router = new IntelligentRouter();
+        const result = await router.route({
+          messages: [{ role: 'user', content: `Generate image: ${lastMsg}` }],
+          stream: false,
+        });
+
+        const imageUrl = result?.data?.[0]?.url || '';
+        if (imageUrl) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'content', content: `![Generated Image](${imageUrl})` })}\n\n`));
+        } else {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Image generation failed. Please try again.' })}\n\n`));
+        }
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        await writer.close();
+        return;
+      }
+
+      // --- VIDEO ---
+      if (intent === 'video') {
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        const router = new IntelligentRouter();
+        const result = await router.route({
+          messages: [{ role: 'user', content: `Generate video: ${lastMsg}` }],
+          stream: false,
+        });
+
+        const videoUrl = result?.video_result?.[0]?.url || '';
+        if (videoUrl) {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'content', content: `<video src="${videoUrl}" controls style="max-width:100%;border-radius:12px;"></video>` })}\n\n`));
+        } else {
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'Video generation failed. Please try again.' })}\n\n`));
+        }
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        await writer.close();
+        return;
+      }
+
+      // --- GENERAL CHAT ---
+      const router = new IntelligentRouter();
+      const result = await router.route({
+        messages,
+        stream: true,
+        userId,
+      });
+
+      // Handle streaming response from router
+      if (result instanceof ReadableStream) {
+        const reader = result.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta;
+                if (delta?.content) {
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'content', content: delta.content })}\n\n`));
+                }
+                if (delta?.reasoning_content) {
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'reasoning', content: delta.reasoning_content })}\n\n`));
+                }
+                if (parsed.usage) {
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'usage', tokens: parsed.usage.total_tokens })}\n\n`));
+                }
+                if (parsed.provider) {
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'provider', provider: parsed.provider })}\n\n`));
+                }
+              } catch (_) {}
+            }
+          }
+        }
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        await writer.close();
+      } else {
+        // Non-streaming fallback
+        const content = result?.choices?.[0]?.message?.content || '';
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'content', content })}\n\n`));
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+        await writer.close();
+      }
+    } catch (error: any) {
+      console.error('[ADMIN] Stream error:', error);
+      try {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'I encountered an issue. Please try again.' })}\n\n`));
+        await writer.close();
+      } catch (_) {}
+    }
+  })();
+
+  return response;
+}
+STREAM_EOF
+log "Rewrote stream route with custom SSE"
+
+# -----------------------------------------------------------------------------
+# 3. Rewrite ChatClient with reliable SSE parsing
+# -----------------------------------------------------------------------------
+log "Rewriting ChatClient with reliable SSE parsing..."
+cat > "${APP_DIR}/app/(app)/chat/ChatClient.tsx" << 'CHAT_EOF'
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ReasoningTrace } from "@/components/chat/ReasoningTrace";
+import { SetuProgress } from "@/components/chat/SetuProgress";
+import { MediaSettings } from "@/components/chat/MediaSettings";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { LuxuryMessage } from "@/components/chat/LuxuryMessage";
+import { NeonComposer } from "@/components/chat/NeonComposer";
+import { ThinkingTrace } from "@/components/chat/ThinkingTrace";
+import { GradientGlowBackground } from "@/components/ui/GradientGlowBackground";
+import { ThinkingLoader } from "@/components/ui/ThinkingLoader";
+import { Bot } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   id: string;
@@ -49,40 +278,47 @@ interface Message {
   questions?: string[];
   tokens?: number;
   provider?: string;
-  model?: string;
 }
 
-export function useStreamingChat() {
+export default function ChatClient() {
+  const [deepThink, setDeepThink] = useState(false);
+  const [setuMode, setSetuMode] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
+  const [mode, setMode] = useState<"chat" | "image" | "video">("chat");
+  const [mediaSettings, setMediaSettings] = useState<any>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const currentAssistantId = useRef<string | null>(null);
 
-  // Clear error on unmount
   useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
+    setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const sendMessage = useCallback(
-    async (content: string, options: { deep?: boolean; setu?: boolean; image?: string } = {}) => {
+    async (text: string, file?: File) => {
+      if (!text.trim() || isLoading) return;
       setError(null);
 
       // Add user message
       const userMsg: Message = {
         id: crypto.randomUUID(),
         role: "user",
-        content,
+        content: text,
         isStreaming: false,
         isComplete: true,
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      // Create assistant placeholder
+      // Add assistant placeholder
       const assistantMsg: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -93,8 +329,8 @@ export function useStreamingChat() {
       };
       currentAssistantId.current = assistantMsg.id;
       setMessages((prev) => [...prev, assistantMsg]);
-
       setIsLoading(true);
+
       abortControllerRef.current = new AbortController();
 
       try {
@@ -103,28 +339,14 @@ export function useStreamingChat() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: [...messages, userMsg],
-            deep: options.deep || false,
-            setu: options.setu || false,
-            image: options.image,
+            deep: deepThink,
+            setu: setuMode,
           }),
           signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok) {
-          let errorMsg = "Something went wrong. Please try again.";
-          try {
-            const errData = await response.json();
-            if (errData.message) errorMsg = errData.message;
-          } catch (_) {}
-          setError(errorMsg);
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMsg.id
-                ? { ...msg, content: `⚠️ ${errorMsg}`, isStreaming: false, isComplete: true }
-                : msg
-            )
-          );
-          return;
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const reader = response.body?.getReader();
@@ -132,8 +354,6 @@ export function useStreamingChat() {
         let buffer = "";
         let fullContent = "";
         let fullReasoning = "";
-        let leadData: any = null;
-        let questionData: any = null;
 
         while (reader) {
           const { done, value } = await reader.read();
@@ -163,18 +383,6 @@ export function useStreamingChat() {
                   return;
                 }
 
-                if (parsed.type === "status") {
-                  // Show status message in reasoning
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMsg.id
-                        ? { ...msg, reasoning: parsed.message, isStreaming: true }
-                        : msg
-                    )
-                  );
-                  continue;
-                }
-
                 if (parsed.type === "content" && parsed.content) {
                   fullContent += parsed.content;
                   setMessages((prev) =>
@@ -201,25 +409,33 @@ export function useStreamingChat() {
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMsg.id
-                        ? { ...msg, tokens: parsed.tokens, isStreaming: true }
+                        ? { ...msg, tokens: parsed.tokens }
                         : msg
                     )
                   );
                 }
 
-                if (parsed.type === "questions" && parsed.questions) {
-                  questionData = parsed.questions;
+                if (parsed.type === "provider" && parsed.provider) {
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMsg.id
-                        ? { ...msg, questions: questionData, isStreaming: false, isComplete: true }
+                        ? { ...msg, provider: parsed.provider }
                         : msg
                     )
                   );
                 }
 
-                if (parsed.type === "leads" && parsed.leads) {
-                  leadData = { leads: parsed.leads, csv: parsed.csv };
+                if (parsed.type === "questions") {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMsg.id
+                        ? { ...msg, questions: parsed.questions, isStreaming: false, isComplete: true }
+                        : msg
+                    )
+                  );
+                }
+
+                if (parsed.type === "leads") {
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMsg.id
@@ -229,7 +445,7 @@ export function useStreamingChat() {
                   );
                 }
 
-                if (parsed.type === "setu_pending" && parsed.questions) {
+                if (parsed.type === "setu_pending") {
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMsg.id
@@ -248,9 +464,7 @@ export function useStreamingChat() {
                     )
                   );
                 }
-              } catch (e) {
-                // Silently ignore malformed JSON
-              }
+              } catch (_) {}
             }
           }
         }
@@ -265,10 +479,7 @@ export function useStreamingChat() {
         );
 
       } catch (error: any) {
-        if (error.name === "AbortError") {
-          // User cancelled, don't show error
-          return;
-        }
+        if (error.name === "AbortError") return;
         console.error("[ADMIN] Chat error:", error);
         setError("Network error. Please check your connection and try again.");
         setMessages((prev) =>
@@ -284,150 +495,27 @@ export function useStreamingChat() {
         currentAssistantId.current = null;
       }
     },
-    [messages]
+    [messages, deepThink, setuMode, isLoading]
   );
 
-  const abort = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  }, []);
-
-  const clearError = useCallback(() => setError(null), []);
-  const clearMessages = useCallback(() => setMessages([]), []);
-
-  return {
-    messages,
-    isLoading,
-    error,
-    sendMessage,
-    abort,
-    clearError,
-    clearMessages,
-  };
-}
-HOOK_EOF
-log "Rewrote useStreamingChat hook"
-
-# -----------------------------------------------------------------------------
-# 2. Rewrite LuxuryMessage component – remove memo blocking
-# -----------------------------------------------------------------------------
-log "Rewriting LuxuryMessage component..."
-cat > "${APP_DIR}/components/chat/LuxuryMessage.tsx" << 'LUX_EOF'
-'use client';
-
-import { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { cn } from "@/lib/utils";
-
-interface LuxuryMessageProps {
-  children: ReactNode;
-  role: "user" | "assistant" | "system";
-  timestamp?: Date;
-  className?: string;
-  isStreaming?: boolean;
-}
-
-export function LuxuryMessage({ children, role, timestamp, className = "", isStreaming = false }: LuxuryMessageProps) {
-  const isUser = role === "user";
-  const isSystem = role === "system";
-
-  // Convert children to string for markdown
-  const content = typeof children === "string" ? children : String(children);
-
-  // System messages are centered with special styling
-  if (isSystem) {
-    return (
-      <div className="flex justify-center my-2">
-        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
-          {content}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "flex flex-col max-w-[85%] rounded-2xl px-4 py-3 relative",
-        isUser
-          ? "ml-auto bg-gradient-to-r from-cyan-600/20 to-purple-600/20 border border-cyan-500/20 text-white shadow-[0_0_30px_rgba(0,255,255,0.05)]"
-          : "bg-white/5 border border-white/10 text-white/90 backdrop-blur-sm",
-        isStreaming && "border-cyan-500/40",
-        className
-      )}
-    >
-      {isUser ? (
-        <span className="whitespace-pre-wrap break-words">{content}</span>
-      ) : (
-        <div className="prose prose-invert prose-sm max-w-none dark:prose-invert break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-      )}
-      {timestamp && (
-        <div className="text-[10px] text-white/30 mt-1 text-right">
-          {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </div>
-      )}
-    </div>
-  );
-}
-LUX_EOF
-log "Rewrote LuxuryMessage component"
-
-# -----------------------------------------------------------------------------
-# 3. Rewrite ChatClient with proper layout and state handling
-# -----------------------------------------------------------------------------
-log "Rewriting ChatClient..."
-cat > "${APP_DIR}/app/(app)/chat/ChatClient.tsx" << 'CHAT_EOF'
-"use client";
-
-import { useState, useEffect, useRef } from "react";
-import { useStreamingChat } from "@/hooks/useStreamingChat";
-import { ReasoningTrace } from "@/components/chat/ReasoningTrace";
-import { SetuProgress } from "@/components/chat/SetuProgress";
-import { MediaSettings } from "@/components/chat/MediaSettings";
-import { ErrorBoundary } from "@/components/error/ErrorBoundary";
-import { LuxuryMessage } from "@/components/chat/LuxuryMessage";
-import { NeonComposer } from "@/components/chat/NeonComposer";
-import { ThinkingTrace } from "@/components/chat/ThinkingTrace";
-import { GradientGlowBackground } from "@/components/ui/GradientGlowBackground";
-import { ThinkingLoader } from "@/components/ui/ThinkingLoader";
-import { Bot } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-
-export default function ChatClient() {
-  const { messages, isLoading, error, sendMessage, clearError } = useStreamingChat();
-  const [deepThink, setDeepThink] = useState(false);
-  const [setuMode, setSetuMode] = useState(false);
-  const [searchMode, setSearchMode] = useState(false);
-  const [mode, setMode] = useState<"chat" | "image" | "video">("chat");
-  const [mediaSettings, setMediaSettings] = useState<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSend = async (text: string, file?: File) => {
-    if (!text.trim()) return;
-    await sendMessage(text, { deep: deepThink, setu: setuMode });
+  const handleSend = (text: string, file?: File) => {
+    setInput("");
+    sendMessage(text, file);
   };
 
   const handleMediaGenerate = async (settings: any) => {
-    console.log("Generating media with settings:", settings);
     const prompt = `Generate ${mode} with settings: ${JSON.stringify(settings)}`;
-    await sendMessage(prompt, { deep: false, setu: false });
+    setInput("");
+    sendMessage(prompt);
   };
 
-  const handleClear = () => {};
+  const handleClear = () => {
+    setMessages([]);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
 
   if (!isMounted) {
     return (
@@ -442,7 +530,6 @@ export default function ChatClient() {
       <div className="relative flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto px-2">
         <GradientGlowBackground isThinking={isLoading} />
 
-        {/* Top Bar */}
         <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -456,40 +543,14 @@ export default function ChatClient() {
             </span>
           </div>
           <div className="flex gap-1 flex-wrap">
-            <CyberToggle
-              active={deepThink}
-              onClick={() => setDeepThink(!deepThink)}
-              label="Deep"
-              color="purple"
-            />
-            <CyberToggle
-              active={setuMode}
-              onClick={() => setSetuMode(!setuMode)}
-              label="SETU"
-              color="amber"
-            />
-            <CyberToggle
-              active={searchMode}
-              onClick={() => setSearchMode(!searchMode)}
-              label="Search"
-              color="blue"
-            />
-            <CyberToggle
-              active={mode === "image"}
-              onClick={() => setMode(mode === "image" ? "chat" : "image")}
-              label="Image"
-              color="pink"
-            />
-            <CyberToggle
-              active={mode === "video"}
-              onClick={() => setMode(mode === "video" ? "chat" : "video")}
-              label="Video"
-              color="red"
-            />
+            <CyberToggle active={deepThink} onClick={() => setDeepThink(!deepThink)} label="Deep" color="purple" />
+            <CyberToggle active={setuMode} onClick={() => setSetuMode(!setuMode)} label="SETU" color="amber" />
+            <CyberToggle active={searchMode} onClick={() => setSearchMode(!searchMode)} label="Search" color="blue" />
+            <CyberToggle active={mode === "image"} onClick={() => setMode(mode === "image" ? "chat" : "image")} label="Image" color="pink" />
+            <CyberToggle active={mode === "video"} onClick={() => setMode(mode === "video" ? "chat" : "video")} label="Video" color="red" />
           </div>
         </div>
 
-        {/* Media Settings */}
         {(mode === "image" || mode === "video") && (
           <MediaSettings
             mode={mode}
@@ -499,7 +560,6 @@ export default function ChatClient() {
           />
         )}
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
           <AnimatePresence>
             {messages.map((msg) => (
@@ -518,11 +578,14 @@ export default function ChatClient() {
                   </div>
                 ) : (
                   <>
-                    <LuxuryMessage role={msg.role} timestamp={new Date()} isStreaming={msg.isStreaming}>
+                    <LuxuryMessage
+                      role={msg.role}
+                      timestamp={new Date()}
+                      isStreaming={msg.isStreaming}
+                    >
                       {msg.content || "..."}
                     </LuxuryMessage>
 
-                    {/* Reasoning trace */}
                     {msg.role === "assistant" && msg.reasoning && (
                       <div className="ml-12 mt-1">
                         <ThinkingTrace
@@ -535,14 +598,12 @@ export default function ChatClient() {
                       </div>
                     )}
 
-                    {/* SETU leads */}
                     {msg.role === "assistant" && msg.leads && msg.leads.length > 0 && (
                       <div className="ml-12 mt-2">
                         <SetuProgress leads={msg.leads} csv={msg.csv} isLoading={false} />
                       </div>
                     )}
 
-                    {/* SETU questions */}
                     {msg.role === "assistant" && msg.questions && msg.questions.length > 0 && (
                       <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
                         <p className="text-white/60 text-sm font-mono">Please answer:</p>
@@ -559,20 +620,18 @@ export default function ChatClient() {
             ))}
           </AnimatePresence>
 
-          {/* Loading indicator */}
           {isLoading && (
             <div className="ml-12 mt-2">
               <ThinkingLoader status="thinking" reasoning="Processing..." />
             </div>
           )}
 
-          {/* Error message */}
           {error && (
             <div className="flex justify-center my-2">
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 text-xs text-red-400/80 font-mono max-w-[90%] backdrop-blur-sm">
                 {error}
                 <button
-                  onClick={clearError}
+                  onClick={() => setError(null)}
                   className="ml-2 text-red-400 hover:text-red-300 underline"
                 >
                   Dismiss
@@ -584,7 +643,6 @@ export default function ChatClient() {
           <div ref={endRef} />
         </div>
 
-        {/* Input Composer */}
         <div className="pt-2 border-t border-white/5">
           <NeonComposer
             onSend={handleSend}
@@ -598,6 +656,8 @@ export default function ChatClient() {
             isSearchMode={searchMode}
             setIsSearchMode={setSearchMode}
             onClear={handleClear}
+            input={input}
+            onInputChange={handleInputChange}
           />
         </div>
       </div>
@@ -616,9 +676,7 @@ function CyberToggle({ active, onClick, label, color }: any) {
   return (
     <button
       onClick={onClick}
-      className={`p-1.5 rounded-lg transition-all duration-200 ${
-        active ? colors[color] + " shadow-glow" : "text-white/40 hover:text-white/70"
-      }`}
+      className={`p-1.5 rounded-lg transition-all duration-200 ${active ? colors[color] + " shadow-glow" : "text-white/40 hover:text-white/70"}`}
       title={label}
     >
       <span className="text-xs font-mono">{label}</span>
@@ -626,251 +684,33 @@ function CyberToggle({ active, onClick, label, color }: any) {
   );
 }
 CHAT_EOF
-log "Rewrote ChatClient"
+log "Rewrote ChatClient with reliable SSE parsing"
 
 # -----------------------------------------------------------------------------
-# 4. Fix sidebar layout (positioning)
+# 4. Remove archived hook if exists
 # -----------------------------------------------------------------------------
-log "Fixing sidebar layout..."
-cat > "${APP_DIR}/components/layout/sidebar.tsx" << 'SIDEBAR_EOF'
-"use client";
-
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Home,
-  Compass,
-  ShoppingBag,
-  MessageCircle,
-  User,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  Bot,
-  FolderKanban,
-  BarChart3,
-  Users,
-  Briefcase,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-
-const NAV_ITEMS = [
-  { label: "Home", icon: Home, href: "/" },
-  { label: "Explore", icon: Compass, href: "/explore" },
-  { label: "Marketplace", icon: ShoppingBag, href: "/marketplace" },
-  { label: "Chat", icon: MessageCircle, href: "/chat" },
-  { label: "Client Panel", icon: FolderKanban, href: "/client" },
-  { label: "Profile", icon: User, href: "/profile" },
-];
-
-const ADMIN_ITEMS = [
-  { label: "Admin", icon: BarChart3, href: "/admin" },
-  { label: "Employees", icon: Users, href: "/employee" },
-];
-
-export function Sidebar() {
-  const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
-  const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
-
-  const isActive = (href: string) => pathname === href || pathname?.startsWith(href + "/");
-
-  // Desktop sidebar
-  return (
-    <>
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
-            onClick={() => setIsMobileOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile sidebar */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.aside
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-black/95 backdrop-blur-2xl border-r border-white/10 p-4 flex flex-col md:hidden"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-xs font-bold tracking-widest text-white/40">MENU</span>
-              <button
-                onClick={() => setIsMobileOpen(false)}
-                className="p-2 rounded-full hover:bg-white/5 transition"
-              >
-                <X className="w-5 h-5 text-white/60" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <nav className="space-y-1">
-                {NAV_ITEMS.map((item) => (
-                  <SidebarLink key={item.href} item={item} isActive={isActive(item.href)} onClose={() => setIsMobileOpen(false)} />
-                ))}
-                <div className="h-px bg-white/5 my-3" />
-                {ADMIN_ITEMS.map((item) => (
-                  <SidebarLink key={item.href} item={item} isActive={isActive(item.href)} onClose={() => setIsMobileOpen(false)} />
-                ))}
-              </nav>
-            </div>
-            <div className="border-t border-white/5 pt-4">
-              <SidebarLink
-                item={{ label: "Settings", icon: Settings, href: "/settings" }}
-                isActive={isActive("/settings")}
-                onClose={() => setIsMobileOpen(false)}
-              />
-              <SidebarLink
-                item={{ label: "Logout", icon: LogOut, href: "/logout" }}
-                isActive={false}
-                onClose={() => setIsMobileOpen(false)}
-                className="text-red-400 hover:bg-red-500/10"
-              />
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "hidden md:flex flex-col fixed top-14 left-0 bottom-0 z-30 bg-black/90 backdrop-blur-xl border-r border-white/5 transition-all duration-300",
-          isCollapsed ? "w-16" : "w-64"
-        )}
-      >
-        <div className="flex-1 overflow-y-auto py-4">
-          <button
-            onClick={toggleCollapse}
-            className="w-full flex items-center justify-center p-2 hover:bg-white/5 transition mb-2"
-          >
-            <Menu className="w-5 h-5 text-white/40" />
-          </button>
-          <nav className="space-y-0.5 px-2">
-            {NAV_ITEMS.map((item) => (
-              <DesktopLink key={item.href} item={item} isActive={isActive(item.href)} collapsed={isCollapsed} />
-            ))}
-            <div className="h-px bg-white/5 my-2" />
-            {ADMIN_ITEMS.map((item) => (
-              <DesktopLink key={item.href} item={item} isActive={isActive(item.href)} collapsed={isCollapsed} />
-            ))}
-          </nav>
-        </div>
-        <div className="border-t border-white/5 p-2">
-          <DesktopLink
-            item={{ label: "Settings", icon: Settings, href: "/settings" }}
-            isActive={isActive("/settings")}
-            collapsed={isCollapsed}
-          />
-          <DesktopLink
-            item={{ label: "Logout", icon: LogOut, href: "/logout" }}
-            isActive={false}
-            collapsed={isCollapsed}
-            className="text-red-400 hover:bg-red-500/10"
-          />
-        </div>
-      </aside>
-    </>
-  );
-}
-
-function SidebarLink({ item, isActive, onClose, className = "" }: any) {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      onClick={onClose}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-        isActive
-          ? "bg-cyan-600/20 text-cyan-400 border border-cyan-500/20"
-          : "text-white/60 hover:bg-white/5 hover:text-white",
-        className
-      )}
-    >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      <span className="text-sm font-medium">{item.label}</span>
-    </Link>
-  );
-}
-
-function DesktopLink({ item, isActive, collapsed, className = "" }: any) {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
-        isActive
-          ? "bg-cyan-600/20 text-cyan-400 border border-cyan-500/20"
-          : "text-white/60 hover:bg-white/5 hover:text-white",
-        collapsed && "justify-center px-0",
-        className
-      )}
-      title={collapsed ? item.label : undefined}
-    >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-    </Link>
-  );
-}
-SIDEBAR_EOF
-log "Fixed sidebar layout"
+if [ -f "${APP_DIR}/hooks/useStreamingChat.ts.archived" ]; then
+  rm "${APP_DIR}/hooks/useStreamingChat.ts.archived"
+  log "Removed archived hook"
+fi
 
 # -----------------------------------------------------------------------------
-# 5. Fix app/(app)/layout.tsx to use sidebar properly
-# -----------------------------------------------------------------------------
-log "Fixing app layout..."
-cat > "${APP_DIR}/app/(app)/layout.tsx" << 'LAYOUT_EOF'
-"use client";
-import { Sidebar } from "@/components/layout/sidebar";
-import { TopBar } from "@/components/layout/top-bar";
-import { BottomNav } from "@/components/layout/bottom-nav";
-import { useState } from "react";
-
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  return (
-    <div className="flex min-h-screen bg-black">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 md:ml-16">
-        <TopBar onMenuClick={() => setIsDrawerOpen(true)} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto pb-20 md:pb-6">
-          {children}
-        </main>
-        <BottomNav />
-      </div>
-    </div>
-  );
-}
-LAYOUT_EOF
-log "Fixed app layout"
-
-# -----------------------------------------------------------------------------
-# 6. Run type-check and build
+# 5. Run type-check and build
 # -----------------------------------------------------------------------------
 log "Running TypeScript type check..."
-npm run type-check || { log "Type check failed."; exit 1; }
+if npm run type-check; then
+  log "Type check passed."
+else
+  log "Type check failed. Please review errors."
+  exit 1
+fi
 
 log "Building project..."
 npm run build || { log "Build failed."; exit 1; }
 
 log "============================================================="
-log "Complete production rewrite applied."
-log "All fixes are now in place."
+log "Custom SSE fix complete. Build passed."
+log "Siddhi now uses reliable custom SSE streaming without SDK conflicts."
 log "Deploy to Vercel and test."
 log "Log file: $LOG_FILE"
 log "============================================================="
