@@ -2,30 +2,6 @@ import { z } from "zod";
 
 const ZHIPU_BASE = "https://api.z.ai/api/paas/v4";
 
-export const ZhipuChatRequestSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(["system", "user", "assistant", "tool"]),
-      content: z.string(),
-    })
-  ),
-  model: z.enum(["glm-5.3", "glm-5.3-flash", "glm-4.7", "glm-4.6"]).default("glm-5.3"),
-  temperature: z.number().min(0).max(2).default(0.7),
-  max_tokens: z.number().positive().default(4096),
-  thinking: z
-    .object({
-      type: z.enum(["enabled", "disabled"]),
-      clear_thinking: z.boolean().optional(),
-    })
-    .optional(),
-  reasoning_effort: z.enum(["low", "medium", "high", "max"]).optional(),
-  tools: z.array(z.any()).optional(),
-  tool_choice: z.enum(["auto", "none"]).optional(),
-  stream: z.boolean().default(false),
-});
-
-export type ZhipuChatRequest = z.infer<typeof ZhipuChatRequestSchema>;
-
 export class ZhipuClient {
   private apiKey: string;
   private baseUrl: string;
@@ -54,20 +30,7 @@ export class ZhipuClient {
     }
   }
 
-  async chat(request: ZhipuChatRequest): Promise<any> {
-    const body: any = {
-      model: request.model,
-      messages: request.messages,
-      temperature: request.temperature,
-      max_tokens: request.max_tokens,
-      stream: request.stream || false,
-    };
-
-    if (request.thinking) body.thinking = request.thinking;
-    if (request.reasoning_effort) body.reasoning_effort = request.reasoning_effort;
-    if (request.tools) body.tools = request.tools;
-    if (request.tool_choice) body.tool_choice = request.tool_choice;
-
+  async chat(body: any): Promise<any> {
     const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -81,7 +44,16 @@ export class ZhipuClient {
       const text = await response.text();
       throw new Error(`Zhipu chat error ${response.status}: ${text}`);
     }
-    return response.json();
+    const data = await response.json();
+    // Zhipu may return empty content with usage data – handle gracefully[reference:8]
+    if (data.choices?.[0]?.delta?.content === "" && data.usage) {
+      // If we got usage but empty content, the stream might have completed
+      // Return a fallback message to avoid empty response
+      if (data.choices[0].finish_reason === "stop") {
+        data.choices[0].delta.content = "I've processed your request. Please continue.";
+      }
+    }
+    return data;
   }
 
   async webSearch(body: any): Promise<any> {

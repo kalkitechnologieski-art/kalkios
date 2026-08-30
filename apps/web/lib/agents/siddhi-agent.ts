@@ -20,95 +20,103 @@ export class SiddhiAgent {
 
     const intent = this.detectIntent(lastMessage);
 
-    if (intent === "deep_think") {
-      return this.handleDeepThink(lastMessage, stream);
-    }
+    try {
+      if (intent === "deep_think") {
+        return this.handleDeepThink(lastMessage, stream);
+      }
 
-    if (intent === "web_search") {
-      return this.handleWebSearch(lastMessage, stream);
-    }
+      if (intent === "web_search") {
+        return this.handleWebSearch(lastMessage, stream);
+      }
 
-    if (intent === "run_setu") {
-      return this.handleSETU(lastMessage, stream);
-    }
+      if (intent === "run_setu") {
+        return this.handleSETU(lastMessage, stream);
+      }
 
-    if (intent === "generate_image") {
-      return this.handleImageGeneration(lastMessage, stream);
-    }
+      if (intent === "generate_image") {
+        return this.handleImageGeneration(lastMessage, stream);
+      }
 
-    if (intent === "generate_video") {
-      return this.handleVideoGeneration(lastMessage, stream);
-    }
+      if (intent === "generate_video") {
+        return this.handleVideoGeneration(lastMessage, stream);
+      }
 
-    const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
-    return this.router.route({
-      messages: enhancedMessages,
-      stream,
-      userId,
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "web_search",
-            description: "Search the web for real-time information.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: { type: "string", description: "The search query." },
+      const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
+      return this.router.route({
+        messages: enhancedMessages,
+        stream,
+        userId,
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "web_search",
+              description: "Search the web for real-time information.",
+              parameters: {
+                type: "object",
+                properties: {
+                  query: { type: "string", description: "The search query." },
+                },
+                required: ["query"],
               },
-              required: ["query"],
             },
           },
-        },
-        {
-          type: "function",
-          function: {
-            name: "generate_image",
-            description: "Generate an image from a text prompt.",
-            parameters: {
-              type: "object",
-              properties: {
-                prompt: { type: "string", description: "The image description." },
-                size: { type: "string", enum: ["1K", "2K", "3K", "4K"] },
-                ratio: { type: "string", enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"] },
+          {
+            type: "function",
+            function: {
+              name: "generate_image",
+              description: "Generate an image from a text prompt.",
+              parameters: {
+                type: "object",
+                properties: {
+                  prompt: { type: "string", description: "The image description." },
+                  size: { type: "string", enum: ["1K", "2K", "3K", "4K"] },
+                  ratio: { type: "string", enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"] },
+                },
+                required: ["prompt"],
               },
-              required: ["prompt"],
             },
           },
-        },
-        {
-          type: "function",
-          function: {
-            name: "generate_video",
-            description: "Generate a short video from a text prompt.",
-            parameters: {
-              type: "object",
-              properties: {
-                prompt: { type: "string", description: "The video description." },
-                duration: { type: "string", enum: ["5", "10"] },
-                resolution: { type: "string", enum: ["720P", "1080P", "4K"] },
+          {
+            type: "function",
+            function: {
+              name: "generate_video",
+              description: "Generate a short video from a text prompt.",
+              parameters: {
+                type: "object",
+                properties: {
+                  prompt: { type: "string", description: "The video description." },
+                  duration: { type: "string", enum: ["5", "10"] },
+                  resolution: { type: "string", enum: ["720P", "1080P", "4K"] },
+                },
+                required: ["prompt"],
               },
-              required: ["prompt"],
             },
           },
-        },
-        {
-          type: "function",
-          function: {
-            name: "run_setu",
-            description: "Find business leads based on criteria.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: { type: "string", description: "The lead search query." },
-                count: { type: "number", description: "Number of leads to find." },
+          {
+            type: "function",
+            function: {
+              name: "run_setu",
+              description: "Find business leads based on criteria.",
+              parameters: {
+                type: "object",
+                properties: {
+                  query: { type: "string", description: "The lead search query." },
+                  count: { type: "number", description: "Number of leads to find." },
+                },
+                required: ["query"],
               },
-              required: ["query"],
             },
           },
-        },
-      ],
-    });
+        ],
+      });
+    } catch (error) {
+      console.error("[ADMIN] SiddhiAgent error:", error);
+      return {
+        type: "content",
+        content: "I'm having trouble processing your request. Please try again later.",
+      };
+    }
   }
 
   private detectIntent(query: string): Intent {
