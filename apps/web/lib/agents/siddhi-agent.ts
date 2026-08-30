@@ -22,41 +22,25 @@ export class SiddhiAgent {
     console.log("[SiddhiAgent] Intent:", intent);
 
     try {
-      let result: any;
-
       switch (intent) {
         case "deep_think":
-          result = await this.handleDeepThink(lastMessage, stream);
-          break;
+          return await this.handleDeepThink(lastMessage, stream);
         case "web_search":
-          result = await this.handleWebSearch(lastMessage, stream);
-          break;
+          return await this.handleWebSearch(lastMessage, stream);
         case "run_setu":
-          result = await this.handleSETU(lastMessage, stream);
-          break;
+          return await this.handleSETU(lastMessage, stream);
         case "generate_image":
-          result = await this.handleImageGeneration(lastMessage, stream);
-          break;
+          return await this.handleImageGeneration(lastMessage, stream);
         case "generate_video":
-          result = await this.handleVideoGeneration(lastMessage, stream);
-          break;
+          return await this.handleVideoGeneration(lastMessage, stream);
         default:
           const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
-          result = await this.router.route({
+          return await this.router.route({
             messages: enhancedMessages,
             stream,
             userId,
           });
       }
-
-      if (!result) {
-        return {
-          type: "content",
-          content: "I'm having trouble processing your request. Please try again later.",
-        };
-      }
-
-      return result;
     } catch (error: any) {
       console.error("[SiddhiAgent] Error:", error);
       return {
@@ -68,7 +52,6 @@ export class SiddhiAgent {
 
   private detectIntent(query: string): Intent {
     const lower = query.toLowerCase();
-
     if (lower.includes("generate image") || lower.includes("create image") || lower.includes("draw")) return "generate_image";
     if (lower.includes("generate video") || lower.includes("create video") || lower.includes("animate")) return "generate_video";
     if (lower.includes("lead") || lower.includes("prospect") || lower.includes("find customers") || lower.includes("find leads")) return "run_setu";
@@ -84,6 +67,7 @@ export class SiddhiAgent {
   }
 
   private async handleWebSearch(query: string, stream: boolean) {
+    // ChainOfThought with deep=false does web search and synthesis
     return this.cot.generate(query, { stream, deep: false });
   }
 
