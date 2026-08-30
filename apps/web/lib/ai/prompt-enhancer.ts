@@ -53,21 +53,17 @@ export class PromptEnhancer {
   }
 
   private buildStructuredPrompt(elements: EnhancedPrompt['keyElements'], intent: string, mode: string): string {
-    let sections: string[] = []
-    sections.push(`## Main Request`)
-    sections.push(`${elements.subject} ${elements.action}`)
-    sections.push(``)
-    sections.push(`## Context`)
-    sections.push(`${elements.context}`)
-    sections.push(``)
-    if (elements.constraints.length > 0) {
-      sections.push(`## Constraints`)
-      elements.constraints.forEach(c => sections.push(`- ${c}`))
-      sections.push(``)
+    // Build a clean, concise prompt without markdown headings
+    let parts = []
+    parts.push(`User query: ${elements.subject} ${elements.action}`)
+    if (elements.context && elements.context !== elements.subject) {
+      parts.push(`Context: ${elements.context}`)
     }
-    sections.push(`## Mode`)
-    sections.push(mode.toUpperCase())
-    return sections.join('\n')
+    if (elements.constraints.length > 0) {
+      parts.push(`Constraints: ${elements.constraints.join(', ')}`)
+    }
+    parts.push(`Mode: ${mode.toUpperCase()}`)
+    return parts.join(' ')
   }
 
   private extractSubject(input: string): string {

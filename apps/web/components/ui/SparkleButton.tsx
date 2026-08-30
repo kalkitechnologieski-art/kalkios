@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface SparkleButtonProps {
-  children: React.ReactNode
+  children: ReactNode
   onClick?: () => void
   href?: string
   className?: string
@@ -13,7 +13,34 @@ interface SparkleButtonProps {
 
 export function SparkleButton({ children, onClick, href, className = '', size = 'md' }: SparkleButtonProps) {
   const [active, setActive] = useState(false)
+  const [particles, setParticles] = useState<Array<{ x: number; y: number; size: number; duration: number; delay: number }>>([])
+  const [mounted, setMounted] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    // Generate deterministic-ish random values (but only on client)
+    const seed = 42 // fixed seed for consistency
+    const random = (i: number) => {
+      // Simple pseudo-random
+      const x = Math.sin(i * 127.1 + seed * 311.7) * 0.5 + 0.5
+      return x
+    }
+    const newParticles = Array.from({ length: 12 }, (_, i) => {
+      const r1 = random(i)
+      const r2 = random(i + 10)
+      const r3 = random(i + 20)
+      const r4 = random(i + 30)
+      return {
+        x: 10 + r1 * 80,
+        y: 10 + r2 * 80,
+        size: 0.15 + r3 * 0.2,
+        duration: 1 + r4 * 2,
+        delay: r4 * 2,
+      }
+    })
+    setParticles(newParticles)
+  }, [])
 
   const sizeClasses = {
     sm: 'text-sm px-4 py-2',
@@ -38,15 +65,17 @@ export function SparkleButton({ children, onClick, href, className = '', size = 
         className
       )}
       onClick={onClick}
-      style={{
-        '--active': active ? '1' : '0',
-        '--bg': active
-          ? 'radial-gradient(40% 50% at center 100%, hsl(0 90% 50% / 0.8), transparent), radial-gradient(80% 100% at center 120%, hsl(0 80% 45% / 0.6), transparent), hsl(0 85% 35%)'
-          : 'radial-gradient(40% 50% at center 100%, hsl(0 70% 40% / 0.3), transparent), radial-gradient(80% 100% at center 120%, hsl(0 60% 35% / 0.2), transparent), hsl(0 75% 25%)',
-        '--transition': '0.3s',
-        '--spark': '2s',
-        '--cut': '0.1em',
-      } as React.CSSProperties}
+      style={
+        {
+          '--active': active ? '1' : '0',
+          '--bg': active
+            ? 'radial-gradient(40% 50% at center 100%, hsl(0 90% 50% / 0.8), transparent), radial-gradient(80% 100% at center 120%, hsl(0 80% 45% / 0.6), transparent), hsl(0 85% 35%)'
+            : 'radial-gradient(40% 50% at center 100%, hsl(0 70% 40% / 0.3), transparent), radial-gradient(80% 100% at center 120%, hsl(0 60% 35% / 0.2), transparent), hsl(0 75% 25%)',
+          '--transition': '0.3s',
+          '--spark': '2s',
+          '--cut': '0.1em',
+        } as React.CSSProperties
+      }
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
     >
@@ -68,26 +97,21 @@ export function SparkleButton({ children, onClick, href, className = '', size = 
         {children}
       </span>
 
-      {/* Particles (only when active) */}
-      <span className="particle-pen absolute w-[200%] aspect-square top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mask-[radial-gradient(white,transparent_65%)] z-[-1] opacity-[var(--active,0)] transition-opacity duration-300 pointer-events-none">
-        {[...Array(12)].map((_, i) => {
-          const size = 0.15 + Math.random() * 0.2
-          const x = 10 + Math.random() * 80
-          const y = 10 + Math.random() * 80
-          const duration = 1 + Math.random() * 2
-          const delay = Math.random() * 2
-          return (
+      {/* Particles – only render on client */}
+      {mounted && particles.length > 0 && (
+        <span className="particle-pen absolute w-[200%] aspect-square top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mask-[radial-gradient(white,transparent_65%)] z-[-1] opacity-[var(--active,0)] transition-opacity duration-300 pointer-events-none">
+          {particles.map((p, i) => (
             <svg
               key={i}
               className="particle absolute fill-white/80"
               style={{
-                width: `${size}rem`,
+                width: `${p.size}rem`,
                 aspectRatio: '1/1',
-                top: `${y}%`,
-                left: `${x}%`,
+                top: `${p.y}%`,
+                left: `${p.x}%`,
                 opacity: 1,
-                animation: `float-out ${duration}s ${-delay}s infinite linear`,
-                transformOrigin: `${x + 20}% ${y + 20}%`,
+                animation: `float-out ${p.duration}s ${-p.delay}s infinite linear`,
+                transformOrigin: `${p.x + 20}% ${p.y + 20}%`,
                 animationPlayState: active ? 'running' : 'paused',
                 zIndex: -1,
               }}
@@ -97,9 +121,9 @@ export function SparkleButton({ children, onClick, href, className = '', size = 
             >
               <path d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z" fill="currentColor" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          )
-        })}
-      </span>
+          ))}
+        </span>
+      )}
     </button>
   )
 

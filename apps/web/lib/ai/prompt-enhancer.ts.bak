@@ -77,7 +77,7 @@ export class PromptEnhancer {
     ]
     for (const pattern of patterns) {
       const match = input.match(pattern)
-      if (match) return match[1].trim()
+      if (match && match[1]) return match[1].trim()
     }
     return input.slice(0, 50)
   }
@@ -99,7 +99,7 @@ export class PromptEnhancer {
     ]
     for (const pattern of patterns) {
       const match = input.match(pattern)
-      if (match) constraints.push(match[1].trim())
+      if (match && match[1]) constraints.push(match[1].trim())
     }
     return constraints
   }

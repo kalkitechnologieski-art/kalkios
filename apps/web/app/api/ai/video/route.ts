@@ -1,7 +1,9 @@
+import { validateAIEnv } from '@/lib/ai/check-env'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateVideo } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
+  validateAIEnv()
   try {
     const body = await req.json()
     const { prompt, image, duration, resolution, motion } = body

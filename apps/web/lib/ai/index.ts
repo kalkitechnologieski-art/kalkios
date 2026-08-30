@@ -27,18 +27,6 @@ function isBlob(value: any): value is Blob {
   return value && typeof value === 'object' && 'size' in value && 'type' in value && !('name' in value)
 }
 
-// Mock response generator for when all providers fail
-function generateMockResponse(messages: ChatMessage[]): ChatResponse {
-  const lastUser = messages.filter(m => m.role === 'user').pop()
-  const query = lastUser?.content || ''
-  return {
-    content: `I'm Siddhi, your AI concierge. I received your message: "${query}".\n\nTo get a real AI response, please set up your API keys in .env.local. Meanwhile, I can help with basic tasks.`,
-    reasoning: 'Mock mode: No API keys configured.',
-    tokens: 0,
-    provider: 'mock',
-  }
-}
-
 export async function chat(
   messages: ChatMessage[],
   options: ChatOptions & { intent?: string; pendulum?: QuantumPendulum } = {}
@@ -47,79 +35,61 @@ export async function chat(
 
   // Deep thinking mode
   if (deep) {
-    try {
-      const result: DeepThinkResult = await deepThink(messages, { ...options, pendulum })
-      if (result.questions && result.questions.length > 0) {
-        return {
-          content: "I need some clarification:\n\n" + result.questions.map((q, i) => `${i+1}. ${q}`).join('\n'),
-          reasoning: 'Asking clarifying questions',
-          tokens: 0,
-          provider: 'deep-think-question',
-        }
-      }
+    const result: DeepThinkResult = await deepThink(messages, { ...options, pendulum })
+    if (result.questions && result.questions.length > 0) {
       return {
-        content: result.finalAnswer,
-        reasoning: result.reasoning,
-        tokens: result.tokens,
-        provider: result.provider,
+        content: "I need some clarification:\n\n" + result.questions.map((q, i) => `${i+1}. ${q}`).join('\n'),
+        reasoning: 'Asking clarifying questions',
+        tokens: 0,
+        provider: 'deep-think-question',
       }
-    } catch (error) {
-      // Fallback to mock if deep think fails
-      return generateMockResponse(messages)
+    }
+    return {
+      content: result.finalAnswer,
+      reasoning: result.reasoning,
+      tokens: result.tokens,
+      provider: result.provider,
     }
   }
 
   // Web Search mode
   if (search) {
-    try {
-      const lastMsg = messages[messages.length - 1]?.content || ''
-      const results = await zhipuWebSearch(lastMsg)
-      const snippet = results.map(r => `- ${r.title}: ${r.snippet}`).join('\n')
-      return {
-        content: `I found the following information:\n${snippet}\n\nFor more details, visit: ${results.map(r => r.url).join(', ')}`,
-        tokens: 0,
-        provider: 'zhipu-search',
-      }
-    } catch (error) {
-      return generateMockResponse(messages)
+    const lastMsg = messages[messages.length - 1]?.content || ''
+    const results = await zhipuWebSearch(lastMsg)
+    const snippet = results.map(r => `- ${r.title}: ${r.snippet}`).join('\n')
+    return {
+      content: `I found the following information:\n${snippet}\n\nFor more details, visit: ${results.map(r => r.url).join(', ')}`,
+      tokens: 0,
+      provider: 'zhipu-search',
     }
   }
 
   // Default chat: try providers in sequence
-  try {
-    const pendulumInstance = pendulum || new QuantumPendulum()
-    const lastQuery = messages.filter(m => m.role === 'user').pop()?.content || ''
-    pendulumInstance.update(lastQuery)
-    const params = pendulumInstance.getModelParams()
+  const pendulumInstance = pendulum || new QuantumPendulum()
+  const lastQuery = messages.filter(m => m.role === 'user').pop()?.content || ''
+  pendulumInstance.update(lastQuery)
+  const params = pendulumInstance.getModelParams()
 
-    // Try Agnes first
+  // Try Agnes first
+  try {
+    const response = await agnesChat(messages, { ...rest, temperature: params.temperature })
+    return response
+  } catch (error) {
+    // Try Zhipu
     try {
-      const response = await agnesChat(messages, { ...rest, temperature: params.temperature })
+      const response = await zhipuChat(messages, { ...rest, deep: false, temperature: params.temperature })
       return response
-    } catch (error) {
-      // Try Zhipu
+    } catch (error2) {
+      // Try Groq
       try {
-        const response = await zhipuChat(messages, { ...rest, deep: false, temperature: params.temperature })
+        const response = await generateChatGroq(messages, { ...rest, temperature: params.temperature })
         return response
-      } catch (error2) {
-        // Try Groq
-        try {
-          const response = await generateChatGroq(messages, { ...rest, temperature: params.temperature })
-          return response
-        } catch (error3) {
-          // Try OpenRouter
-          try {
-            const response = await generateChatOpenRouter(messages, { ...rest, temperature: params.temperature })
-            return response
-          } catch (error4) {
-            // All providers failed: fallback to mock
-            return generateMockResponse(messages)
-          }
-        }
+      } catch (error3) {
+        // Try OpenRouter
+        const response = await generateChatOpenRouter(messages, { ...rest, temperature: params.temperature })
+        return response
       }
     }
-  } catch (error) {
-    return generateMockResponse(messages)
   }
 }
 
@@ -142,8 +112,7 @@ export async function generateImage(options: ImageGenerationOptions & { image?: 
     try {
       return await generateImageZhipu(opts)
     } catch (error2) {
-      // Fallback: return a placeholder image
-      return `https://picsum.photos/seed/${Date.now()}/1024/768`
+      throw new Error(`Image generation failed: ${error2 instanceof Error ? error2.message : 'Unknown error'}`)
     }
   }
 }
@@ -167,26 +136,17 @@ export async function generateVideo(options: VideoGenerationOptions & { image?: 
     try {
       return await generateVideoZhipu(opts)
     } catch (error2) {
-      // Fallback: sample video
-      return 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
+      throw new Error(`Video generation failed: ${error2 instanceof Error ? error2.message : 'Unknown error'}`)
     }
   }
 }
 
 export async function webSearch(query: string): Promise<SearchResult[]> {
-  try {
-    return await zhipuWebSearch(query)
-  } catch (error) {
-    return []
-  }
+  return await zhipuWebSearch(query)
 }
 
 export async function ocr(file: File): Promise<string> {
-  try {
-    return await performOCR(file)
-  } catch (error) {
-    return 'OCR failed. Please try again.'
-  }
+  return await performOCR(file)
 }
 
 export async function generateLeads(query: string): Promise<Lead[]> {

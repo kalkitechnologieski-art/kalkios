@@ -13,7 +13,6 @@ import { MediaWorkflow } from '@/lib/ai/media-workflow'
 
 export function useChat() {
   const [isProcessing, setIsProcessing] = useState(false)
-  const [pendingQuestions, setPendingQuestions] = useState<string[]>([])
   const contextManager = ContextManager.getInstance()
 
   const sendMessage = useCallback(async (
@@ -72,7 +71,6 @@ export function useChat() {
         if (questions.length > 0 && options.onQuestion) {
           options.onQuestion(questions.map(q => q.question))
         }
-        // We'll still call AI with enhanced prompt
       }
 
       // 7. Standard chat with enhanced prompt
@@ -105,9 +103,11 @@ export function useChat() {
       }
     } catch (error: any) {
       console.error('Chat error:', error)
+      // Provide a helpful error message without mock
+      const errorMessage = error?.message || 'Unknown error'
       return {
-        content: '⚠️ I encountered an issue. Please try again.',
-        reasoning: 'Service temporarily unavailable.',
+        content: `⚠️ I encountered an issue: ${errorMessage}. Please check your API keys and try again.`,
+        reasoning: `Error: ${error?.stack || errorMessage}`,
         tokens: 0,
         provider: 'error',
       }

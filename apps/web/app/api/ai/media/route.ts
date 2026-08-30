@@ -1,7 +1,9 @@
+import { validateAIEnv } from '@/lib/ai/check-env'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateImage, generateVideo } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
+  validateAIEnv()
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File
