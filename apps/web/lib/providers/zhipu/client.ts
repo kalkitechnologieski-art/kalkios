@@ -9,7 +9,7 @@ export const ZhipuChatRequestSchema = z.object({
       content: z.string(),
     })
   ),
-  model: z.string().default("glm-5.3"),
+  model: z.enum(["glm-5.3", "glm-5.3-flash", "glm-4.7", "glm-4.6"]).default("glm-5.3"),
   temperature: z.number().min(0).max(2).default(0.7),
   max_tokens: z.number().positive().default(4096),
   thinking: z
@@ -19,6 +19,9 @@ export const ZhipuChatRequestSchema = z.object({
     })
     .optional(),
   reasoning_effort: z.enum(["low", "medium", "high", "max"]).optional(),
+  tools: z.array(z.any()).optional(),
+  tool_choice: z.enum(["auto", "none"]).optional(),
+  stream: z.boolean().default(false),
 });
 
 export type ZhipuChatRequest = z.infer<typeof ZhipuChatRequestSchema>;
@@ -52,6 +55,19 @@ export class ZhipuClient {
   }
 
   async chat(request: ZhipuChatRequest): Promise<any> {
+    const body: any = {
+      model: request.model,
+      messages: request.messages,
+      temperature: request.temperature,
+      max_tokens: request.max_tokens,
+      stream: request.stream || false,
+    };
+
+    if (request.thinking) body.thinking = request.thinking;
+    if (request.reasoning_effort) body.reasoning_effort = request.reasoning_effort;
+    if (request.tools) body.tools = request.tools;
+    if (request.tool_choice) body.tool_choice = request.tool_choice;
+
     const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -59,7 +75,7 @@ export class ZhipuClient {
         "Content-Type": "application/json",
         "Accept-Language": "en-US,en",
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const text = await response.text();

@@ -18,7 +18,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
-    "noEmit": true
+    "noEmit": true,
+    "strict": true
   },
   "include": [
     "next-env.d.ts",

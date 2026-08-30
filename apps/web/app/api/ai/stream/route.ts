@@ -3,16 +3,6 @@ import { SiddhiAgent } from "@/lib/agents/siddhi-agent";
 import { notifyAdmin } from "@/lib/security/audit";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { messages, userId } = body;
-
-  if (!messages || !Array.isArray(messages)) {
-    return new Response(JSON.stringify({ error: "Invalid messages" }), { status: 400 });
-  }
-
-  const agent = new SiddhiAgent();
-  const result = await agent.process({ messages, userId, stream: true });
-
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -24,6 +14,18 @@ export async function POST(req: NextRequest) {
       };
 
       try {
+        const body = await req.json();
+        const { messages, userId } = body;
+
+        if (!messages || !Array.isArray(messages)) {
+          send({ type: "error", message: "Invalid request: messages array required." });
+          controller.close();
+          return;
+        }
+
+        const agent = new SiddhiAgent();
+        const result = await agent.process({ messages, userId, stream: true });
+
         if (result && typeof result[Symbol.asyncIterator] === "function") {
           for await (const chunk of result) {
             send(chunk);
@@ -37,9 +39,12 @@ export async function POST(req: NextRequest) {
         }
         send({ type: "complete" });
       } catch (error: any) {
-        console.error("[ADMIN] SiddhiAgent error:", error);
-        notifyAdmin(error, { userId, messages });
-        send({ type: "error", message: "I encountered an issue. Please try again." });
+        console.error("[ADMIN] Stream error:", error);
+        notifyAdmin(error, { url: req.url });
+        send({
+          type: "error",
+          message: "I encountered an issue. Please try again or contact support if the problem persists.",
+        });
       } finally {
         try {
           controller.close();

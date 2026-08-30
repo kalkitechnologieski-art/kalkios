@@ -48,6 +48,7 @@ export class IntelligentRouter {
   async route(request: RouteRequest): Promise<any> {
     const { messages, stream = false, deep, tools, image_url, provider: preferred, userId } = request;
 
+    // Use preferred provider if specified, otherwise try Agnes first (free)
     let providers: Provider[];
     if (preferred) {
       providers = [preferred, ...this.providerOrder.filter((p) => p !== preferred)];
@@ -86,26 +87,17 @@ export class IntelligentRouter {
       messages,
       temperature: 0.7,
       max_tokens: 4096,
+      stream: stream || false,
     };
 
     if (tools) body.tools = tools;
-
-    if (image_url) {
-      const last = messages[messages.length - 1];
-      if (last?.role === "user") {
-        last.content = [
-          { type: "text", text: last.content },
-          { type: "image_url", image_url: { url: image_url } },
-        ];
-      }
-    }
 
     const client = this.clients[provider];
 
     switch (provider) {
       case "agnes":
         body.model = "agnes-2.0-flash";
-        if (deep) body.chat_template_kwargs = { enable_thinking: true };
+        if (deep) body.thinking = { type: "enabled", budget_tokens: 4096 };
         if (stream) {
           const agnesStream = await client.chatStream(body);
           if (!agnesStream) throw new Error("Agnes stream returned null");
@@ -138,6 +130,7 @@ export class IntelligentRouter {
           body.reasoning_effort = "max";
         }
         if (stream) {
+          // Zhipu streaming works, but we need to handle it differently; for now fallback to non‑stream
           return client.chat(body);
         }
         return client.chat(body);
