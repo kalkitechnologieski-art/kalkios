@@ -51,12 +51,12 @@ export function useChat() {
       // 5. Special modes
       if (options.image && attachments.length > 0) {
         const mediaWorkflow = new MediaWorkflow()
-        const url = await mediaWorkflow.imageToImage(enhanced.enhanced, attachments[0])
+        const url = await mediaWorkflow.imageToImage(enhanced.enhanced, attachments[0]!)
         return { content: `![Generated Image](${url})`, reasoning: 'Image generated from reference', tokens: 0, provider: 'media' }
       }
       if (options.video && attachments.length > 0) {
         const mediaWorkflow = new MediaWorkflow()
-        const url = await mediaWorkflow.imageToVideo(enhanced.enhanced, attachments[0])
+        const url = await mediaWorkflow.imageToVideo(enhanced.enhanced, attachments[0]!)
         return { content: `<video src="${url}" controls style="max-width:100%;border-radius:12px;" />`, reasoning: 'Video generated from image', tokens: 0, provider: 'media' }
       }
       if (options.search) {
