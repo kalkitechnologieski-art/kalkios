@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/store/cartStore'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import { Loader2, CheckCircle, ShoppingCart, ArrowLeft } from 'lucide-react'
+import { Loader2, CheckCircle, ShoppingCart, ArrowLeft, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import type { Database } from '@/lib/supabase/types'
 
@@ -15,12 +15,18 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const serviceId = searchParams.get('service')
-  const { items, totalPrice, clearCart, removeItem } = useCartStore()
+  const { items, totalPrice, clearCart } = useCartStore()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [serviceData, setServiceData] = useState<Service | null>(null)
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
+  const [buyerDetails, setBuyerDetails] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  })
   const supabase = createClient()
 
   // Fetch service details if single service purchase
@@ -31,7 +37,7 @@ export default function CheckoutPage() {
         .select('*')
         .eq('id', serviceId)
         .single()
-        .then(({ data, error }: { data: any; error: any }) => {
+        .then(({ data, error }: { data: Service | null; error: any }) => {
           if (error) {
             setError('Service not found.')
           } else {
@@ -41,7 +47,6 @@ export default function CheckoutPage() {
     }
   }, [serviceId, supabase])
 
-  // Determine purchase items
   const purchaseItems = serviceId
     ? (serviceData ? [{ id: serviceData.id, name: serviceData.name, price: serviceData.price ?? 0, quantity: 1 }] : [])
     : items.map(item => ({ ...item, price: item.price ?? 0 }))
@@ -56,6 +61,20 @@ export default function CheckoutPage() {
       return
     }
 
+    // Validate buyer details
+    if (!buyerDetails.name.trim()) {
+      setError('Please enter your full name.')
+      return
+    }
+    if (!buyerDetails.email.trim() || !buyerDetails.email.includes('@')) {
+      setError('Please enter a valid email address.')
+      return
+    }
+    if (!buyerDetails.phone.trim()) {
+      setError('Please enter your phone number.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -67,45 +86,52 @@ export default function CheckoutPage() {
         return
       }
 
-      // Create order in Supabase
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          service_id: item.id,
-          amount: item.price,
-          status: 'pending',
-          buyer_name: 'Guest',
-          buyer_email: 'guest@example.com',
-        })
-        .select()
-        .single()
+      // Call payment creation API
+      const response = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: item.id,
+          buyerName: buyerDetails.name,
+          buyerEmail: buyerDetails.email,
+          buyerPhone: buyerDetails.phone,
+        }),
+      })
 
-      if (orderError) throw orderError
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Payment creation failed')
+      }
 
-      setOrderId(order.id)
+      setOrderId(data.orderId)
+      setPaymentUrl(data.paymentUrl)
 
-      // Simulate payment gateway
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Redirect to Instamojo payment page
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl
+      } else {
+        throw new Error('No payment URL returned')
+      }
 
-      // Update order to paid (in prod, webhook would do this)
-      await supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .eq('id', order.id)
-
-      if (!serviceId) clearCart()
-      setSuccess(true)
-
-      // Redirect to client dashboard after 2s
-      setTimeout(() => router.push('/client'), 2000)
-
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err)
-      setError('Payment failed. Please try again.')
+      setError(err.message || 'Payment initialization failed. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  // If payment was successful (redirected back with ?payment=success)
+  useEffect(() => {
+    const successParam = searchParams.get('payment')
+    if (successParam === 'success') {
+      setSuccess(true)
+      if (!serviceId) clearCart()
+      setTimeout(() => {
+        router.push('/client')
+      }, 3000)
+    }
+  }, [searchParams, router, serviceId, clearCart])
 
   if (success) {
     return (
@@ -113,7 +139,7 @@ export default function CheckoutPage() {
         <CheckCircle className="w-16 h-16 text-green-400 mb-4" />
         <h2 className="text-2xl font-bold text-white">Payment Successful!</h2>
         <p className="text-cyan-400/40 mt-2">Your order is being processed.</p>
-        <p className="text-white/30 text-sm mt-4">Order ID: {orderId}</p>
+        <p className="text-white/30 text-sm mt-4">Redirecting to your dashboard...</p>
         <LuxuryButton variant="primary" size="lg" label="Go to Dashboard" onClick={() => router.push('/client')} className="mt-6" />
       </div>
     )
@@ -137,6 +163,35 @@ export default function CheckoutPage() {
           <ShoppingCart className="w-5 h-5 text-cyan-400" />
           Order Summary
         </h2>
+
+        {/* Buyer details */}
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Full Name *"
+            value={buyerDetails.name}
+            onChange={(e) => setBuyerDetails({ ...buyerDetails, name: e.target.value })}
+            className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition"
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email *"
+            value={buyerDetails.email}
+            onChange={(e) => setBuyerDetails({ ...buyerDetails, email: e.target.value })}
+            className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition"
+            required
+          />
+          <input
+            type="tel"
+            placeholder="Phone *"
+            value={buyerDetails.phone}
+            onChange={(e) => setBuyerDetails({ ...buyerDetails, phone: e.target.value })}
+            className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition"
+            required
+          />
+        </div>
+
         {purchaseItems.length === 0 ? (
           <p className="text-white/40">No items to purchase.</p>
         ) : (
@@ -154,11 +209,11 @@ export default function CheckoutPage() {
             <LuxuryButton
               variant="primary"
               size="lg"
-              label={loading ? 'Processing...' : 'Pay Now'}
+              label={loading ? 'Processing...' : 'Pay with Instamojo'}
               onClick={handleCheckout}
               disabled={loading || purchaseItems.length === 0}
               fullWidth
-              icon={loading ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
+              icon={loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             />
           </>
         )}

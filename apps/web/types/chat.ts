@@ -1,10 +1,9 @@
 export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: Date
-  reasoning?: string | null
-  tokens?: number
-  timeMs?: number
-  isThinking?: boolean
+  id?: string;
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  reasoning_content?: string;
+  tool_calls?: any[];
+  tool_call_id?: string;
+  name?: string;
 }

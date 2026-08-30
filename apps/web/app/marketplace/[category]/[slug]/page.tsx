@@ -14,8 +14,16 @@ type Service = Database['public']['Tables']['services']['Row'] & {
 type PageProps = { params: Promise<{ category: string; slug: string }> }
 
 export async function generateStaticParams() {
-  // We'll rely on dynamic routes; no static generation needed to avoid errors.
-  return []
+  const { fetchServices } = await import('@/lib/services')
+  try {
+    const services = await fetchServices()
+    return services.map(s => ({
+      category: s.category,
+      slug: s.slug,
+    }))
+  } catch {
+    return []
+  }
 }
 
 async function getService(category: string, slug: string): Promise<Service | null> {
@@ -34,7 +42,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const features = Array.isArray(service.features) ? service.features : []
   const industries = service.target_industries || []
 
-  // Prepare service object for AddToCartButton
   const cartService = {
     id: service.id,
     name: service.name,
@@ -47,7 +54,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-white/40 mb-6">
         <Link href="/" className="hover:text-white transition">Home</Link>
         <ChevronRight className="w-4 h-4" />
@@ -59,7 +65,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left: Image / Icon */}
         <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 rounded-2xl flex items-center justify-center relative border border-cyan-500/10">
           {service.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -88,7 +93,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* Right: Details */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-xs text-cyan-400/60 uppercase tracking-wider">{service.category}</span>
@@ -136,11 +140,9 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            {/* Buy Now – adds to cart and redirects to checkout */}
             <Link href={`/checkout?service=${service.id}`} className="flex-1">
               <LuxuryButton variant="primary" size="lg" label="Buy Now" icon={<ShoppingCart className="w-4 h-4" />} fullWidth />
             </Link>
-            {/* Add to Cart – silenty adds via client component */}
             <div className="flex-1">
               <AddToCartButton service={cartService} />
             </div>
@@ -154,7 +156,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* FAQ section */}
       <div className="mt-12 bg-white/5 border border-cyan-500/10 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Frequently Asked Questions</h2>
         <div className="space-y-4">

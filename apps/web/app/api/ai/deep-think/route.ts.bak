@@ -1,0 +1,22 @@
+import { NextRequest } from "next/server";
+import { ChainOfThought } from "@/lib/reasoning/chain-of-thought";
+
+export async function POST(req: NextRequest) {
+  const { query } = await req.json();
+  const cot = new ChainOfThought();
+  const generator = cot.generate(query, { stream: true, deep: true });
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: any) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      try {
+        for await (const chunk of generator) send(chunk);
+      } catch (e) {
+        send({ type: "error", message: "DeepThink failed" });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+}
