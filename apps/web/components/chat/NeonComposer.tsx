@@ -62,7 +62,7 @@ export function NeonComposer({
   }, [file, isLoading, onSend]);
 
   return (
-    <div className={`flex flex-col gap-2 sm:gap-3 ${className}`}>
+    <div className={`flex flex-col gap-2 sm:gap-3 ${className} safe-area-bottom`}>
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 px-0.5 sm:px-1">
         <ModeToggleButton
           active={isDeepThink}
@@ -82,40 +82,40 @@ export function NeonComposer({
 
         <button
           onClick={() => setIsSearchMode(!isSearchMode)}
-          className={`p-1 sm:p-1.5 rounded-lg transition ${
+          className={`p-2 sm:p-1.5 rounded-lg transition ${
             isSearchMode ? "bg-blue-600/30 text-blue-400 border border-blue-500/30" : "text-white/40 hover:text-white/70"
           }`}
           title="Web Search"
         >
-          <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Search className="w-4 h-4 sm:w-4 sm:h-4" />
         </button>
 
         <button
           onClick={() => onModeChange(mode === "image" ? "chat" : "image")}
-          className={`p-1 sm:p-1.5 rounded-lg transition ${
+          className={`p-2 sm:p-1.5 rounded-lg transition ${
             mode === "image" ? "bg-pink-600/30 text-pink-400 border border-pink-500/30" : "text-white/40 hover:text-white/70"
           }`}
           title="Image Mode"
         >
-          <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <ImageIcon className="w-4 h-4 sm:w-4 sm:h-4" />
         </button>
 
         <button
           onClick={() => onModeChange(mode === "video" ? "chat" : "video")}
-          className={`p-1 sm:p-1.5 rounded-lg transition ${
+          className={`p-2 sm:p-1.5 rounded-lg transition ${
             mode === "video" ? "bg-red-600/30 text-red-400 border border-red-500/30" : "text-white/40 hover:text-white/70"
           }`}
           title="Video Mode"
         >
-          <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Video className="w-4 h-4 sm:w-4 sm:h-4" />
         </button>
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-1 sm:p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition"
+          className="p-2 sm:p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition"
           title="Attach file"
         >
-          <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Paperclip className="w-4 h-4 sm:w-4 sm:h-4" />
         </button>
 
         <input
@@ -156,9 +156,9 @@ export function NeonComposer({
             </div>
             <button
               onClick={clearFile}
-              className="p-1 sm:p-1.5 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition"
+              className="p-2 sm:p-1.5 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition"
             >
-              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <X className="w-4 h-4 sm:w-4 sm:h-4" />
             </button>
           </motion.div>
         )}

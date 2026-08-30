@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { ChainOfThought } from "@/lib/reasoning/chain-of-thought";
 import { notifyAdmin } from "@/lib/security/audit";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const { query } = await req.json();
 
@@ -23,7 +25,14 @@ export async function POST(req: NextRequest) {
         } catch (_) {}
       };
 
+      let timeoutId: NodeJS.Timeout | null = null;
+
       try {
+        timeoutId = setTimeout(() => {
+          send({ type: "error", message: "DeepThink timed out. Please try again." });
+          controller.close();
+        }, 55000);
+
         const generator = await cot.generate(query, { stream: true, deep: true });
         for await (const chunk of generator) {
           send(chunk);
@@ -36,6 +45,7 @@ export async function POST(req: NextRequest) {
           message: "I encountered an issue while reasoning. Please try again.",
         });
       } finally {
+        if (timeoutId) clearTimeout(timeoutId);
         try {
           controller.close();
         } catch (_) {}

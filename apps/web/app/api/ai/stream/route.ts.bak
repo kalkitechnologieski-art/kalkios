@@ -2,9 +2,6 @@ import { NextRequest } from "next/server";
 import { SiddhiAgent } from "@/lib/agents/siddhi-agent";
 import { notifyAdmin } from "@/lib/security/audit";
 
-// Vercel Hobby plan: max 60 seconds (10s default, extendable to 60s)[reference:7]
-export const maxDuration = 60;
-
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
 
@@ -14,16 +11,6 @@ export async function POST(req: NextRequest) {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
         } catch (_) {}
-      };
-
-      // Server‑side timeout: abort after 55s to avoid Vercel's hard limit
-      let timeoutId: NodeJS.Timeout | null = null;
-
-      const abortTimeout = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
       };
 
       try {
@@ -36,16 +23,8 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // Set a 55‑second timeout for the whole operation
-        timeoutId = setTimeout(() => {
-          send({ type: "error", message: "The request took too long. Please try again." });
-          controller.close();
-        }, 55000);
-
         const agent = new SiddhiAgent();
         const result = await agent.process({ messages, userId, stream: true });
-
-        abortTimeout();
 
         if (result && typeof result[Symbol.asyncIterator] === "function") {
           for await (const chunk of result) {
@@ -67,7 +46,6 @@ export async function POST(req: NextRequest) {
           message: "I encountered an issue. Please try again or contact support if the problem persists.",
         });
       } finally {
-        abortTimeout();
         try {
           controller.close();
         } catch (_) {}

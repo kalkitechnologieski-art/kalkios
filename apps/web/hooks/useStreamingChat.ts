@@ -24,7 +24,6 @@ export function useStreamingChat() {
     async (content: string, options: { deep?: boolean; setu?: boolean; image?: string } = {}) => {
       setError(null);
 
-      // Add user message
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -34,7 +33,6 @@ export function useStreamingChat() {
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      // Add assistant placeholder
       const assistantMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -62,11 +60,13 @@ export function useStreamingChat() {
         });
 
         if (!response.ok) {
-          if (response.status >= 500) {
-            setError("I'm having trouble connecting. Please try again later.");
-          } else {
-            setError("Something went wrong. Please try again.");
+          let message = "Something went wrong. Please try again.";
+          if (response.status === 504) {
+            message = "The request timed out. Please try again or use simpler queries.";
+          } else if (response.status >= 500) {
+            message = "I'm having trouble connecting. Please try again later.";
           }
+          setError(message);
           console.error("API error:", response.status);
           setIsLoading(false);
           return;
@@ -84,7 +84,6 @@ export function useStreamingChat() {
           return;
         }
 
-        // Process the stream
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -168,7 +167,6 @@ export function useStreamingChat() {
                 }
 
                 if (parsed.type === "complete") {
-                  // Mark as complete
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantMsg.id
@@ -183,13 +181,12 @@ export function useStreamingChat() {
                   );
                 }
               } catch (e) {
-                // Ignore malformed JSON
+                // ignore malformed JSON
               }
             }
           }
         }
 
-        // If no content was received, show a fallback
         if (!hasContent && !fullContent) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -225,7 +222,6 @@ export function useStreamingChat() {
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
-
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);

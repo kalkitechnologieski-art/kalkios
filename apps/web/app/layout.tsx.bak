@@ -1,65 +1,36 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
-import { Suspense } from 'react'
-import { ScrollProvider } from '@/components/providers/ScrollProvider'
+import { cn } from '@/lib/utils'
 import { AppLayout } from '@/components/ui/AppLayout'
+import { GlobalLoader } from '@/components/ui/GlobalLoader'
 import '@/styles/globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kalkios.com'),
-  title: {
-    template: '%s | KALKI OS — Enterprise AI Platform',
-    default: 'KALKI OS — Universe-Class AI Platform for Marketing, Development & AI',
-  },
-  description: 'Premium AI-powered digital services marketplace. Enterprise SEO, AI development, and cognitive solutions trusted by 500+ businesses.',
-  keywords: ['AI platform', 'digital marketing', 'AI development', 'enterprise SEO', 'AI chatbot', 'cognitive solutions'],
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-snippet': -1,
-      'max-image-preview': 'large',
-      'max-video-preview': -1,
-    },
-  },
-  alternates: { canonical: 'https://kalkios.com' },
-  openGraph: {
-    type: 'website',
-    url: 'https://kalkios.com',
-    title: 'KALKI OS — Enterprise AI Platform',
-    description: 'AI-powered marketplace for marketing, development, and cognitive solutions.',
-    siteName: 'KALKI OS',
-    images: [{ url: '/og-image.jpg', width: 1200, height: 630 }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'KALKI OS — Enterprise AI Platform',
-    description: 'AI-powered marketplace for marketing, development, and cognitive solutions.',
-    images: ['/og-image.jpg'],
-  },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'),
+  title: { template: '%s | KALKI OS', default: 'KALKI OS — Temple of Technology' },
+  description: 'Premium AI-powered digital services marketplace.',
+  icons: { icon: '/favicon.svg', shortcut: '/favicon.ico' },
 }
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: true,
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en" className="dark">
-      <body className={inter.className}>
-        <ScrollProvider>
-          {/* 
-            Suspense boundary: 
-            - AppLayout uses usePathname (dynamic hook)
-            - Without Suspense, Next.js cannot prerender the static shell
-            - The fallback maintains the page background while the layout resolves
-          */}
-          <Suspense fallback={<div className="min-h-screen bg-background" />}>
-            <AppLayout>{children}</AppLayout>
-          </Suspense>
-        </ScrollProvider>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={cn('min-h-screen bg-black font-sans antialiased', inter.className)} suppressHydrationWarning>
+        <GlobalLoader />
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   )

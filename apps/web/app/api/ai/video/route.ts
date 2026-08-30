@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { AgnesClient } from "@/lib/providers/agnes/client";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const VideoRequestSchema = z.object({
   prompt: z.string().min(1, "Prompt is required"),
   mode: z.enum(["text", "keyframe", "reference"]).default("text"),

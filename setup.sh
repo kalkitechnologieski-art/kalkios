@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================================
-# PUSH TO ORIGIN – SIDDHI AI ENTERPRISE
+# PUSH TO ORIGIN – KALKI OS
 # ============================================================================
 # This script commits all changes and pushes to the remote origin.
 # It includes a pre-push build check to ensure the code is valid.
@@ -10,26 +10,30 @@ set -euo pipefail
 
 ROOT_DIR="$(pwd)"
 APP_DIR="${ROOT_DIR}/apps/web"
-BRANCH=$(git branch --show-current || echo "master")
-TIMESTAMP=$(date "+%Y%m%d_%H%M%S")
-LOG_FILE="${ROOT_DIR}/push_${TIMESTAMP}.log"
+BRANCH="master"  # Change if you use a different branch
 
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
 }
 
 log "Starting push to origin..."
 
 # -----------------------------------------------------------------------------
-# 1. Check if we are in a git repository
+# 1. Check if we are on the correct branch
 # -----------------------------------------------------------------------------
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  log "ERROR: Not in a git repository."
-  exit 1
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+  log "WARNING: You are on branch '$CURRENT_BRANCH', not '$BRANCH'."
+  read -p "Continue pushing to $CURRENT_BRANCH? (y/n): " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+  BRANCH=$CURRENT_BRANCH
 fi
 
 # -----------------------------------------------------------------------------
-# 2. Check if there are changes to commit
+# 2. Check git status
 # -----------------------------------------------------------------------------
 if git diff --quiet && git diff --cached --quiet; then
   log "No changes to commit. Nothing to push."
@@ -67,18 +71,18 @@ git add .
 # -----------------------------------------------------------------------------
 # 5. Commit with a meaningful message
 # -----------------------------------------------------------------------------
-COMMIT_MSG="feat: Enterprise Siddhi AI – mobile-first, always active
+COMMIT_MSG="feat: Enterprise Siddhi AI implementation
 
-- Complete mobile-first responsive design for all chat components
-- Always active with health checks and auto-reconnect
-- Integrated all AI providers (Agnes, Zhipu, Groq, OpenRouter)
-- Added MediaProgress with neon gradient progress bar
-- Full support for DeepThink, SETU, Search, Image, Video
-- Collapsible media settings with full controls
-- Removed Redis dependency – in-memory caching fallback
-- Enterprise-grade error handling and audit logging
-- Fixed all TypeScript errors, strict mode enabled
-- Build passes with zero errors"
+- Added provider clients (Agnes, Groq, OpenRouter, Zhipu)
+- Implemented IntelligentRouter with circuit-breaker, rate-limiter, retry
+- Added Chain-of-Thought reasoning with web grounding
+- Created SETU agent for lead generation with CSV export
+- Implemented SiddhiAgent for self-aware intent detection
+- Added streaming API route with SSE
+- Integrated image and video generation
+- Added error boundaries and audit logging
+- Fixed all TypeScript errors (strict mode)
+- Enterprise-grade error handling and fallbacks"
 
 log "Committing changes..."
 git commit -m "$COMMIT_MSG"
@@ -92,7 +96,4 @@ git push origin "$BRANCH"
 log "============================================================="
 log "Push completed successfully."
 log "Branch: $BRANCH"
-log "Commit: $(git rev-parse --short HEAD)"
 log "============================================================="
-
-exit 0

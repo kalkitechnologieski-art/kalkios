@@ -12,7 +12,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <GlobalErrorHandler>
-      <div className="min-h-screen-safe-safe bg-black flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col">
         <TopBar onMenuClick={() => setIsDrawerOpen(true)} />
 
         <div className="flex flex-1">
@@ -22,7 +22,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </Suspense>
           </div>
 
-          <main className="flex-1 min-h-screen-safe-safe ml-0 md:ml-16 transition-all duration-300 p-4 md:p-6 lg:p-8 overflow-y-auto pb-20 md:pb-6">
+          <main className="flex-1 min-h-screen ml-0 md:ml-16 transition-all duration-300 p-4 md:p-6 lg:p-8 overflow-y-auto pb-20 md:pb-6">
             <Suspense fallback={<div className="text-white/40 text-center py-20">Loading...</div>}>
               {children}
             </Suspense>

@@ -6,13 +6,13 @@ import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   return (
-    <header className="fixed top-0 safe-area-top left-0 right-0 z-50 h-14 bg-black/90 backdrop-blur-xl border-b border-cyan/10 flex items-center justify-between px-4 md:px-6">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-black/90 backdrop-blur-xl border-b border-cyan/10 flex items-center justify-between px-4 md:px-6">
       <button
         onClick={onMenuClick}
-        className="p-3 -ml-3 rounded-full hover:bg-white/5 transition group"
+        className="p-2 -ml-2 rounded-full hover:bg-white/5 transition group"
         aria-label="Open menu"
       >
-        <Menu className="w-6 h-6 text-cyan/60 group-hover:text-cyan transition" />
+        <Menu className="w-5 h-5 text-cyan/60 group-hover:text-cyan transition" />
       </button>
 
       <Link href="/" className="flex items-center gap-3 group">

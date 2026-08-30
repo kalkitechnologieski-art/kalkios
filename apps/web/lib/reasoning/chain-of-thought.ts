@@ -21,13 +21,15 @@ export class ChainOfThought {
 
     if (deep) {
       try {
+        // Limit search to 5 results for speed (Vercel Hobby 60s limit)
         const searchResults = await this.zhipu.webSearch({
           search_query: query,
-          count: 8,
+          count: 5,
           search_recency_filter: "noLimit",
         });
 
-        for (const result of searchResults.search_result || []) {
+        // Read only first 3 pages
+        for (const result of (searchResults.search_result || []).slice(0, 3)) {
           try {
             const reader = await this.zhipu.webReader({
               url: result.link,
@@ -75,7 +77,7 @@ export class ChainOfThought {
 
     try {
       const timeoutPromise = new Promise((_, reject) => {
-        timeout = setTimeout(() => reject(new Error("Stream timeout")), 60000);
+        timeout = setTimeout(() => reject(new Error("Stream timeout")), 55000);
       });
 
       while (true) {

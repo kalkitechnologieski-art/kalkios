@@ -309,7 +309,7 @@ export default function ChatClient() {
 
   return (
     <ErrorBoundary>
-      <div className="relative flex flex-col h-[calc(100vh-130px)] sm:h-[calc(100vh-140px)] max-w-4xl mx-auto px-1.5 sm:px-4">
+      <div className="relative flex flex-col safe-area-padding safe-area-padding-top h-[calc(100dvh-130px)] sm:h-[calc(100dvh-140px)] max-w-4xl mx-auto px-1.5 sm:px-4">
         <GradientGlowBackground isThinking={isLoading} />
 
         {/* Header */}

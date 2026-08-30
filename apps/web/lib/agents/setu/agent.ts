@@ -46,6 +46,7 @@ export class SETUAgent {
       count: 20,
     });
 
+    // Limit to first 5 results for speed (Vercel Hobby 60s limit)
     const pages = [];
     for (const result of (searchResults.search_result || []).slice(0, 5)) {
       try {

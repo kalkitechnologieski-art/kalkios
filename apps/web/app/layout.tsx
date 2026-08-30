@@ -1,37 +1,45 @@
-import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
-import { cn } from '@/lib/utils'
-import { AppLayout } from '@/components/ui/AppLayout'
-import { GlobalLoader } from '@/components/ui/GlobalLoader'
-import '@/styles/globals.css'
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { AppLayout } from "@/components/ui/AppLayout";
+import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import "@/styles/globals.css";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'),
-  title: { template: '%s | KALKI OS', default: 'KALKI OS — Temple of Technology' },
-  description: 'Premium AI-powered digital services marketplace.',
-  icons: { icon: '/favicon.svg', shortcut: '/favicon.ico' },
-}
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://kalkios.com"),
+  title: { template: "%s | KALKI OS", default: "KALKI OS — Temple of Technology" },
+  description: "Premium AI-powered digital services marketplace.",
+  icons: { icon: "/favicon.svg", shortcut: "/favicon.ico" },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+};
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: true,
-}
+  viewportFit: "cover", // Important for notched devices
+  themeColor: "#000000",
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={cn('min-h-screen bg-black font-sans antialiased', inter.className)} suppressHydrationWarning>
+      <body
+        className={cn(
+          "min-h-screen-safe bg-black font-sans antialiased safe-area-padding safe-area-padding-top",
+          inter.className
+        )}
+        suppressHydrationWarning
+      >
         <GlobalLoader />
         <AppLayout>{children}</AppLayout>
       </body>
     </html>
-  )
+  );
 }

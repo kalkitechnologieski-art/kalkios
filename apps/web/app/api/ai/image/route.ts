@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { AgnesClient } from "@/lib/providers/agnes/client";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const ImageRequestSchema = z.object({
   prompt: z.string().min(1, "Prompt is required"),
   size: z.enum(["1K", "2K", "3K", "4K"]).default("2K"),
