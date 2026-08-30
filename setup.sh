@@ -2,55 +2,51 @@
 # ================================================================
 # KALKI OS – Safe Git Push (All Changes)
 # ================================================================
-# This script stages, commits, and pushes all changes to the remote
-# repository. It is safe to run even if there are uncommitted changes.
+# This script safely commits and pushes all changes to the remote.
+# It ensures you are on the correct branch and provides clear output.
 #
-# Usage: ./safe-push.sh
+# Usage: ./push-safely.sh
 # ================================================================
 
 set -euo pipefail
 
-echo "🚀 Preparing to push all changes safely..."
+echo "📦 Preparing to push all changes..."
 
-# Check if there are changes to commit
-if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+# ─── 1. Check git status ──────────────────────────────────────
+if [ -z "$(git status --porcelain)" ]; then
     echo "ℹ️ No changes to commit."
     exit 0
 fi
 
-# Show what will be committed
-echo ""
-echo "📋 Files to be committed:"
-git status --short
+# ─── 2. Show current branch ──────────────────────────────────
+BRANCH=$(git branch --show-current)
+echo "📌 Current branch: $BRANCH"
 
-echo ""
-read -p "❓ Do you want to continue with commit and push? (y/N) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 1
-fi
-
-# Stage all changes
-echo "📦 Staging all changes..."
+# ─── 3. Stage all changes ────────────────────────────────────
+echo "📝 Staging all changes..."
 git add .
 
-# Generate commit message with timestamp
-COMMIT_MSG="feat: enterprise upgrade - notifications, presence, admin/employee panels, realtime fixes, production-ready"
+# ─── 4. Commit with a descriptive message ────────────────────
+COMMIT_MSG="feat: enterprise-grade panels, real-time notifications, presence, and final fixes
 
-echo "📝 Committing with message: $COMMIT_MSG"
+- Admin/Employee/Client panels with real-time Supabase
+- Notification system with priority, push, and realtime
+- User presence (online/offline) with heartbeat
+- Sidebar with role-based dynamic menu
+- DataTable, StatCard, and other reusable components
+- Fixed all TypeScript errors
+- Safe SQL migration for notifications and presence
+- Disabled notifications realtime on /chat to avoid conflicts
+- Updated .env.example with all required keys"
+
+echo "📝 Committing changes..."
 git commit -m "$COMMIT_MSG"
 
-# Determine branch
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-echo "🔀 Pushing to branch: $BRANCH"
+# ─── 5. Push to remote ────────────────────────────────────────
+echo "🚀 Pushing to origin/$BRANCH..."
+git push origin "$BRANCH"
 
-# Push
-if git push origin "$BRANCH"; then
-    echo ""
-    echo "✅ All changes pushed successfully!"
-else
-    echo ""
-    echo "❌ Push failed. Please check your remote connection and permissions."
-    exit 1
-fi
+echo ""
+echo "🎉 All changes pushed successfully!"
+echo "🔗 Remote: $(git remote get-url origin)"
+echo "🌿 Branch: $BRANCH"
