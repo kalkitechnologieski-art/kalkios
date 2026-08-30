@@ -1,6 +1,5 @@
 /**
  * Environment variable validation
- * Ensures all required keys are present before making API calls
  */
 
 export interface EnvStatus {
@@ -28,7 +27,7 @@ export function validateEnv(): EnvStatus {
   const present: string[] = [];
 
   for (const key of REQUIRED_KEYS) {
-    if (process.env[key]) {
+    if (process.env[key] && process.env[key]!.length > 0) {
       present.push(key);
     } else {
       missing.push(key);
@@ -36,31 +35,28 @@ export function validateEnv(): EnvStatus {
   }
 
   for (const key of OPTIONAL_KEYS) {
-    if (process.env[key]) {
+    if (process.env[key] && process.env[key]!.length > 0) {
       present.push(key);
     }
   }
 
   return {
-    valid: missing.length === 0,
+    valid: present.length > 0 && missing.length === 0,
     missing,
     present,
   };
 }
 
-export function getEnvStatusMessage(): string {
-  const status = validateEnv();
-  if (status.valid) {
-    return `✅ All required environment variables are set. (${status.present.length} keys present)`;
-  }
-  return `❌ Missing environment variables: ${status.missing.join(", ")}`;
-}
-
 export function getProviderStatus(): Record<string, boolean> {
   return {
-    agnes: !!process.env.AGNES_API_KEY,
-    zhipu: !!process.env.ZHIPU_API_KEY,
-    groq: !!process.env.GROQ_API_KEY,
-    openrouter: !!process.env.OPENROUTER_API_KEY,
+    agnes: !!(process.env.AGNES_API_KEY && process.env.AGNES_API_KEY.length > 0),
+    zhipu: !!(process.env.ZHIPU_API_KEY && process.env.ZHIPU_API_KEY.length > 0),
+    groq: !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 0),
+    openrouter: !!(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.length > 0),
   };
+}
+
+export function hasAnyProvider(): boolean {
+  const status = getProviderStatus();
+  return !!(status.agnes || status.zhipu || status.groq || status.openrouter);
 }

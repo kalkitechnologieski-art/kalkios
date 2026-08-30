@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { SiddhiAgent } from "@/lib/agents/siddhi-agent";
 import { notifyAdmin } from "@/lib/security/audit";
-import { validateEnv, getEnvStatusMessage } from "@/lib/env/validation";
+import { validateEnv, getProviderStatus, hasAnyProvider } from "@/lib/env/validation";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,22 +20,24 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Start async work
   (async () => {
     try {
-      // Validate environment variables first
       const envStatus = validateEnv();
-      if (!envStatus.valid) {
-        console.error("[ADMIN] Environment validation failed:", envStatus.missing);
+
+      // Log missing keys but don't fail if at least one provider exists
+      if (envStatus.missing.length > 0) {
+        console.warn("[ADMIN] Missing environment variables:", envStatus.missing);
+      }
+
+      if (!hasAnyProvider()) {
+        console.error("[ADMIN] No AI provider API keys found");
         await writer.write(encoder.encode(`data: ${JSON.stringify({
           type: "error",
-          message: "Server configuration error. Please contact support.",
-          details: `Missing: ${envStatus.missing.join(", ")}`,
+          message: "No AI service configured. Please contact support.",
         })}\n\n`));
         await writer.close();
         return;
       }
-      console.log("[DIAGNOSTIC] Environment validation passed");
 
       const body = await req.json();
       const { messages, userId } = body;
@@ -49,17 +51,10 @@ export async function POST(req: NextRequest) {
       // Send a ping to indicate the stream is alive
       await writer.write(encoder.encode(`data: ${JSON.stringify({ type: "status", message: "Connecting to Siddhi..." })}\n\n`));
 
-      console.log("[DIAGNOSTIC] Creating SiddhiAgent...");
       const agent = new SiddhiAgent();
-
-      console.log("[DIAGNOSTIC] Processing request...");
       const result = await agent.process({ messages, userId, stream: true });
 
-      console.log("[DIAGNOSTIC] Result type:", typeof result);
-
-      // Check if result is an async generator
       if (result && typeof result[Symbol.asyncIterator] === "function") {
-        console.log("[DIAGNOSTIC] Result is an async generator, iterating...");
         let hasContent = false;
         for await (const chunk of result) {
           if (chunk.type === "content" && (!chunk.content || chunk.content === "")) {
