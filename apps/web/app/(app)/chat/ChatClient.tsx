@@ -32,10 +32,10 @@ export default function ChatClient() {
 
   const handleSend = useCallback(
     async (text: string, file?: File) => {
-      if (!text.trim()) return;
+      if (!text.trim() || isLoading) return;
       await sendMessage(text, { deep: deepThink, setu: setuMode, search: searchMode });
     },
-    [sendMessage, deepThink, setuMode, searchMode]
+    [sendMessage, isLoading, deepThink, setuMode, searchMode]
   );
 
   const handleMediaGenerate = useCallback(
@@ -93,59 +93,69 @@ export default function ChatClient() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {msg.role === 'system' ? (
-                <div className="flex justify-center my-2">
-                  <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
-                    {typeof msg.content === 'string' ? msg.content : String(msg.content)}
+          {messages.map((msg) => {
+            // Handle different content types
+            let contentToRender = msg.content;
+            if (typeof contentToRender === 'string') {
+              // If it contains image markdown or video tag, render as is
+            } else {
+              contentToRender = String(contentToRender);
+            }
+
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {msg.role === 'system' ? (
+                  <div className="flex justify-center my-2">
+                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
+                      {typeof msg.content === 'string' ? msg.content : String(msg.content)}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <ChatMessage
-                  content={typeof msg.content === 'string' ? msg.content : String(msg.content)}
-                  role={msg.role}
-                  timestamp={new Date()}
-                  isStreaming={msg.isStreaming}
-                />
-              )}
-
-              {msg.role === 'assistant' && msg.reasoning && (
-                <div className="ml-12 mt-1">
-                  <ThinkingTrace
-                    reasoning={typeof msg.reasoning === 'string' ? msg.reasoning : String(msg.reasoning)}
-                    tokens={msg.tokens}
-                    timeMs={0}
-                    status="done"
-                    provider={msg.provider}
+                ) : (
+                  <ChatMessage
+                    content={contentToRender}
+                    role={msg.role}
+                    timestamp={new Date()}
+                    isStreaming={msg.isStreaming}
                   />
-                </div>
-              )}
+                )}
 
-              {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
-                <div className="ml-12 mt-2">
-                  <SetuProgress leads={msg.leads} csv={msg.csv} isLoading={false} />
-                </div>
-              )}
+                {msg.role === 'assistant' && msg.reasoning && (
+                  <div className="ml-12 mt-1">
+                    <ThinkingTrace
+                      reasoning={typeof msg.reasoning === 'string' ? msg.reasoning : String(msg.reasoning)}
+                      tokens={msg.tokens}
+                      timeMs={0}
+                      status="done"
+                      provider={msg.provider}
+                    />
+                  </div>
+                )}
 
-              {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
-                <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
-                  <p className="text-white/60 text-sm font-mono">Please answer:</p>
-                  <ul className="list-disc list-inside text-cyan-400/80 text-sm mt-1 space-y-1">
-                    {msg.questions.map((q: string, i: number) => (
-                      <li key={i}>{q}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </motion.div>
-          ))}
+                {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
+                  <div className="ml-12 mt-2">
+                    <SetuProgress leads={msg.leads} csv={msg.csv} isLoading={false} />
+                  </div>
+                )}
+
+                {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
+                  <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
+                    <p className="text-white/60 text-sm font-mono">Please answer:</p>
+                    <ul className="list-disc list-inside text-cyan-400/80 text-sm mt-1 space-y-1">
+                      {msg.questions.map((q: string, i: number) => (
+                        <li key={i}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
 
         {isLoading && (
