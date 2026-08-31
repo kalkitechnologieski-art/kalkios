@@ -1,4 +1,3 @@
-// lib/agents/setu/socratic-orchestrator.ts
 import { ResearchPlan } from '@/lib/ai/enhanced/types';
 import { GroqClient } from '@/lib/providers/groq/client';
 
@@ -20,7 +19,7 @@ export class SocraticOrchestrator {
     };
   }
 
-  private async decomposeQuery(query: string): Promise<string[]> {
+  async decomposeQuery(query: string): Promise<string[]> {
     const prompt = `Break down this lead generation query into 3-5 specific sub-questions that would help find better leads. Return only the sub-questions, one per line:
 
 Query: "${query}"`;
@@ -43,7 +42,7 @@ Query: "${query}"`;
     }
   }
 
-  private async generateSearchQueries(subQuestions: string[]): Promise<string[]> {
+  async generateSearchQueries(subQuestions: string[]): Promise<string[]> {
     const queries: string[] = [];
     for (const q of subQuestions) {
       const keywords = await this.extractKeywords(q);
