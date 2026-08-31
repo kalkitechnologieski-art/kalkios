@@ -15,24 +15,36 @@ export interface ModelProvider {
   name: string;
   client: any;
   defaultModel: string;
-  weight: number;       // 0-1, higher = better
+  weight: number;
   rpmLimit: number;
   isAvailable: () => boolean;
   capabilities: ModelCapabilities;
-  // Optional: provider-specific config
-  config?: Record<string, unknown>;
 }
 
 export class ModelRegistry {
   private providers: ModelProvider[] = [];
 
   constructor() {
-    // Primary: Agnes – free, multimodal (text, image, video)
+    this.register({
+      name: 'zhipu',
+      client: new ZhipuClient(),
+      defaultModel: 'glm-4.7',
+      weight: 0.95,
+      rpmLimit: 1,
+      isAvailable: () => !!process.env.ZHIPU_API_KEY,
+      capabilities: {
+        supportsStreaming: true,
+        supportsThinking: true,
+        supportsImages: false,
+        supportsVideo: false,
+        supportsWebSearch: true,
+      },
+    });
     this.register({
       name: 'agnes',
       client: new AgnesClient(),
       defaultModel: 'agnes-2.5-flash',
-      weight: 0.95,
+      weight: 0.9,
       rpmLimit: 20,
       isAvailable: () => !!process.env.AGNES_API_KEY,
       capabilities: {
@@ -43,8 +55,6 @@ export class ModelRegistry {
         supportsWebSearch: false,
       },
     });
-
-    // Secondary: Groq – fast, free, no images/video
     this.register({
       name: 'groq',
       client: new GroqClient(),
@@ -60,25 +70,6 @@ export class ModelRegistry {
         supportsWebSearch: false,
       },
     });
-
-    // Tertiary: Zhipu – large context, web search, reasoning
-    this.register({
-      name: 'zhipu',
-      client: new ZhipuClient(),
-      defaultModel: 'glm-4.7',
-      weight: 0.8,
-      rpmLimit: 1,
-      isAvailable: () => !!process.env.ZHIPU_API_KEY,
-      capabilities: {
-        supportsStreaming: true,
-        supportsThinking: true,
-        supportsImages: false,
-        supportsVideo: false,
-        supportsWebSearch: true,
-      },
-    });
-
-    // Fallback: OpenRouter – universal access
     this.register({
       name: 'openrouter',
       client: new OpenRouterClient(),

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { StreamingOrchestrator } from '@/lib/orchestration/streaming-orchestrator';
+import { EnterpriseRouter } from '@/lib/orchestration/enterprise-router';
 import { EnhancedDeepThink } from '@/lib/reasoning/enhanced-deep-think';
 import { EnhancedSETUAgent } from '@/lib/agents/setu/enhanced-agent';
 import { EnhancedImageGenerator } from '@/lib/ai/enhanced/image';
@@ -10,7 +10,6 @@ import { generateCSV } from '@/lib/ai/enhanced/utils';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-// ─── Safe string converter (handles React elements) ──────────────────────
 function safeString(data: unknown): string {
   if (typeof data === 'string') return data;
   if (data && typeof data === 'object') {
@@ -30,7 +29,6 @@ function safeString(data: unknown): string {
   return String(data);
 }
 
-// ─── Intent detection ──────────────────────────────────────────────────────
 function detectIntent(query: string): string {
   const lower = query.toLowerCase();
   if (/generate image|create image|draw|paint|render image|make an image/.test(lower)) return 'image';
@@ -50,9 +48,7 @@ export async function POST(req: NextRequest) {
   const send = async (data: any) => {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-    } catch (e) {
-      console.error('[send] Failed to write:', e);
-    }
+    } catch {}
   };
 
   const response = new Response(responseStream.readable, {
@@ -67,13 +63,8 @@ export async function POST(req: NextRequest) {
   (async () => {
     try {
       console.log('[API] Request received');
-      const body = await req.json().catch((e) => {
-        console.error('[API] Failed to parse JSON:', e);
-        return null;
-      });
-
+      const body = await req.json().catch(() => null);
       if (!body || !body.messages || !Array.isArray(body.messages)) {
-        console.error('[API] Invalid request body');
         await send({ type: 'error', message: 'Invalid request.' });
         await writer.close();
         return;
@@ -84,13 +75,11 @@ export async function POST(req: NextRequest) {
       const query = lastUser?.content || '';
       const detectedIntent = intent || detectIntent(query);
 
-      console.log(`[API] Detected intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
-
+      console.log(`[API] Intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
-      // ─── Specialised intents ──────────────────────────────────────────────
+      // Specialised intents
       if (detectedIntent === 'deep') {
-        console.log('[API] Running DeepThink...');
         const deepThink = new EnhancedDeepThink();
         const result = await deepThink.reason(query, {
           num_paths: 3,
@@ -101,13 +90,11 @@ export async function POST(req: NextRequest) {
         await send({ type: 'reasoning', content: safeString(result.reasoning) });
         await send({ type: 'content', content: safeString(result.final_answer) });
         await send({ type: 'complete' });
-        console.log('[API] DeepThink completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'setu') {
-        console.log('[API] Running SETU...');
         const setu = new EnhancedSETUAgent();
         const leads = await setu.generateLeads(query);
         const leadData = leads.map((l: any) => ({
@@ -135,13 +122,11 @@ export async function POST(req: NextRequest) {
         await send({ type: 'leads', leads: leadData, total: leads.length, csv });
         await send({ type: 'content', content: `Found ${leads.length} leads. Download CSV below.` });
         await send({ type: 'complete' });
-        console.log('[API] SETU completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'image') {
-        console.log('[API] Running Image Generation...');
         const imageGen = new EnhancedImageGenerator();
         const result = await imageGen.generate({
           prompt: query,
@@ -153,13 +138,11 @@ export async function POST(req: NextRequest) {
         await send({ type: 'image', url: result.url });
         await send({ type: 'content', content: `![Generated Image](${result.url})` });
         await send({ type: 'complete' });
-        console.log('[API] Image completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'video') {
-        console.log('[API] Running Video Generation...');
         const videoGen = new EnhancedVideoGenerator();
         const result = await videoGen.generate({
           prompt: query,
@@ -171,18 +154,17 @@ export async function POST(req: NextRequest) {
         await send({ type: 'video', url: result.url });
         await send({ type: 'content', content: `<video src="${result.url}" controls style="max-width:100%;border-radius:12px;" />` });
         await send({ type: 'complete' });
-        console.log('[API] Video completed.');
         await writer.close();
         return;
       }
 
-      // ─── Default: chat with orchestrator ──────────────────────────────────
-      console.log('[API] Using StreamingOrchestrator for chat...');
+      // Chat: use EnterpriseRouter
+      console.log('[API] Using EnterpriseRouter for chat...');
       const systemPrompt = `${SIDDHI_SYSTEM_PROMPT}\n\nUser query: ${query}`;
       const enrichedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
-      const orchestrator = new StreamingOrchestrator();
-      const stream = await orchestrator.route({
+      const router = new EnterpriseRouter();
+      const stream = await router.route({
         messages: enrichedMessages,
         stream: true,
         userId,
@@ -191,41 +173,51 @@ export async function POST(req: NextRequest) {
         intent: 'chat',
       });
 
-      console.log('[API] Orchestrator returned:', stream ? 'ReadableStream' : 'null');
-
       if (stream instanceof ReadableStream) {
         const reader = stream.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let hasContent = false;
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
               if (data === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.content) parsed.content = safeString(parsed.content);
+                if (parsed.content) {
+                  parsed.content = safeString(parsed.content);
+                  hasContent = true;
+                }
                 await send(parsed);
-              } catch (e) {
-                console.warn('[API] Failed to parse SSE chunk:', data, e);
+              } catch {
                 await send({ type: 'content', content: safeString(data) });
+                hasContent = true;
               }
             } else if (line.trim()) {
               await send({ type: 'content', content: safeString(line) });
+              hasContent = true;
             }
           }
         }
+
+        if (!hasContent) {
+          console.warn('[API] No content received, sending fallback');
+          await send({ type: 'content', content: 'I received your message but am having trouble responding. Please try again.' });
+        }
+
         await send({ type: 'complete' });
-        console.log('[API] Stream finished.');
         await writer.close();
       } else {
-        console.warn('[API] Orchestrator did not return a stream. Falling back to plain response.');
-        await send({ type: 'content', content: safeString(stream?.choices?.[0]?.message?.content || 'No response.') });
+        console.warn('[API] Router did not return a stream');
+        await send({ type: 'content', content: 'No response available.' });
         await send({ type: 'complete' });
         await writer.close();
       }
