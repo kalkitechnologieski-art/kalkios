@@ -31,7 +31,7 @@ function safeString(data: unknown): string {
   return String(data);
 }
 
-function detectIntent(query: string): string {
+function detectIntentFromText(query: string): string {
   const lower = query.toLowerCase();
   if (/generate image|create image|draw|paint|render image|make an image/.test(lower)) return 'image';
   if (/generate video|create video|animate|make video|render video/.test(lower)) return 'video';
@@ -74,22 +74,39 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      const { messages, intent, options, userId, sessionId } = body;
+      const { messages, deep, setu, search, options, userId, sessionId } = body;
       const lastUser = messages.filter((m: any) => m.role === 'user').pop();
       const query = lastUser?.content || '';
-      const detectedIntent = intent || detectIntent(query);
 
-      console.log(`[API] 🎯 Intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
+      // ─── Determine intent from flags, then text ──────────────────────────
+      let detectedIntent: string;
+      if (deep === true) {
+        detectedIntent = 'deep';
+      } else if (setu === true) {
+        detectedIntent = 'setu';
+      } else if (search === true) {
+        detectedIntent = 'search';
+      } else {
+        detectedIntent = detectIntentFromText(query);
+      }
+
+      console.log(`[API] 🎯 Intent: ${detectedIntent} (deep=${deep}, setu=${setu}, search=${search})`);
+
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
-      // ─── Specialised intents ──────────────────────────────────────────
+      // ─── Handle each intent ──────────────────────────────────────────────
+
+      // ─── DeepThink ──────────────────────────────────────────────────────
       if (detectedIntent === 'deep') {
+        console.log('[API] 🧠 Running DeepThink...');
         const deepThink = new EnhancedDeepThink();
+        // Use web search if the search flag is also true (or always for deep)
+        const useWeb = search === true || true;
         const result = await deepThink.reason(query, {
           num_paths: 3,
           consensus_threshold: 0.6,
           stream: false,
-          useWeb: true,
+          useWeb,
         });
         await send({ type: 'reasoning', content: safeString(result.reasoning) });
         await send({ type: 'content', content: safeString(result.final_answer) });
@@ -98,9 +115,11 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // ─── SETU ────────────────────────────────────────────────────────────
       if (detectedIntent === 'setu') {
-        const setu = new EnhancedSETUAgent();
-        const leads = await setu.generateLeads(query);
+        console.log('[API] 🔍 Running SETU...');
+        const setuAgent = new EnhancedSETUAgent();
+        const leads = await setuAgent.generateLeads(query);
         const leadData = leads.map((l: any) => ({
           name: l.name,
           email: l.email,
@@ -130,7 +149,27 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // ─── Web Search ──────────────────────────────────────────────────────
+      if (detectedIntent === 'search') {
+        console.log('[API] 🌐 Running Web Search...');
+        // Use EnhancedDeepThink with web search only
+        const deepThink = new EnhancedDeepThink();
+        const result = await deepThink.reason(query, {
+          num_paths: 1,
+          consensus_threshold: 0.5,
+          stream: false,
+          useWeb: true,
+        });
+        // Return just the final answer
+        await send({ type: 'content', content: safeString(result.final_answer) });
+        await send({ type: 'complete' });
+        await writer.close();
+        return;
+      }
+
+      // ─── Image Generation ─────────────────────────────────────────────
       if (detectedIntent === 'image') {
+        console.log('[API] 🖼️ Running Image Generation...');
         const imageGen = new EnhancedImageGenerator();
         const result = await imageGen.generate({
           prompt: query,
@@ -146,7 +185,9 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // ─── Video Generation ─────────────────────────────────────────────
       if (detectedIntent === 'video') {
+        console.log('[API] 🎬 Running Video Generation...');
         const videoGen = new EnhancedVideoGenerator();
         const result = await videoGen.generate({
           prompt: query,
@@ -162,8 +203,8 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      // ─── Chat: use EnterpriseRouter ──────────────────────────────────
-      console.log('[API] 🚀 Using EnterpriseRouter for chat...');
+      // ─── Default: Chat ──────────────────────────────────────────────────
+      console.log('[API] 💬 Using EnterpriseRouter for chat...');
       const systemPrompt = `${SIDDHI_SYSTEM_PROMPT}\n\nUser query: ${query}`;
       const enrichedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
@@ -178,31 +219,19 @@ export async function POST(req: NextRequest) {
       });
 
       if (stream instanceof ReadableStream) {
-        console.log('[API] 📡 Streaming with eventsource‑parser...');
         const reader = stream.getReader();
         const decoder = new TextDecoder();
-        let hasContent = false;
-        let fullContent = '';
-        let chunkCount = 0;
-
-        // ─── Correct parser configuration ──────────────────────────────
         const parser = createParser({
           onEvent: (event: EventSourceMessage) => {
             if (event.data === '[DONE]') return;
             try {
               const parsed = JSON.parse(event.data);
-              // OpenAI‑compatible: choices[0].delta.content
               const content = parsed?.choices?.[0]?.delta?.content ||
                               parsed?.choices?.[0]?.message?.content ||
                               parsed?.content;
               if (content) {
-                const text = safeString(content);
-                fullContent += text;
-                hasContent = true;
-                console.log(`[API] 📝 SSE chunk: "${text.slice(0, 50)}..."`);
-                send({ type: 'content', content: text });
+                send({ type: 'content', content: safeString(content) });
               }
-              // Handle reasoning content
               const reasoning = parsed?.choices?.[0]?.delta?.reasoning_content;
               if (reasoning) {
                 send({ type: 'reasoning', content: safeString(reasoning) });
@@ -213,23 +242,18 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // ─── Read stream ──────────────────────────────────────────────────
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunkCount++;
-            const chunk = decoder.decode(value, { stream: true });
-            console.log(`[API] 📦 Chunk ${chunkCount} (${chunk.length} bytes)`);
-            parser.feed(chunk);
-          }
-        } catch (readErr) {
-          console.error('[API] ❌ Stream read error:', readErr);
+        let hasContent = false;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = new TextDecoder().decode(value);
+          parser.feed(chunk);
+          // Quick check for content (simplified)
+          if (chunk.includes('"content"')) hasContent = true;
         }
 
-        // ─── Fallback if no content ──────────────────────────────────────
         if (!hasContent) {
-          console.warn('[API] ⚠️ No content from SSE. Falling back to non‑streaming.');
+          console.warn('[API] ⚠️ No content from stream, falling back to non‑streaming.');
           const fallbackResult = await router.route({
             messages: enrichedMessages,
             stream: false,
@@ -239,20 +263,16 @@ export async function POST(req: NextRequest) {
             intent: 'chat',
           });
           if (fallbackResult?.choices?.[0]?.message?.content) {
-            const text = safeString(fallbackResult.choices[0].message.content);
-            await send({ type: 'content', content: text });
+            await send({ type: 'content', content: safeString(fallbackResult.choices[0].message.content) });
           } else {
             await send({ type: 'content', content: 'I received your message but am having trouble responding. Please try again.' });
           }
-        } else {
-          console.log(`[API] ✅ Full content received (${fullContent.length} chars).`);
         }
 
         await send({ type: 'complete' });
         await writer.close();
       } else {
-        // Router returned a plain object (non‑streaming)
-        console.warn('[API] 📄 Router returned plain object (non‑streaming).');
+        console.warn('[API] 📄 Router returned plain object.');
         const content = stream?.choices?.[0]?.message?.content;
         if (content) {
           await send({ type: 'content', content: safeString(content) });
