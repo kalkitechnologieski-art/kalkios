@@ -1,5 +1,4 @@
-// lib/agents/setu/enhanced-agent.ts
-import { EnhancedLead, ResearchPlan, generateUUID } from '@/lib/ai/enhanced/types';
+import { EnhancedLead, ResearchPlan } from '@/lib/ai/enhanced/types';
 import { SocraticOrchestrator } from './socratic-orchestrator';
 import { WebResearchAgent } from './web-research-agent';
 import { LeadAggregator } from './lead-aggregator';

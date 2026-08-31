@@ -1,4 +1,3 @@
-// lib/ai/enhanced/image.ts
 import { ImageGenerationOptions, ImageGenerationResult } from './types';
 import { imageCache } from './cache';
 import { GroqClient } from '@/lib/providers/groq/client';
@@ -6,10 +5,10 @@ import { AgnesClient } from '@/lib/providers/agnes/client';
 import { safeFileToBase64 } from './utils';
 
 const QUALITY_CONFIGS = {
-  low: { size: '1K' as const, steps: 10, model: 'agnes-image-2.1-flash' },
-  standard: { size: '2K' as const, steps: 25, model: 'agnes-image-2.1-flash' },
-  high: { size: '3K' as const, steps: 40, model: 'agnes-image-2.1-flash' },
-  ultra: { size: '4K' as const, steps: 60, model: 'agnes-image-2.1-flash' },
+  low: { size: '1K', steps: 10, model: 'agnes-image-2.1-flash' },
+  standard: { size: '2K', steps: 25, model: 'agnes-image-2.1-flash' },
+  high: { size: '3K', steps: 40, model: 'agnes-image-2.1-flash' },
+  ultra: { size: '4K', steps: 60, model: 'agnes-image-2.1-flash' },
 };
 
 export class EnhancedImageGenerator {
@@ -24,10 +23,12 @@ export class EnhancedImageGenerator {
     const size = options.size || config.size;
     const steps = options.steps || config.steps;
 
+    // Optimise prompt if short
     const optimizedPrompt = options.prompt.length < 50 
       ? await this.optimizePrompt(options.prompt, options.style)
       : options.prompt;
 
+    // Check cache
     const cacheKey = this.getCacheKey(optimizedPrompt, size);
     if (options.cache !== false && !this.isServer) {
       const cached = imageCache.get(cacheKey);
@@ -45,6 +46,7 @@ export class EnhancedImageGenerator {
       }
     }
 
+    // Handle file upload
     let imageData: string | undefined;
     if (options.image) {
       if (typeof options.image === 'string') {
@@ -52,42 +54,27 @@ export class EnhancedImageGenerator {
       } else if (!this.isServer) {
         imageData = await safeFileToBase64(options.image);
       } else {
-        throw new Error('File upload is not supported on server');
+        throw new Error('File upload not supported on server');
       }
     }
 
-    const body: Record<string, unknown> = {
+    // Build request
+    const body: any = {
       model: config.model,
       prompt: optimizedPrompt,
       size,
       ratio: options.ratio || '16:9',
       n: options.n || 1,
     };
-
-    const extraBody: Record<string, unknown> = {
-      response_format: 'url',
-    };
-
-    if (options.negative_prompt) {
-      extraBody.negative_prompt = options.negative_prompt;
-    }
-    if (steps) {
-      extraBody.steps = steps;
-    }
-    if (imageData) {
-      extraBody.image = [imageData];
-    }
-
-    if (Object.keys(extraBody).length > 0) {
-      body.extra_body = extraBody;
-    }
+    const extraBody: any = { response_format: 'url' };
+    if (options.negative_prompt) extraBody.negative_prompt = options.negative_prompt;
+    if (steps) extraBody.steps = steps;
+    if (imageData) extraBody.image = [imageData];
+    if (Object.keys(extraBody).length) body.extra_body = extraBody;
 
     const response = await this.agnes.image(body);
     const url = response.data?.[0]?.url;
-
-    if (!url) {
-      throw new Error('No image URL returned from Agnes');
-    }
+    if (!url) throw new Error('No image URL returned');
 
     if (options.cache !== false && !this.isServer) {
       imageCache.set(cacheKey, url);
@@ -109,7 +96,7 @@ export class EnhancedImageGenerator {
     try {
       const styleInstruction = style ? ` in ${style} style` : '';
       const response = await this.groq.chat({
-        messages: [{ role: 'user', content: `Expand this short image prompt into a detailed, high-quality description${styleInstruction}. Be specific about lighting, composition, colors, and mood. Return only the expanded prompt, no explanation.\n\nOriginal: "${prompt}"` }],
+        messages: [{ role: 'user', content: `Expand this short image prompt into a detailed, high-quality description${styleInstruction}. Return only the expanded prompt:\n\n"${prompt}"` }],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.5,
         max_tokens: 200,
@@ -129,8 +116,7 @@ export class EnhancedImageGenerator {
   private hashString(input: string): string {
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = ((hash << 5) - hash) + input.charCodeAt(i);
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);

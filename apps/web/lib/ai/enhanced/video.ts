@@ -1,4 +1,3 @@
-// lib/ai/enhanced/video.ts
 import { VideoGenerationOptions, VideoGenerationResult } from './types';
 import { videoCache } from './cache';
 import { AgnesClient } from '@/lib/providers/agnes/client';
@@ -7,9 +6,9 @@ import { GroqClient } from '@/lib/providers/groq/client';
 import { safeFileToBase64, sleep } from './utils';
 
 const QUALITY_CONFIGS = {
-  speed: { resolution: '720P' as const, duration: 5, model: 'agnes-video-2.5-flash' },
-  balanced: { resolution: '1080P' as const, duration: 5, model: 'agnes-video-2.5' },
-  quality: { resolution: '4K' as const, duration: 10, model: 'agnes-video-2.5' },
+  speed: { resolution: '720P', duration: 5, model: 'agnes-video-2.5-flash' },
+  balanced: { resolution: '1080P', duration: 5, model: 'agnes-video-2.5' },
+  quality: { resolution: '4K', duration: 10, model: 'agnes-video-2.5' },
 };
 
 const ZHIPU_RESOLUTIONS: Record<string, string> = {
@@ -96,7 +95,7 @@ export class EnhancedVideoGenerator {
   ): Promise<Omit<VideoGenerationResult, 'cache_hit' | 'time_ms'>> {
     const model = resolution === '720P' ? 'agnes-video-2.5-flash' : 'agnes-video-2.5';
 
-    const body: Record<string, unknown> = {
+    const body: any = {
       model,
       prompt,
       mode: options.mode || 'text',
@@ -105,19 +104,15 @@ export class EnhancedVideoGenerator {
       aspect_ratio: options.aspect_ratio || '16:9',
       n: 1,
     };
-
     if (options.seed) body.seed = options.seed;
-
     if (options.mode === 'keyframe') {
       if (options.first_frame) body.first_frame = options.first_frame;
       if (options.last_frame) body.last_frame = options.last_frame;
     }
-
     if (options.mode === 'reference') {
       if (options.images) body.images = options.images;
       if (options.audios) body.audios = options.audios;
     }
-
     if (options.image) {
       const imageData = typeof options.image === 'string' 
         ? options.image 
@@ -127,13 +122,9 @@ export class EnhancedVideoGenerator {
 
     const response = await this.agnes.video(body);
     const videoId = response.video_id;
-
-    if (!videoId) {
-      throw new Error('No video_id returned from Agnes');
-    }
+    if (!videoId) throw new Error('No video_id returned');
 
     const url = await this.pollAgnesStatus(videoId, model);
-
     return {
       url,
       taskId: videoId,
@@ -157,17 +148,14 @@ export class EnhancedVideoGenerator {
 
       try {
         const status = await this.agnes.videoStatus(videoId, model);
-
         if (status.status === 'completed') {
           const url = status.metadata?.url;
           if (!url) throw new Error('No URL in completed status');
           return url;
         }
-
         if (status.status === 'failed') {
           throw new Error(`Video generation failed: ${status.error?.message || 'Unknown error'}`);
         }
-
         if (status.progress && status.progress < 50 && delay < 8000) {
           delay = Math.min(delay * 1.3, 8000);
         }
@@ -178,8 +166,7 @@ export class EnhancedVideoGenerator {
         }
       }
     }
-
-    throw new Error('Video generation timed out after 60 attempts');
+    throw new Error('Video generation timed out');
   }
 
   private async generateZhipu(
@@ -190,20 +177,18 @@ export class EnhancedVideoGenerator {
   ): Promise<Omit<VideoGenerationResult, 'cache_hit' | 'time_ms'>> {
     const zhipuResolution = ZHIPU_RESOLUTIONS[resolution] || '1920x1080';
 
-    const body: Record<string, unknown> = {
+    const body: any = {
       model: 'cogvideox-3',
       prompt,
       quality: duration > 5 ? 'quality' : 'speed',
       size: zhipuResolution,
     };
-
     if (options.image) {
       const imageData = typeof options.image === 'string' 
         ? options.image 
         : await safeFileToBase64(options.image);
       body.image_url = imageData;
     }
-
     if (options.first_frame && options.last_frame) {
       body.image_url = [options.first_frame, options.last_frame];
     }
@@ -216,21 +201,12 @@ export class EnhancedVideoGenerator {
       },
       body: JSON.stringify(body),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Zhipu video generation failed: ${response.status} ${errorText}`);
-    }
-
+    if (!response.ok) throw new Error(`Zhipu video failed: ${response.status}`);
     const data = await response.json();
     const taskId = data.id;
-
-    if (!taskId) {
-      throw new Error('No task ID from Zhipu');
-    }
+    if (!taskId) throw new Error('No task ID from Zhipu');
 
     const url = await this.pollZhipuStatus(taskId);
-
     return {
       url,
       taskId,
@@ -256,29 +232,22 @@ export class EnhancedVideoGenerator {
         const response = await fetch(
           `https://open.bigmodel.cn/api/paas/v4/async/result/${taskId}`,
           {
-            headers: {
-              'Authorization': `Bearer ${process.env.ZHIPU_API_KEY}`,
-            },
+            headers: { 'Authorization': `Bearer ${process.env.ZHIPU_API_KEY}` },
           }
         );
-
         if (!response.ok) {
           if (response.status === 404) continue;
           throw new Error(`Zhipu status check failed: ${response.status}`);
         }
-
         const data = await response.json();
-
         if (data.task_status === 'SUCCESS') {
           const url = data.video_url || data.result?.video_url;
-          if (!url) throw new Error('No video URL in Zhipu response');
+          if (!url) throw new Error('No video URL');
           return url;
         }
-
         if (data.task_status === 'FAIL') {
-          throw new Error(`Zhipu video generation failed: ${data.error?.message || 'Unknown error'}`);
+          throw new Error(`Zhipu video failed: ${data.error?.message || 'Unknown'}`);
         }
-
         if (attempts % 5 === 0 && delay < 8000) {
           delay = Math.min(delay * 1.5, 8000);
         }
@@ -289,14 +258,13 @@ export class EnhancedVideoGenerator {
         }
       }
     }
-
     throw new Error('Zhipu video generation timed out');
   }
 
   private async optimizePrompt(prompt: string): Promise<string> {
     try {
       const response = await this.groq.chat({
-        messages: [{ role: 'user', content: `Expand this short video prompt into a detailed, cinematic description. Include visual style, camera movement, and mood. Return only the expanded prompt:\n\n"${prompt}"` }],
+        messages: [{ role: 'user', content: `Expand this short video prompt into a detailed, cinematic description. Return only the expanded prompt:\n\n"${prompt}"` }],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.5,
         max_tokens: 200,
@@ -316,8 +284,7 @@ export class EnhancedVideoGenerator {
   private hashString(input: string): string {
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = ((hash << 5) - hash) + input.charCodeAt(i);
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);

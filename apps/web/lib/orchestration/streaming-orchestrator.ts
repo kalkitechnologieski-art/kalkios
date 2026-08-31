@@ -11,6 +11,8 @@ export interface OrchestratorRequest {
   userId?: string;
   sessionId?: string;
   preferredProvider?: string;
+  // For specialised intents
+  intent?: 'chat' | 'image' | 'video' | 'setu' | 'deep';
 }
 
 export class StreamingOrchestrator {
@@ -20,17 +22,18 @@ export class StreamingOrchestrator {
   private sessionMap = new Map<string, string>();
 
   async route(request: OrchestratorRequest): Promise<any> {
-    const { messages, stream = false, deep, tools, image_url, userId, sessionId, preferredProvider } = request;
+    const { messages, stream = false, deep, tools, image_url, userId, sessionId, preferredProvider, intent } = request;
 
-    // 1. Select candidate providers
+    // 1. Select candidate providers based on intent
     let candidates = this.registry.getAvailable();
 
     // If a specific capability is needed, filter further
-    if (deep) {
-      candidates = candidates.filter(p => p.capabilities.supportsThinking);
-    }
-    if (image_url) {
+    if (intent === 'image') {
       candidates = candidates.filter(p => p.capabilities.supportsImages);
+    } else if (intent === 'video') {
+      candidates = candidates.filter(p => p.capabilities.supportsVideo);
+    } else if (intent === 'deep' || deep) {
+      candidates = candidates.filter(p => p.capabilities.supportsThinking);
     }
 
     // 2. Apply sticky routing (for OpenRouter)
@@ -42,7 +45,7 @@ export class StreamingOrchestrator {
       }
     }
 
-    // 3. If a preferred provider is given, move it to front
+    // 3. Preferred provider
     if (preferredProvider) {
       const preferred = candidates.find(p => p.name === preferredProvider);
       if (preferred) {
@@ -58,7 +61,7 @@ export class StreamingOrchestrator {
 
       try {
         const result = await this.callProvider(provider, request);
-        // If result is a ReadableStream, we're good to go
+        // If result is a ReadableStream, we're good
         if (result instanceof ReadableStream) {
           if (sessionId && !this.sessionMap.has(sessionId)) {
             this.sessionMap.set(sessionId, provider.name);
@@ -68,9 +71,7 @@ export class StreamingOrchestrator {
         // If result is a plain object with content, wrap it in a stream
         if (result?.choices?.[0]?.message?.content) {
           const content = result.choices[0].message.content;
-          // Ensure it's a string
           const text = typeof content === 'string' ? content : String(content);
-          // Convert to a ReadableStream
           const stream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'content', content: text })}\n\n`));
@@ -83,14 +84,12 @@ export class StreamingOrchestrator {
           }
           return stream;
         }
-        // If it's something else, fallback
         console.warn(`[Orchestrator] ${provider.name} returned unexpected result:`, result);
         // Continue to next provider
       } catch (error) {
         lastError = error as Error;
         this.circuitBreaker.recordFailure(provider.name);
         console.warn(`[Orchestrator] ${provider.name} failed:`, error);
-        // Try next provider
       }
     }
 

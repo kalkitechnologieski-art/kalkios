@@ -1,4 +1,3 @@
-// lib/reasoning/enhanced-deep-think.ts
 import { ReasoningPath, ConsensusResult, generateUUID } from '../ai/enhanced/types';
 import { AgnesClient } from '@/lib/providers/agnes/client';
 import { GroqClient } from '@/lib/providers/groq/client';
@@ -10,26 +9,15 @@ export class EnhancedDeepThink {
   private groq = new GroqClient();
   private zhipu = new ZhipuClient();
 
-  private systemPrompt = `You are Siddhi, an expert reasoning AI. Your task is to provide a detailed, step‑by‑step chain‑of‑thought for the user's query.
+  private systemPrompt = `You are Siddhi, an expert reasoning AI. Provide a detailed, step‑by‑step chain‑of‑thought.
 
-Follow this structure in your response:
-
+Follow this structure:
 ## Problem Restatement
-Briefly restate the user's query in your own words.
-
 ## Assumptions
-List any assumptions you are making.
-
 ## Analysis
-Break down the problem into logical steps. Explain your reasoning clearly.
-
 ## Alternatives Considered
-Mention any alternative interpretations or approaches you considered and why you chose the current one.
-
 ## Conclusion
-Summarise your findings and provide a final answer.
-
-Make your reasoning transparent, thorough, and well‑structured. End with the final answer clearly marked.`;
+Make your reasoning transparent. End with the final answer clearly marked.`;
 
   async reason(
     query: string,
@@ -44,8 +32,7 @@ Make your reasoning transparent, thorough, and well‑structured. End with the f
     const { num_paths = 3, consensus_threshold = 0.6, stream = false, onReasoning, useWeb = true } = options;
 
     if (!stream) {
-      const cacheKey = this.getCacheKey(query);
-      const cached = deepThinkCache.get(cacheKey);
+      const cached = deepThinkCache.get(this.getCacheKey(query));
       if (cached) return cached;
     }
 
@@ -62,14 +49,14 @@ Make your reasoning transparent, thorough, and well‑structured. End with the f
           .map((r: any) => `- ${r.title}: ${r.content?.slice(0, 200)}...`)
           .join('\n');
         if (snippets) {
-          webContext = `\n\n## Web Context (for grounding)\n${snippets}`;
+          webContext = `\n\n## Web Context\n${snippets}`;
         }
       } catch (e) {
         console.warn('[DeepThink] Web grounding failed:', e);
       }
     }
 
-    const paths = await this.generatePaths(query, num_paths, webContext, onReasoning, stream);
+    const paths = await this.generatePaths(query, num_paths, webContext, onReasoning);
     if (paths.length === 0) {
       return this.fallbackResponse(query);
     }
@@ -103,13 +90,12 @@ Make your reasoning transparent, thorough, and well‑structured. End with the f
     query: string,
     numPaths: number,
     webContext: string,
-    onReasoning?: (path: ReasoningPath) => void,
-    stream?: boolean
+    onReasoning?: (path: ReasoningPath) => void
   ): Promise<ReasoningPath[]> {
     const providers = [
       { client: this.agnes, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes', supportsThinking: true },
       { client: this.groq, model: 'llama-3.3-70b-versatile', temp: 0.5, name: 'groq', supportsThinking: false },
-      { client: this.zhipu, model: 'glm-4.7-flash', temp: 0.7, name: 'zhipu', supportsThinking: true },
+      { client: this.zhipu, model: 'glm-4.7', temp: 0.7, name: 'zhipu', supportsThinking: true },
     ].slice(0, numPaths);
 
     const fullSystem = this.systemPrompt + webContext;
@@ -213,15 +199,12 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
       const content = response?.choices?.[0]?.message?.content || '{}';
       const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
       let scores: Record<string, { relevance: number; coherence: number; completeness: number }> = {};
-
       try {
         const parsed = JSON.parse(cleanContent);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           scores = parsed;
         }
-      } catch (_) {
-        // Fallback to empty object
-      }
+      } catch (_) {}
 
       return paths.map((p, i) => {
         const key = String(i);
@@ -229,7 +212,6 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
         if (s && typeof s.relevance === 'number' && typeof s.coherence === 'number' && typeof s.completeness === 'number') {
           p.confidence = (s.relevance + s.coherence + s.completeness) / 3;
         } else {
-          // Fallback heuristic
           const providerWeight: Record<string, number> = { agnes: 0.9, groq: 0.85, zhipu: 0.8 };
           const weight = providerWeight[p.provider] || 0.7;
           const lengthWeight = Math.min(1, p.reasoning.length / 400);
@@ -256,7 +238,6 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
   } {
     if (paths.length === 0) return { score: 0, best_answer: '', best_reasoning: '' };
 
-    // Filter out any null/undefined entries (safety)
     const validPaths = paths.filter((p): p is ReasoningPath => p !== null && p !== undefined);
     if (validPaths.length === 0) return { score: 0, best_answer: '', best_reasoning: '' };
 
@@ -367,8 +348,7 @@ Produce a refined reasoning and final answer. Use the same structured format.`;
   private hashString(input: string): string {
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = ((hash << 5) - hash) + input.charCodeAt(i);
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);

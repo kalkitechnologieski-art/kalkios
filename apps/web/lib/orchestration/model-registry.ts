@@ -19,12 +19,15 @@ export interface ModelProvider {
   rpmLimit: number;
   isAvailable: () => boolean;
   capabilities: ModelCapabilities;
+  // Optional: provider-specific config
+  config?: Record<string, unknown>;
 }
 
 export class ModelRegistry {
   private providers: ModelProvider[] = [];
 
   constructor() {
+    // Primary: Agnes – free, multimodal (text, image, video)
     this.register({
       name: 'agnes',
       client: new AgnesClient(),
@@ -40,6 +43,8 @@ export class ModelRegistry {
         supportsWebSearch: false,
       },
     });
+
+    // Secondary: Groq – fast, free, no images/video
     this.register({
       name: 'groq',
       client: new GroqClient(),
@@ -55,6 +60,8 @@ export class ModelRegistry {
         supportsWebSearch: false,
       },
     });
+
+    // Tertiary: Zhipu – large context, web search, reasoning
     this.register({
       name: 'zhipu',
       client: new ZhipuClient(),
@@ -70,6 +77,8 @@ export class ModelRegistry {
         supportsWebSearch: true,
       },
     });
+
+    // Fallback: OpenRouter – universal access
     this.register({
       name: 'openrouter',
       client: new OpenRouterClient(),

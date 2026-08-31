@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
-      // ─── Handle special intents ──────────────────────────────────────────
+      // ─── Specialised intents ──────────────────────────────────────────────
       if (detectedIntent === 'deep') {
         const deepThink = new EnhancedDeepThink();
         const result = await deepThink.reason(query, {
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
           useWeb: true,
         });
         await send({ type: 'reasoning', content: result.reasoning });
-        await send({ type: 'content', content: result.final_answer });
+        await send({ type: 'content', content: safeString(result.final_answer) });
         await send({ type: 'complete' });
         await writer.close();
         return;
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      // ─── Default: chat with streaming orchestrator ──────────────────────
+      // ─── Default: chat with orchestrator ──────────────────────────────────
       const systemPrompt = `${SIDDHI_SYSTEM_PROMPT}\n\nUser query: ${query}`;
       const enrichedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
@@ -171,6 +171,7 @@ export async function POST(req: NextRequest) {
         userId,
         sessionId,
         deep: false,
+        intent: 'chat',
       });
 
       if (stream instanceof ReadableStream) {
