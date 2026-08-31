@@ -11,7 +11,6 @@ export interface OrchestratorRequest {
   userId?: string;
   sessionId?: string;
   preferredProvider?: string;
-  // For specialised intents
   intent?: 'chat' | 'image' | 'video' | 'setu' | 'deep';
 }
 
@@ -24,10 +23,12 @@ export class StreamingOrchestrator {
   async route(request: OrchestratorRequest): Promise<any> {
     const { messages, stream = false, deep, tools, image_url, userId, sessionId, preferredProvider, intent } = request;
 
-    // 1. Select candidate providers based on intent
-    let candidates = this.registry.getAvailable();
+    console.log('[Orchestrator] Starting route with intent:', intent);
 
-    // If a specific capability is needed, filter further
+    // 1. Select candidate providers
+    let candidates = this.registry.getAvailable();
+    console.log('[Orchestrator] Available providers:', candidates.map(p => p.name).join(', '));
+
     if (intent === 'image') {
       candidates = candidates.filter(p => p.capabilities.supportsImages);
     } else if (intent === 'video') {
@@ -36,12 +37,15 @@ export class StreamingOrchestrator {
       candidates = candidates.filter(p => p.capabilities.supportsThinking);
     }
 
-    // 2. Apply sticky routing (for OpenRouter)
+    console.log('[Orchestrator] Candidates after filtering:', candidates.map(p => p.name).join(', '));
+
+    // 2. Sticky routing (for OpenRouter)
     if (sessionId && this.sessionMap.has(sessionId)) {
       const stickyName = this.sessionMap.get(sessionId)!;
       const stickyProvider = candidates.find(p => p.name === stickyName);
       if (stickyProvider) {
         candidates = [stickyProvider, ...candidates.filter(p => p.name !== stickyName)];
+        console.log('[Orchestrator] Sticky routing to:', stickyName);
       }
     }
 
@@ -50,28 +54,39 @@ export class StreamingOrchestrator {
       const preferred = candidates.find(p => p.name === preferredProvider);
       if (preferred) {
         candidates = [preferred, ...candidates.filter(p => p.name !== preferredProvider)];
+        console.log('[Orchestrator] Preferred provider:', preferredProvider);
       }
     }
 
-    // 4. Try each provider in order
-    let lastError: Error | null = null;
+    // 4. Try each provider
     for (const provider of candidates) {
-      if (this.circuitBreaker.isOpen(provider.name)) continue;
-      if (!(await this.rateLimiter.check(provider.name))) continue;
+      const isOpen = this.circuitBreaker.isOpen(provider.name);
+      const isLimited = !(await this.rateLimiter.check(provider.name));
+      console.log(`[Orchestrator] Checking ${provider.name}: circuitOpen=${isOpen}, rateLimited=${isLimited}`);
+
+      if (isOpen) {
+        console.warn(`[Orchestrator] Circuit breaker open for ${provider.name}`);
+        continue;
+      }
+      if (isLimited) {
+        console.warn(`[Orchestrator] Rate limit exceeded for ${provider.name}`);
+        continue;
+      }
 
       try {
+        console.log(`[Orchestrator] Calling ${provider.name}...`);
         const result = await this.callProvider(provider, request);
-        // If result is a ReadableStream, we're good
         if (result instanceof ReadableStream) {
+          console.log(`[Orchestrator] ${provider.name} returned a stream.`);
           if (sessionId && !this.sessionMap.has(sessionId)) {
             this.sessionMap.set(sessionId, provider.name);
           }
           return result;
         }
-        // If result is a plain object with content, wrap it in a stream
         if (result?.choices?.[0]?.message?.content) {
           const content = result.choices[0].message.content;
           const text = typeof content === 'string' ? content : String(content);
+          console.log(`[Orchestrator] ${provider.name} returned plain text (${text.length} chars). Wrapping in stream.`);
           const stream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'content', content: text })}\n\n`));
@@ -87,14 +102,14 @@ export class StreamingOrchestrator {
         console.warn(`[Orchestrator] ${provider.name} returned unexpected result:`, result);
         // Continue to next provider
       } catch (error) {
-        lastError = error as Error;
+        console.error(`[Orchestrator] ${provider.name} failed:`, error);
         this.circuitBreaker.recordFailure(provider.name);
-        console.warn(`[Orchestrator] ${provider.name} failed:`, error);
+        // Try next provider
       }
     }
 
-    // 5. All providers failed – return a fallback stream
-    return this.fallbackStream(messages, lastError);
+    console.error('[Orchestrator] All providers failed. Returning fallback stream.');
+    return this.fallbackStream(messages);
   }
 
   private async callProvider(provider: ModelProvider, request: OrchestratorRequest): Promise<any> {
@@ -118,7 +133,6 @@ export class StreamingOrchestrator {
       }
     }
 
-    // Provider‑specific adjustments
     if (provider.name === 'agnes' && deep && provider.capabilities.supportsThinking) {
       body.thinking = { type: 'enabled' };
     }
@@ -141,7 +155,7 @@ export class StreamingOrchestrator {
     return provider.client.chat(body);
   }
 
-  private fallbackStream(messages: any[], error: Error | null): ReadableStream {
+  private fallbackStream(messages: any[]): ReadableStream {
     const fallbackText = "I'm having trouble connecting. Please try again later.";
     return new ReadableStream({
       start(controller) {

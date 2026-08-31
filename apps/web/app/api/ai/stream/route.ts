@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
   const send = async (data: any) => {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error('[send] Failed to write:', e);
     }
   };
 
@@ -66,8 +66,14 @@ export async function POST(req: NextRequest) {
 
   (async () => {
     try {
-      const body = await req.json().catch(() => null);
+      console.log('[API] Request received');
+      const body = await req.json().catch((e) => {
+        console.error('[API] Failed to parse JSON:', e);
+        return null;
+      });
+
       if (!body || !body.messages || !Array.isArray(body.messages)) {
+        console.error('[API] Invalid request body');
         await send({ type: 'error', message: 'Invalid request.' });
         await writer.close();
         return;
@@ -78,10 +84,13 @@ export async function POST(req: NextRequest) {
       const query = lastUser?.content || '';
       const detectedIntent = intent || detectIntent(query);
 
+      console.log(`[API] Detected intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
+
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
       // ─── Specialised intents ──────────────────────────────────────────────
       if (detectedIntent === 'deep') {
+        console.log('[API] Running DeepThink...');
         const deepThink = new EnhancedDeepThink();
         const result = await deepThink.reason(query, {
           num_paths: 3,
@@ -89,14 +98,16 @@ export async function POST(req: NextRequest) {
           stream: false,
           useWeb: true,
         });
-        await send({ type: 'reasoning', content: result.reasoning });
+        await send({ type: 'reasoning', content: safeString(result.reasoning) });
         await send({ type: 'content', content: safeString(result.final_answer) });
         await send({ type: 'complete' });
+        console.log('[API] DeepThink completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'setu') {
+        console.log('[API] Running SETU...');
         const setu = new EnhancedSETUAgent();
         const leads = await setu.generateLeads(query);
         const leadData = leads.map((l: any) => ({
@@ -124,11 +135,13 @@ export async function POST(req: NextRequest) {
         await send({ type: 'leads', leads: leadData, total: leads.length, csv });
         await send({ type: 'content', content: `Found ${leads.length} leads. Download CSV below.` });
         await send({ type: 'complete' });
+        console.log('[API] SETU completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'image') {
+        console.log('[API] Running Image Generation...');
         const imageGen = new EnhancedImageGenerator();
         const result = await imageGen.generate({
           prompt: query,
@@ -140,11 +153,13 @@ export async function POST(req: NextRequest) {
         await send({ type: 'image', url: result.url });
         await send({ type: 'content', content: `![Generated Image](${result.url})` });
         await send({ type: 'complete' });
+        console.log('[API] Image completed.');
         await writer.close();
         return;
       }
 
       if (detectedIntent === 'video') {
+        console.log('[API] Running Video Generation...');
         const videoGen = new EnhancedVideoGenerator();
         const result = await videoGen.generate({
           prompt: query,
@@ -156,11 +171,13 @@ export async function POST(req: NextRequest) {
         await send({ type: 'video', url: result.url });
         await send({ type: 'content', content: `<video src="${result.url}" controls style="max-width:100%;border-radius:12px;" />` });
         await send({ type: 'complete' });
+        console.log('[API] Video completed.');
         await writer.close();
         return;
       }
 
       // ─── Default: chat with orchestrator ──────────────────────────────────
+      console.log('[API] Using StreamingOrchestrator for chat...');
       const systemPrompt = `${SIDDHI_SYSTEM_PROMPT}\n\nUser query: ${query}`;
       const enrichedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
@@ -173,6 +190,8 @@ export async function POST(req: NextRequest) {
         deep: false,
         intent: 'chat',
       });
+
+      console.log('[API] Orchestrator returned:', stream ? 'ReadableStream' : 'null');
 
       if (stream instanceof ReadableStream) {
         const reader = stream.getReader();
@@ -192,7 +211,8 @@ export async function POST(req: NextRequest) {
                 const parsed = JSON.parse(data);
                 if (parsed.content) parsed.content = safeString(parsed.content);
                 await send(parsed);
-              } catch {
+              } catch (e) {
+                console.warn('[API] Failed to parse SSE chunk:', data, e);
                 await send({ type: 'content', content: safeString(data) });
               }
             } else if (line.trim()) {
@@ -201,15 +221,16 @@ export async function POST(req: NextRequest) {
           }
         }
         await send({ type: 'complete' });
+        console.log('[API] Stream finished.');
         await writer.close();
       } else {
-        // Plain response
+        console.warn('[API] Orchestrator did not return a stream. Falling back to plain response.');
         await send({ type: 'content', content: safeString(stream?.choices?.[0]?.message?.content || 'No response.') });
         await send({ type: 'complete' });
         await writer.close();
       }
     } catch (error: any) {
-      console.error('[API] Stream error:', error);
+      console.error('[API] Unhandled error:', error);
       await send({ type: 'error', message: 'An error occurred. Please try again.' });
       await writer.close();
     }

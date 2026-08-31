@@ -10,11 +10,17 @@ export class AgnesClient {
   private provider = 'agnes';
 
   private async request(endpoint: string, body: any, timeout = 30000) {
-    if (!AGNES_API_KEY) throw new Error('AGNES_API_KEY not set');
+    console.log(`[Agnes] Request to ${endpoint}`);
+    if (!AGNES_API_KEY) {
+      console.error('[Agnes] No API key');
+      throw new Error('AGNES_API_KEY not set');
+    }
     if (this.circuitBreaker.isOpen(this.provider)) {
+      console.warn('[Agnes] Circuit breaker open');
       throw new Error(`Circuit breaker open for ${this.provider}`);
     }
     if (!(await this.rateLimiter.check(this.provider))) {
+      console.warn('[Agnes] Rate limit exceeded');
       throw new Error(`Rate limit exceeded for ${this.provider}`);
     }
 
@@ -33,11 +39,13 @@ export class AgnesClient {
       clearTimeout(id);
       if (!response.ok) {
         const text = await response.text();
+        console.error(`[Agnes] HTTP ${response.status}: ${text}`);
         throw new Error(`Agnes error ${response.status}: ${text}`);
       }
       this.circuitBreaker.recordSuccess(this.provider);
       return response.json();
     } catch (error) {
+      console.error('[Agnes] Request failed:', error);
       this.circuitBreaker.recordFailure(this.provider);
       throw error;
     }
@@ -48,6 +56,7 @@ export class AgnesClient {
   }
 
   async chatStream(body: any) {
+    console.log('[Agnes] Chat stream requested');
     if (!AGNES_API_KEY) throw new Error('AGNES_API_KEY not set');
     if (this.circuitBreaker.isOpen(this.provider)) {
       throw new Error(`Circuit breaker open for ${this.provider}`);
@@ -66,9 +75,11 @@ export class AgnesClient {
     });
     if (!response.ok) {
       const text = await response.text();
+      console.error(`[Agnes] Stream error ${response.status}: ${text}`);
       throw new Error(`Agnes stream error ${response.status}: ${text}`);
     }
     this.circuitBreaker.recordSuccess(this.provider);
+    console.log('[Agnes] Stream obtained');
     return response.body;
   }
 
