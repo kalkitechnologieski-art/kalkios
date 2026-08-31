@@ -1,91 +1,62 @@
-import { z } from "zod";
+import { RateLimiter } from '../../orchestration/rate-limiter';
+import { CircuitBreaker } from '../../orchestration/circuit-breaker';
 
-const ZHIPU_BASE = "https://api.z.ai/api/paas/v4";
+const ZHIPU_BASE = 'https://api.z.ai/api/paas/v4';
+const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || '';
 
 export class ZhipuClient {
-  private apiKey: string;
-  private baseUrl: string;
+  private rateLimiter = new RateLimiter();
+  private circuitBreaker = new CircuitBreaker();
+  private provider = 'zhipu';
 
-  constructor() {
-    const key = process.env.ZHIPU_API_KEY;
-    if (!key) throw new Error("ZHIPU_API_KEY not set");
-    this.apiKey = key;
-    this.baseUrl = ZHIPU_BASE;
-  }
+  private async request(endpoint: string, body: any, timeout = 30000, method = 'POST') {
+    if (!ZHIPU_API_KEY) throw new Error('ZHIPU_API_KEY not set');
+    if (this.circuitBreaker.isOpen(this.provider)) {
+      throw new Error(`Circuit breaker open for ${this.provider}`);
+    }
+    if (!(await this.rateLimiter.check(this.provider))) {
+      throw new Error(`Rate limit exceeded for ${this.provider}`);
+    }
 
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit,
-    timeout = 30000
-  ): Promise<Response> {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      const response = await fetch(`${ZHIPU_BASE}/${endpoint}`, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
       clearTimeout(id);
-      return response;
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Zhipu error ${response.status}: ${text}`);
+      }
+      this.circuitBreaker.recordSuccess(this.provider);
+      return response.json();
     } catch (error) {
-      clearTimeout(id);
+      this.circuitBreaker.recordFailure(this.provider);
       throw error;
     }
   }
 
-  async chat(body: any): Promise<any> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Accept-Language": "en-US,en",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Zhipu chat error ${response.status}: ${text}`);
+  async chat(body: any) {
+    const requestBody = { ...body };
+    if (requestBody.max_tokens) {
+      requestBody.max_completion_tokens = requestBody.max_tokens;
+      delete requestBody.max_tokens;
     }
-    const data = await response.json();
-    // Zhipu may return empty content with usage data – handle gracefully[reference:8]
-    if (data.choices?.[0]?.delta?.content === "" && data.usage) {
-      // If we got usage but empty content, the stream might have completed
-      // Return a fallback message to avoid empty response
-      if (data.choices[0].finish_reason === "stop") {
-        data.choices[0].delta.content = "I've processed your request. Please continue.";
-      }
-    }
-    return data;
+    return this.request('chat/completions', requestBody);
   }
 
-  async webSearch(body: any): Promise<any> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/web_search`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Accept-Language": "en-US,en",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Zhipu web search error ${response.status}: ${text}`);
-    }
-    return response.json();
+  async webSearch(body: any) {
+    return this.request('web_search', body);
   }
 
-  async webReader(body: any): Promise<any> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/reader`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Zhipu web reader error ${response.status}: ${text}`);
-    }
-    return response.json();
+  async webReader(body: any) {
+    return this.request('reader', body);
   }
 }

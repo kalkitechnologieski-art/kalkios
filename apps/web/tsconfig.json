@@ -1,35 +1,97 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": [
+        "./apps/web/*",
         "./*"
       ],
-      "@ui/*": [
-        "../../packages/ui/*"
+      "@/lib/*": [
+        "./apps/web/lib/*",
+        "./lib/*"
       ],
-      "@shared/*": [
-        "../../packages/shared/*"
+      "@/components/*": [
+        "./apps/web/components/*",
+        "./components/*"
+      ],
+      "@/hooks/*": [
+        "./apps/web/hooks/*",
+        "./hooks/*"
+      ],
+      "@/store/*": [
+        "./apps/web/store/*",
+        "./store/*"
+      ],
+      "@/types/*": [
+        "./apps/web/types/*",
+        "./types/*"
+      ],
+      "@/providers/*": [
+        "./apps/web/lib/providers/*",
+        "./lib/providers/*"
+      ],
+      "@/orchestration/*": [
+        "./apps/web/lib/orchestration/*",
+        "./lib/orchestration/*"
+      ],
+      "@/ai/*": [
+        "./apps/web/lib/ai/*",
+        "./lib/ai/*"
+      ],
+      "@/agents/*": [
+        "./apps/web/lib/agents/*",
+        "./lib/agents/*"
+      ],
+      "@/reasoning/*": [
+        "./apps/web/lib/reasoning/*",
+        "./lib/reasoning/*"
       ]
     },
-    "jsx": "preserve",
-    "ignoreDeprecations": "6.0",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
     "noEmit": true,
-    "strict": true,
-    "skipLibCheck": true
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next"
+    ".next",
+    "dist",
+    "build"
   ]
 }

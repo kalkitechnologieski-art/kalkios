@@ -1,153 +1,167 @@
-import { AgnesClient } from "@/lib/providers/agnes/client";
-import { GroqClient } from "@/lib/providers/groq/client";
-import { OpenRouterClient } from "@/lib/providers/openrouter/client";
-import { ZhipuClient } from "@/lib/providers/zhipu/client";
-import { RateLimiter } from "./rate-limiter";
-import { CircuitBreaker } from "./circuit-breaker";
-import { withRetry } from "./retry";
-import { auditLog } from "@/lib/security/audit";
+import { AgnesClient } from '@/lib/providers/agnes/client';
+import { GroqClient } from '@/lib/providers/groq/client';
+import { ZhipuClient } from '@/lib/providers/zhipu/client';
+import { OpenRouterClient } from '@/lib/providers/openrouter/client';
+import { RateLimiter } from './rate-limiter';
+import { CircuitBreaker } from './circuit-breaker';
 
-type Provider = "agnes" | "groq" | "openrouter" | "zhipu";
-
-interface RouteRequest {
-  messages: any[];
-  stream?: boolean;
-  deep?: boolean;
-  tools?: any[];
-  image_url?: string;
-  provider?: Provider;
-  userId?: string;
+interface ProviderConfig {
+  name: string;
+  client: any;
+  model: string;
+  weight: number;
+  rpmLimit: number;
+  supportsStreaming: boolean;
+  supportsThinking: boolean;
+  isAvailable: () => boolean;
 }
 
+const PROVIDERS: ProviderConfig[] = [
+  {
+    name: 'agnes',
+    client: new AgnesClient(),
+    model: 'agnes-2.5-flash',
+    weight: 0.9,
+    rpmLimit: 20,
+    supportsStreaming: true,
+    supportsThinking: true,
+    isAvailable: () => !!process.env.AGNES_API_KEY,
+  },
+  {
+    name: 'groq',
+    client: new GroqClient(),
+    model: 'llama-3.3-70b-versatile',
+    weight: 0.85,
+    rpmLimit: 30,
+    supportsStreaming: true,
+    supportsThinking: false,
+    isAvailable: () => !!process.env.GROQ_API_KEY,
+  },
+  {
+    name: 'zhipu',
+    client: new ZhipuClient(),
+    model: 'glm-4.7',
+    weight: 0.8,
+    rpmLimit: 1,
+    supportsStreaming: true,
+    supportsThinking: true,
+    isAvailable: () => !!process.env.ZHIPU_API_KEY,
+  },
+  {
+    name: 'openrouter',
+    client: new OpenRouterClient(),
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    weight: 0.6,
+    rpmLimit: 20,
+    supportsStreaming: true,
+    supportsThinking: false,
+    isAvailable: () => !!process.env.OPENROUTER_API_KEY,
+  },
+];
+
 export class IntelligentRouter {
-  private agnes: AgnesClient;
-  private groq: GroqClient;
-  private openrouter: OpenRouterClient;
-  private zhipu: ZhipuClient;
-  private rateLimiter: RateLimiter;
-  private circuitBreaker: CircuitBreaker;
-  private providerOrder: Provider[];
-  private clients: Record<Provider, any>;
+  private rateLimiter = new RateLimiter();
+  private circuitBreaker = new CircuitBreaker();
+  private sessionMap = new Map<string, string>();
 
-  constructor() {
-    this.agnes = new AgnesClient();
-    this.groq = new GroqClient();
-    this.openrouter = new OpenRouterClient();
-    this.zhipu = new ZhipuClient();
-    this.rateLimiter = new RateLimiter();
-    this.circuitBreaker = new CircuitBreaker();
-    this.providerOrder = ["agnes", "groq", "openrouter", "zhipu"];
-    this.clients = {
-      agnes: this.agnes,
-      groq: this.groq,
-      openrouter: this.openrouter,
-      zhipu: this.zhipu,
-    };
-  }
+  async route(request: any): Promise<any> {
+    const { messages, stream = false, deep, tools, image_url, userId, sessionId } = request;
 
-  async route(request: RouteRequest): Promise<any> {
-    const { messages, stream = false, deep, tools, image_url, provider: preferred, userId } = request;
-
-    let providers: Provider[];
-    if (preferred) {
-      providers = [preferred, ...this.providerOrder.filter((p) => p !== preferred)];
-    } else {
-      providers = this.providerOrder;
-    }
-
-    let lastError: Error | null = null;
-
-    for (const provider of providers) {
-      if (this.circuitBreaker.isOpen(provider)) continue;
-      if (!(await this.rateLimiter.check(provider))) continue;
-
-      try {
-        const result = await withRetry(
-          () => this.callProvider(provider, request),
-          provider,
-          this.circuitBreaker
-        );
-        await auditLog(userId, "ai_chat_success", provider, result);
-        return result;
-      } catch (error) {
-        const err = error as Error;
-        lastError = err;
-        await auditLog(userId, "ai_chat_failure", provider, { error: err.message });
+    let available = PROVIDERS.filter(p => p.isAvailable());
+    if (request.provider) {
+      const preferred = available.find(p => p.name === request.provider);
+      if (preferred) {
+        available = [preferred, ...available.filter(p => p.name !== request.provider)];
       }
     }
 
-    return this.fallbackResponse(messages, lastError, userId);
+    // Sticky routing for OpenRouter
+    if (sessionId && this.sessionMap.has(sessionId)) {
+      const stickyProvider = this.sessionMap.get(sessionId)!;
+      const provider = available.find(p => p.name === stickyProvider);
+      if (provider) {
+        try {
+          return await this.callProvider(provider, request, sessionId);
+        } catch {
+          this.sessionMap.delete(sessionId);
+        }
+      }
+    }
+
+    for (const provider of available) {
+      if (this.circuitBreaker.isOpen(provider.name)) continue;
+      if (!(await this.rateLimiter.check(provider.name))) continue;
+
+      try {
+        const result = await this.callProvider(provider, request, sessionId);
+        if (sessionId && !this.sessionMap.has(sessionId)) {
+          this.sessionMap.set(sessionId, provider.name);
+        }
+        return result;
+      } catch (error) {
+        this.circuitBreaker.recordFailure(provider.name);
+        console.warn(`[Router] ${provider.name} failed:`, error);
+      }
+    }
+
+    return this.fallbackResponse(messages);
   }
 
-  private async callProvider(provider: Provider, request: RouteRequest): Promise<any> {
+  private async callProvider(provider: ProviderConfig, request: any, sessionId?: string): Promise<any> {
     const { messages, stream, deep, tools, image_url } = request;
-
     const body: any = {
       messages,
+      model: provider.model,
       temperature: 0.7,
-      max_tokens: 4096,
-      stream: stream || false,
+      max_tokens: 2048,
+      stream: stream && provider.supportsStreaming,
     };
-
     if (tools) body.tools = tools;
-
-    const client = this.clients[provider];
-
-    switch (provider) {
-      case "agnes":
-        body.model = "agnes-2.0-flash";
-        if (deep) body.thinking = { type: "enabled", budget_tokens: 4096 };
-        if (stream) {
-          const agnesStream = await client.chatStream(body);
-          if (!agnesStream) throw new Error("Agnes stream returned null");
-          return agnesStream;
-        }
-        return client.chat(body);
-
-      case "groq":
-        body.model = "llama-3.3-70b-versatile";
-        if (stream) {
-          const groqStream = await client.chatStream(body);
-          if (!groqStream) throw new Error("Groq stream returned null");
-          return groqStream;
-        }
-        return client.chat(body);
-
-      case "openrouter":
-        body.model = "meta-llama/llama-3.2-3b-instruct:free";
-        if (stream) {
-          const orStream = await client.chatStream(body);
-          if (!orStream) throw new Error("OpenRouter stream returned null");
-          return orStream;
-        }
-        return client.chat(body);
-
-      case "zhipu":
-        body.model = "glm-5.3";
-        if (deep) {
-          body.thinking = { type: "enabled", clear_thinking: false };
-          body.reasoning_effort = "max";
-        }
-        if (stream) {
-          return client.chat(body);
-        }
-        return client.chat(body);
-
-      default:
-        throw new Error(`Unsupported provider: ${provider}`);
+    if (image_url) {
+      const last = messages[messages.length - 1];
+      if (last?.role === 'user') {
+        last.content = [
+          { type: 'text', text: last.content },
+          { type: 'image_url', image_url: { url: image_url } },
+        ];
+      }
     }
+
+    if (provider.name === 'agnes' && deep && provider.supportsThinking) {
+      body.thinking = { type: 'enabled' };
+    }
+    if (provider.name === 'zhipu') {
+      if (body.max_tokens) {
+        body.max_completion_tokens = body.max_tokens;
+        delete body.max_tokens;
+      }
+      if (deep && provider.supportsThinking) {
+        body.thinking = { type: 'enabled' };
+      }
+    }
+    if (provider.name === 'openrouter' && sessionId) {
+      body.session_id = sessionId;
+    }
+
+    if (stream && provider.supportsStreaming) {
+      return provider.client.chatStream(body);
+    }
+    return provider.client.chat(body);
   }
 
-  private fallbackResponse(messages: any[], error: Error | null, userId?: string): any {
-    const content =
-      "I'm having trouble connecting right now. Please try again in a moment. If the issue persists, our team has been notified.";
-    if (error) {
-      console.error(`All providers failed for user ${userId}:`, error);
-    }
+  private fallbackResponse(messages: any[]): any {
     return {
-      choices: [{ message: { content } }],
+      choices: [{
+        message: {
+          content: "I'm having trouble connecting to my AI services. Please try again.",
+        },
+      }],
       usage: { total_tokens: 0 },
-      provider: "fallback",
+      provider: 'fallback',
     };
+  }
+
+  clearSession(sessionId: string): void {
+    this.sessionMap.delete(sessionId);
   }
 }

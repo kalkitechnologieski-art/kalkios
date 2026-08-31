@@ -17,11 +17,11 @@ export class CircuitBreaker {
     return false;
   }
 
-  recordSuccess(provider: string): void {
+  recordSuccess(provider: string) {
     this.failures[provider] = 0;
   }
 
-  recordFailure(provider: string): void {
+  recordFailure(provider: string) {
     this.failures[provider] = (this.failures[provider] || 0) + 1;
     this.lastFailure[provider] = Date.now();
   }

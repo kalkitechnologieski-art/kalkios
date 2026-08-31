@@ -229,3 +229,25 @@ export async function performOCR(file: File): Promise<string> {
   const words = data.words_result || []
   return words.map((w: any) => w.words).join('\n')
 }
+
+export async function generateLeads(query: string): Promise<any[]> {
+  try {
+    const results = await webSearch(query);
+    return results.map((r: any) => ({
+      name: r.title || null,
+      email: null,
+      phone: null,
+      company: r.source || null,
+      jobTitle: null,
+      linkedinUrl: null,
+      twitterUrl: null,
+      city: null,
+      country: null,
+      verified: false,
+      confidence: 0.5,
+      source: 'zhipu-web-search',
+    }));
+  } catch {
+    return [];
+  }
+}

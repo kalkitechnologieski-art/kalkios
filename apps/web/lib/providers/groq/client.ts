@@ -1,79 +1,74 @@
-import { z } from "zod";
+import { RateLimiter } from '../../orchestration/rate-limiter';
+import { CircuitBreaker } from '../../orchestration/circuit-breaker';
 
-const GROQ_BASE = "https://api.groq.com/openai/v1";
-
-export const GroqChatRequestSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(["system", "user", "assistant", "tool"]),
-      content: z.string(),
-    })
-  ),
-  model: z.string().default("llama-3.3-70b-versatile"),
-  temperature: z.number().min(0).max(2).default(0.7),
-  max_tokens: z.number().positive().default(4096),
-  stream: z.boolean().default(false),
-});
-
-export type GroqChatRequest = z.infer<typeof GroqChatRequestSchema>;
+const GROQ_BASE = 'https://api.groq.com/openai/v1';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 
 export class GroqClient {
-  private apiKey: string;
-  private baseUrl: string;
+  private rateLimiter = new RateLimiter();
+  private circuitBreaker = new CircuitBreaker();
+  private provider = 'groq';
 
-  constructor() {
-    const key = process.env.GROQ_API_KEY;
-    if (!key) throw new Error("GROQ_API_KEY not set");
-    this.apiKey = key;
-    this.baseUrl = GROQ_BASE;
-  }
+  private async request(endpoint: string, body: any, timeout = 30000) {
+    if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
+    if (this.circuitBreaker.isOpen(this.provider)) {
+      throw new Error(`Circuit breaker open for ${this.provider}`);
+    }
+    if (!(await this.rateLimiter.check(this.provider))) {
+      throw new Error(`Rate limit exceeded for ${this.provider}`);
+    }
 
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit,
-    timeout = 30000
-  ): Promise<Response> {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      const response = await fetch(`${GROQ_BASE}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
       clearTimeout(id);
-      return response;
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Groq error ${response.status}: ${text}`);
+      }
+      this.circuitBreaker.recordSuccess(this.provider);
+      return response.json();
     } catch (error) {
-      clearTimeout(id);
+      this.circuitBreaker.recordFailure(this.provider);
       throw error;
     }
   }
 
-  async chat(request: GroqChatRequest): Promise<any> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Groq chat error ${response.status}: ${text}`);
-    }
-    return response.json();
+  async chat(body: any) {
+    return this.request('chat/completions', { ...body, model: body.model || 'llama-3.3-70b-versatile' });
   }
 
-  async chatStream(request: GroqChatRequest): Promise<ReadableStream | null> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
+  async chatStream(body: any) {
+    if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
+    if (this.circuitBreaker.isOpen(this.provider)) {
+      throw new Error(`Circuit breaker open for ${this.provider}`);
+    }
+    if (!(await this.rateLimiter.check(this.provider))) {
+      throw new Error(`Rate limit exceeded for ${this.provider}`);
+    }
+
+    const response = await fetch(`${GROQ_BASE}/chat/completions`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...request, stream: true }),
+      body: JSON.stringify({ ...body, model: body.model || 'llama-3.3-70b-versatile', stream: true }),
     });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Groq stream error ${response.status}: ${text}`);
     }
+    this.circuitBreaker.recordSuccess(this.provider);
     return response.body;
   }
 }
