@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Compass, ShoppingBag, MessageCircle, User,
   Settings, LogOut, FolderKanban, BarChart3, Users,
-  Menu, X, Bot
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,9 +30,13 @@ const BOTTOM_ITEMS = [
   { label: 'Logout', icon: LogOut, href: '/logout' },
 ];
 
-export function EnterpriseSidebar() {
+interface EnterpriseSidebarProps {
+  isMobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
+}
+
+export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
 
@@ -63,7 +67,7 @@ export function EnterpriseSidebar() {
       <Link
         key={item.href}
         href={item.href}
-        onClick={() => setIsMobileOpen(false)}
+        onClick={() => setMobileOpen(false)}
         className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
           active
@@ -129,15 +133,6 @@ export function EnterpriseSidebar() {
         </div>
       </motion.aside>
 
-      {/* ─── Mobile Hamburger ─── */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className="fixed top-20 left-3 z-40 md:hidden p-2 rounded-full bg-black/80 backdrop-blur-sm border border-cyan-500/20 text-white/60 hover:text-white transition"
-        aria-label="Open menu"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-
       {/* ─── Mobile Drawer ─── */}
       <AnimatePresence>
         {isMobileOpen && (
@@ -147,7 +142,7 @@ export function EnterpriseSidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
-              onClick={() => setIsMobileOpen(false)}
+              onClick={() => setMobileOpen(false)}
             />
             <motion.aside
               initial={{ x: '-100%' }}
@@ -158,7 +153,7 @@ export function EnterpriseSidebar() {
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-xs font-bold tracking-widest text-white/40">MENU</span>
-                <button onClick={() => setIsMobileOpen(false)} className="p-2 rounded-full hover:bg-white/5 transition">
+                <button onClick={() => setMobileOpen(false)} className="p-2 rounded-full hover:bg-white/5 transition">
                   <X className="w-5 h-5 text-white/60" />
                 </button>
               </div>
