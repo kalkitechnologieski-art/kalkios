@@ -73,13 +73,12 @@ export async function POST(req: NextRequest) {
             num_paths: 3,
             consensus_threshold: 0.6,
             stream: false,
-            useWeb: true,
           });
 
           await writer.write(encoder.encode(`data: ${JSON.stringify({
             type: "reasoning",
             content: reasoningResult.reasoning,
-            paths: reasoningResult.paths.map((p: any) => ({ provider: p.provider, confidence: p.confidence, summary: p.summary })),
+            paths: reasoningResult.paths.map((p: any) => ({ provider: p.provider, confidence: p.confidence })),
             consensus: reasoningResult.consensus_score
           })}\n\n`));
 

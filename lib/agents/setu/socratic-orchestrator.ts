@@ -1,0 +1,93 @@
+// lib/agents/setu/socratic-orchestrator.ts
+import { ResearchPlan } from '@/lib/ai/enhanced/types';
+import { groqClient } from '@/lib/providers/groq/client';
+
+export class SocraticOrchestrator {
+  async createPlan(query: string): Promise<ResearchPlan> {
+    const subQuestions = await this.decomposeQuery(query);
+    const searchQueries = await this.generateSearchQueries(subQuestions);
+    const targets = await this.extractTargets(query);
+
+    return {
+      main_query: query,
+      sub_questions: subQuestions,
+      search_queries: searchQueries,
+      target_industries: targets.industries,
+      target_locations: targets.locations,
+      keywords: targets.keywords,
+    };
+  }
+
+  private async decomposeQuery(query: string): Promise<string[]> {
+    const prompt = `Break down this lead generation query into 3-5 specific sub-questions that would help find better leads. Return only the sub-questions, one per line:
+
+Query: "${query}"`;
+
+    try {
+      const response = await groqClient.chat({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.3,
+        max_tokens: 300,
+      });
+
+      const content = response.choices?.[0]?.message?.content || '';
+      return content
+        .split('\n')
+        .filter(line => line.match(/^\d+\./))
+        .map(line => line.replace(/^\d+\.\s*/, '').trim());
+    } catch {
+      return [query];
+    }
+  }
+
+  private async generateSearchQueries(subQuestions: string[]): Promise<string[]> {
+    const queries: string[] = [];
+    for (const q of subQuestions) {
+      const keywords = await this.extractKeywords(q);
+      queries.push(keywords.join(' '));
+    }
+    return queries;
+  }
+
+  private async extractKeywords(text: string): Promise<string[]> {
+    const prompt = `Extract the most important keywords from this text for search purposes. Return only the keywords, comma-separated:\n\n"${text}"`;
+
+    try {
+      const response = await groqClient.chat({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+        max_tokens: 100,
+      });
+      const content = response.choices?.[0]?.message?.content || '';
+      return content.split(',').map(s => s.trim()).filter(Boolean);
+    } catch {
+      return text.split(' ').slice(0, 5);
+    }
+  }
+
+  private async extractTargets(query: string): Promise<{
+    industries: string[];
+    locations: string[];
+    keywords: string[];
+  }> {
+    const prompt = `Extract target industries, locations, and keywords from this query. Return JSON with keys: industries (array), locations (array), keywords (array):
+
+Query: "${query}"`;
+
+    try {
+      const response = await groqClient.chat({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+        max_tokens: 200,
+      });
+      const content = response.choices?.[0]?.message?.content || '{}';
+      const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(cleanContent);
+    } catch {
+      return { industries: [], locations: [], keywords: [] };
+    }
+  }
+}

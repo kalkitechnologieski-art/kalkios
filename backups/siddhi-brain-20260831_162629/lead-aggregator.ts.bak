@@ -1,0 +1,101 @@
+// lib/agents/setu/lead-aggregator.ts
+import { EnhancedLead, LeadEnrichment, generateUUID } from '@/lib/ai/enhanced/types';
+import { GroqClient } from '@/lib/providers/groq/client';
+
+export class LeadAggregator {
+  private groq = new GroqClient();
+
+  merge(leads: Partial<EnhancedLead>[]): EnhancedLead[] {
+    const byKey = new Map<string, EnhancedLead>();
+
+    for (const lead of leads) {
+      if (!lead.name && !lead.email && !lead.phone) continue;
+
+      const key = lead.email || lead.phone || lead.name || '';
+      if (!key) continue;
+
+      if (byKey.has(key)) {
+        const existing = byKey.get(key)!;
+        byKey.set(key, {
+          ...existing,
+          ...lead,
+          source_urls: [...new Set([...existing.source_urls, ...(lead.source_urls || [])])],
+          confidence: Math.max(existing.confidence, lead.confidence || 0),
+        });
+      } else {
+        byKey.set(key, {
+          id: lead.id || generateUUID(),
+          name: lead.name || '',
+          email: lead.email || null,
+          phone: lead.phone || null,
+          company: lead.company || null,
+          job_title: lead.job_title || null,
+          linkedin_url: lead.linkedin_url || null,
+          twitter_url: lead.twitter_url || null,
+          website: lead.website || null,
+          enrichment: lead.enrichment || {},
+          confidence: lead.confidence || 0.3,
+          source_urls: lead.source_urls || [],
+          verified: false,
+          created_at: lead.created_at || new Date(),
+        });
+      }
+    }
+
+    return Array.from(byKey.values());
+  }
+
+  score(leads: EnhancedLead[]): EnhancedLead[] {
+    return leads.map(lead => {
+      let score = 0;
+      if (lead.email) score += 0.3;
+      if (lead.phone) score += 0.2;
+      if (lead.company) score += 0.15;
+      if (lead.linkedin_url) score += 0.15;
+      if (lead.job_title) score += 0.1;
+      if (lead.enrichment.company_size) score += 0.05;
+      score += Math.min(lead.source_urls.length * 0.02, 0.1);
+
+      lead.confidence = Math.min(score, 1);
+      return lead;
+    }).sort((a, b) => b.confidence - a.confidence);
+  }
+
+  deduplicate(leads: EnhancedLead[]): EnhancedLead[] {
+    const seen = new Set<string>();
+    return leads.filter(lead => {
+      const key = lead.email || lead.phone || lead.name?.toLowerCase() || '';
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  async enrich(lead: EnhancedLead): Promise<EnhancedLead> {
+    if (!lead.company || lead.enrichment.company_size) {
+      return lead;
+    }
+
+    try {
+      const prompt = `Provide company info for "${lead.company}": company_size (string), industry (string), revenue (string). Return JSON.`;
+
+      const response = await this.groq.chat({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+        max_tokens: 150,
+      });
+
+      const content = response.choices?.[0]?.message?.content || '{}';
+      const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+      const enrichment = JSON.parse(cleanContent);
+
+      lead.enrichment = { ...lead.enrichment, ...enrichment };
+    } catch {
+      // Silently fail
+    }
+
+    return lead;
+  }
+}
