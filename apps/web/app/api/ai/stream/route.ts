@@ -7,8 +7,10 @@ import { EnhancedVideoGenerator } from '@/lib/ai/enhanced/video';
 import { SIDDHI_SYSTEM_PROMPT } from '@/lib/prompts/siddhi-system';
 import { generateCSV } from '@/lib/ai/enhanced/utils';
 
-export const runtime = 'edge';
+// CRITICAL FIX: Switch to nodejs runtime (Edge Runtime has fetch issues)
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // 60 seconds timeout
 
 function safeString(data: unknown): string {
   if (typeof data === 'string') return data;
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
 
   (async () => {
     try {
-      console.log('[API] Request received');
+      console.log('[API] Request received (Node.js runtime)');
       const body = await req.json().catch(() => null);
       if (!body || !body.messages || !Array.isArray(body.messages)) {
         await send({ type: 'error', message: 'Invalid request.' });
@@ -78,7 +80,6 @@ export async function POST(req: NextRequest) {
       console.log(`[API] Intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
-      // Specialised intents
       if (detectedIntent === 'deep') {
         const deepThink = new EnhancedDeepThink();
         const result = await deepThink.reason(query, {
