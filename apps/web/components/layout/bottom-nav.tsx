@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { Suspense, useEffect, useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Home, Compass, ShoppingBag, User, Bot } from 'lucide-react'
+import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Home, Compass, ShoppingBag, User, Bot } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
@@ -12,26 +12,26 @@ const NAV_ITEMS = [
   { label: 'SIDDHI', icon: Bot, href: '/chat', isSpecial: true },
   { label: 'Cart', icon: ShoppingBag, href: '/cart' },
   { label: 'Profile', icon: User, href: '/profile' },
-]
+];
 
 function BottomNavContent() {
-  const [mounted, setMounted] = useState(false)
-  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
-    return <div className="h-[72px]" />
+    return <div className="h-[72px]" />;
   }
 
-  const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/')
+  const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-[72px] bg-black/90 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-2 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 h-[72px] bg-black/90 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-2 safe-area-bottom">
       {NAV_ITEMS.map((item) => {
-        const active = isActive(item.href)
+        const active = isActive(item.href);
 
         if (item.isSpecial) {
           return (
@@ -57,7 +57,7 @@ function BottomNavContent() {
                 />
               )}
             </Link>
-          )
+          );
         }
 
         return (
@@ -91,10 +91,10 @@ function BottomNavContent() {
               {item.label}
             </span>
           </Link>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }
 
 export function BottomNav() {
@@ -102,5 +102,5 @@ export function BottomNav() {
     <Suspense fallback={<div className="h-[72px]" />}>
       <BottomNavContent />
     </Suspense>
-  )
+  );
 }

@@ -1,33 +1,34 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { Menu } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { useUser } from '@/hooks/useAuth'
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Menu } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useUser } from '@/hooks/useAuth';
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-  const { user, loading } = useUser()
-  const [displayName, setDisplayName] = useState('Guest')
+  const { user, loading } = useUser();
+  const [displayName, setDisplayName] = useState('Guest');
 
   useEffect(() => {
     if (!loading && user) {
-      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-      setDisplayName(name)
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+      setDisplayName(name);
     } else if (!loading) {
-      setDisplayName('Guest')
+      setDisplayName('Guest');
     }
-  }, [user, loading])
+  }, [user, loading]);
 
   if (!mounted) {
-    return <div className="h-14 bg-black/80" />
+    return <div className="h-14 bg-black/80" />;
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-black/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 md:px-6">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-black/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 md:px-6">
       <button
         onClick={onMenuClick}
         className="p-2 -ml-2 rounded-full hover:bg-white/5 transition group md:hidden"
@@ -66,5 +67,5 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         </Link>
       </div>
     </header>
-  )
+  );
 }

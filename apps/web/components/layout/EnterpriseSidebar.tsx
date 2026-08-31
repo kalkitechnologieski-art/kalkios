@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Compass, ShoppingBag, MessageCircle, User,
-  Settings, LogOut, Bot, FolderKanban, BarChart3, Users,
-  Menu, X
+  Settings, LogOut, FolderKanban, BarChart3, Users,
+  Menu, X, Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -96,9 +96,9 @@ export function EnterpriseSidebar() {
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* ─── Desktop Sidebar ─── */}
       <motion.aside
-        className="fixed top-16 left-0 bottom-0 z-30 hidden md:flex flex-col bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 h-[calc(100vh-64px)] overflow-hidden"
+        className="fixed top-14 left-0 bottom-0 z-30 hidden md:flex flex-col bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 overflow-hidden"
         animate={{ width: isExpanded ? 200 : 64 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
         onMouseEnter={handleMouseEnter}
@@ -129,7 +129,7 @@ export function EnterpriseSidebar() {
         </div>
       </motion.aside>
 
-      {/* Mobile Sidebar */}
+      {/* ─── Mobile Hamburger ─── */}
       <button
         onClick={() => setIsMobileOpen(true)}
         className="fixed top-20 left-3 z-40 md:hidden p-2 rounded-full bg-black/80 backdrop-blur-sm border border-cyan-500/20 text-white/60 hover:text-white transition"
@@ -138,6 +138,7 @@ export function EnterpriseSidebar() {
         <Menu className="w-5 h-5" />
       </button>
 
+      {/* ─── Mobile Drawer ─── */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
