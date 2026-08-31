@@ -20,6 +20,7 @@ export const ChatMessage = memo(function ChatMessage({
   isStreaming = false,
   className,
 }: ChatMessageProps) {
+  // Ensure content is always a string
   const safeContent = typeof content === 'string' ? content : String(content);
   const displayContent = safeContent.trim() || (role === 'assistant' ? '…' : '');
 
