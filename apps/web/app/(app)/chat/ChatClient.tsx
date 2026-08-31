@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
-import { ChatMessage } from '@/components/chat/ChatMessage';
+import { MessageGroup } from '@/components/chat/MessageGroup';
 import { NeonComposer } from '@/components/chat/NeonComposer';
-import { ThinkingTrace } from '@/components/chat/ThinkingTrace';
-import { SetuProgress } from '@/components/chat/SetuProgress';
 import { MediaSettings } from '@/components/chat/MediaSettings';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
@@ -13,7 +11,7 @@ import { Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ChatClient() {
-  const { messages, isLoading, error, sendMessage, clearError } = useStreamingChat();
+  const { messages: rawMessages, isLoading, error, sendMessage, clearError } = useStreamingChat();
   const [deepThink, setDeepThink] = useState(false);
   const [setuMode, setSetuMode] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
@@ -22,13 +20,36 @@ export default function ChatClient() {
   const [mounted, setMounted] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  const [groups, setGroups] = useState<any[]>([]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
+    const newGroups: any[] = [];
+    let currentGroup: any = null;
+    for (const msg of rawMessages) {
+      if (msg.role === 'user') {
+        if (currentGroup) newGroups.push(currentGroup);
+        currentGroup = { id: msg.id, userMessage: msg, assistantMessage: null };
+      } else if (msg.role === 'assistant') {
+        if (currentGroup) {
+          currentGroup.assistantMessage = msg;
+          newGroups.push(currentGroup);
+          currentGroup = null;
+        } else {
+          newGroups.push({ id: msg.id, userMessage: null, assistantMessage: msg });
+        }
+      }
+    }
+    if (currentGroup) newGroups.push(currentGroup);
+    setGroups(newGroups);
+  }, [rawMessages]);
+
+  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages, isLoading]);
+  }, [groups, isLoading]);
 
   const handleSend = useCallback(
     async (text: string, file?: File) => {
@@ -38,12 +59,31 @@ export default function ChatClient() {
     [sendMessage, isLoading, deepThink, setuMode, searchMode]
   );
 
-  const handleMediaGenerate = useCallback(
-    async (settings: any) => {
-      const prompt = `Generate ${mode} with settings: ${JSON.stringify(settings)}`;
-      await sendMessage(prompt, { deep: false, setu: false });
+  const handleEditUser = useCallback(
+    (groupId: string, newContent: string) => {
+      const group = groups.find(g => g.id === groupId);
+      if (group && group.userMessage) {
+        handleSend(newContent);
+      }
     },
-    [sendMessage, mode]
+    [groups, handleSend]
+  );
+
+  const handleRegenerate = useCallback(
+    (groupId: string) => {
+      const group = groups.find(g => g.id === groupId);
+      if (group && group.userMessage) {
+        handleSend(group.userMessage.content);
+      }
+    },
+    [groups, handleSend]
+  );
+
+  const handleFeedback = useCallback(
+    (groupId: string, rating: 'up' | 'down') => {
+      console.log(`Feedback for group ${groupId}: ${rating}`);
+    },
+    []
   );
 
   if (!mounted) {
@@ -55,7 +95,7 @@ export default function ChatClient() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] max-w-4xl mx-auto px-2 md:px-4 relative">
+    <div className="chat-fullscreen relative">
       <GradientGlowBackground isThinking={isLoading} />
 
       {/* Top Bar */}
@@ -85,7 +125,10 @@ export default function ChatClient() {
         <MediaSettings
           mode={mode}
           onSettingsChange={setMediaSettings}
-          onGenerate={handleMediaGenerate}
+          onGenerate={async (settings: Record<string, unknown>) => {
+            const prompt = `Generate ${mode} with settings: ${JSON.stringify(settings)}`;
+            await sendMessage(prompt, { deep: false, setu: false });
+          }}
           isLoading={isLoading}
         />
       )}
@@ -93,73 +136,23 @@ export default function ChatClient() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
-          {messages.map((msg) => {
-            // Handle different content types
-            let contentToRender = msg.content;
-            if (typeof contentToRender === 'string') {
-              // If it contains image markdown or video tag, render as is
-            } else {
-              contentToRender = String(contentToRender);
-            }
-
-            return (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {msg.role === 'system' ? (
-                  <div className="flex justify-center my-2">
-                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2 text-xs text-cyan-400/80 font-mono max-w-[90%] backdrop-blur-sm">
-                      {typeof msg.content === 'string' ? msg.content : String(msg.content)}
-                    </div>
-                  </div>
-                ) : (
-                  <ChatMessage
-                    content={contentToRender}
-                    role={msg.role}
-                    timestamp={new Date()}
-                    isStreaming={msg.isStreaming}
-                  />
-                )}
-
-                {msg.role === 'assistant' && msg.reasoning && (
-                  <div className="ml-12 mt-1">
-                    <ThinkingTrace
-                      reasoning={typeof msg.reasoning === 'string' ? msg.reasoning : String(msg.reasoning)}
-                      tokens={msg.tokens}
-                      timeMs={0}
-                      status="done"
-                      provider={msg.provider}
-                    />
-                  </div>
-                )}
-
-                {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
-                  <div className="ml-12 mt-2">
-                    <SetuProgress leads={msg.leads} csv={msg.csv} isLoading={false} />
-                  </div>
-                )}
-
-                {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
-                  <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
-                    <p className="text-white/60 text-sm font-mono">Please answer:</p>
-                    <ul className="list-disc list-inside text-cyan-400/80 text-sm mt-1 space-y-1">
-                      {msg.questions.map((q: string, i: number) => (
-                        <li key={i}>{q}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+          {groups.map((group) => (
+            <MessageGroup
+              key={group.id}
+              id={group.id}
+              userMessage={group.userMessage}
+              assistantMessage={group.assistantMessage}
+              isStreaming={isLoading && group === groups[groups.length - 1] && !group.assistantMessage}
+              onEditUser={(newContent) => handleEditUser(group.id, newContent)}
+              onRegenerate={() => handleRegenerate(group.id)}
+              onCopy={(content) => navigator.clipboard.writeText(content)}
+              onFeedback={(rating) => handleFeedback(group.id, rating)}
+            />
+          ))}
         </AnimatePresence>
 
-        {isLoading && (
-          <div className="ml-12 mt-2">
+        {isLoading && !groups.length && (
+          <div className="flex justify-start">
             <ThinkingLoader status="thinking" reasoning="Processing…" />
           </div>
         )}
@@ -179,7 +172,7 @@ export default function ChatClient() {
       </div>
 
       {/* Input */}
-      <div className="pt-2 border-t border-white/5 bg-black/50 backdrop-blur-sm sticky bottom-0">
+      <div className="chat-input-floating">
         <NeonComposer
           onSend={handleSend}
           isLoading={isLoading}
