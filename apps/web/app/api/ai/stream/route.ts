@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createParser, EventSourceMessage } from 'eventsource-parser';
 import { EnterpriseRouter } from '@/lib/orchestration/enterprise-router';
 import { EnhancedDeepThink } from '@/lib/reasoning/enhanced-deep-think';
 import { EnhancedSETUAgent } from '@/lib/agents/setu/enhanced-agent';
@@ -7,10 +8,9 @@ import { EnhancedVideoGenerator } from '@/lib/ai/enhanced/video';
 import { SIDDHI_SYSTEM_PROMPT } from '@/lib/prompts/siddhi-system';
 import { generateCSV } from '@/lib/ai/enhanced/utils';
 
-// CRITICAL FIX: Switch to nodejs runtime (Edge Runtime has fetch issues)
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 seconds timeout
+export const maxDuration = 60;
 
 function safeString(data: unknown): string {
   if (typeof data === 'string') return data;
@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
   const send = async (data: any) => {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-    } catch {}
+    } catch (err) {
+      console.error('[API] Failed to send event:', err);
+    }
   };
 
   const response = new Response(responseStream.readable, {
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   (async () => {
     try {
-      console.log('[API] Request received (Node.js runtime)');
+      console.log('[API] 📨 Request received (Node.js)');
       const body = await req.json().catch(() => null);
       if (!body || !body.messages || !Array.isArray(body.messages)) {
         await send({ type: 'error', message: 'Invalid request.' });
@@ -77,9 +79,10 @@ export async function POST(req: NextRequest) {
       const query = lastUser?.content || '';
       const detectedIntent = intent || detectIntent(query);
 
-      console.log(`[API] Intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
+      console.log(`[API] 🎯 Intent: ${detectedIntent}, query: "${query.slice(0, 50)}..."`);
       await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
 
+      // ─── Specialised intents ──────────────────────────────────────────
       if (detectedIntent === 'deep') {
         const deepThink = new EnhancedDeepThink();
         const result = await deepThink.reason(query, {
@@ -159,8 +162,8 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      // Chat: use EnterpriseRouter
-      console.log('[API] Using EnterpriseRouter for chat...');
+      // ─── Chat: use EnterpriseRouter ──────────────────────────────────
+      console.log('[API] 🚀 Using EnterpriseRouter for chat...');
       const systemPrompt = `${SIDDHI_SYSTEM_PROMPT}\n\nUser query: ${query}`;
       const enrichedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
@@ -175,55 +178,92 @@ export async function POST(req: NextRequest) {
       });
 
       if (stream instanceof ReadableStream) {
+        console.log('[API] 📡 Streaming with eventsource‑parser...');
         const reader = stream.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
         let hasContent = false;
+        let fullContent = '';
+        let chunkCount = 0;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.content) {
-                  parsed.content = safeString(parsed.content);
-                  hasContent = true;
-                }
-                await send(parsed);
-              } catch {
-                await send({ type: 'content', content: safeString(data) });
+        // ─── Correct parser configuration ──────────────────────────────
+        const parser = createParser({
+          onEvent: (event: EventSourceMessage) => {
+            if (event.data === '[DONE]') return;
+            try {
+              const parsed = JSON.parse(event.data);
+              // OpenAI‑compatible: choices[0].delta.content
+              const content = parsed?.choices?.[0]?.delta?.content ||
+                              parsed?.choices?.[0]?.message?.content ||
+                              parsed?.content;
+              if (content) {
+                const text = safeString(content);
+                fullContent += text;
                 hasContent = true;
+                console.log(`[API] 📝 SSE chunk: "${text.slice(0, 50)}..."`);
+                send({ type: 'content', content: text });
               }
-            } else if (line.trim()) {
-              await send({ type: 'content', content: safeString(line) });
-              hasContent = true;
+              // Handle reasoning content
+              const reasoning = parsed?.choices?.[0]?.delta?.reasoning_content;
+              if (reasoning) {
+                send({ type: 'reasoning', content: safeString(reasoning) });
+              }
+            } catch (e) {
+              console.warn('[API] ⚠️ Failed to parse SSE event:', e);
             }
+          },
+        });
+
+        // ─── Read stream ──────────────────────────────────────────────────
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunkCount++;
+            const chunk = decoder.decode(value, { stream: true });
+            console.log(`[API] 📦 Chunk ${chunkCount} (${chunk.length} bytes)`);
+            parser.feed(chunk);
           }
+        } catch (readErr) {
+          console.error('[API] ❌ Stream read error:', readErr);
         }
 
+        // ─── Fallback if no content ──────────────────────────────────────
         if (!hasContent) {
-          console.warn('[API] No content received, sending fallback');
-          await send({ type: 'content', content: 'I received your message but am having trouble responding. Please try again.' });
+          console.warn('[API] ⚠️ No content from SSE. Falling back to non‑streaming.');
+          const fallbackResult = await router.route({
+            messages: enrichedMessages,
+            stream: false,
+            userId,
+            sessionId,
+            deep: false,
+            intent: 'chat',
+          });
+          if (fallbackResult?.choices?.[0]?.message?.content) {
+            const text = safeString(fallbackResult.choices[0].message.content);
+            await send({ type: 'content', content: text });
+          } else {
+            await send({ type: 'content', content: 'I received your message but am having trouble responding. Please try again.' });
+          }
+        } else {
+          console.log(`[API] ✅ Full content received (${fullContent.length} chars).`);
         }
 
         await send({ type: 'complete' });
         await writer.close();
       } else {
-        console.warn('[API] Router did not return a stream');
-        await send({ type: 'content', content: 'No response available.' });
+        // Router returned a plain object (non‑streaming)
+        console.warn('[API] 📄 Router returned plain object (non‑streaming).');
+        const content = stream?.choices?.[0]?.message?.content;
+        if (content) {
+          await send({ type: 'content', content: safeString(content) });
+        } else {
+          await send({ type: 'content', content: 'No response available.' });
+        }
         await send({ type: 'complete' });
         await writer.close();
       }
     } catch (error: any) {
-      console.error('[API] Unhandled error:', error);
+      console.error('[API] 💥 Unhandled error:', error);
       await send({ type: 'error', message: 'An error occurred. Please try again.' });
       await writer.close();
     }
