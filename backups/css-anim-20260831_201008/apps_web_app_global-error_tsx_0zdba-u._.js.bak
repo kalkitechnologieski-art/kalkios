@@ -1,0 +1,3 @@
+module.exports=[36170,a=>{"use strict";var b=a.i(72131);let c=["removeChild","NotFoundError","The node to be removed is not a child of this node","Failed to execute 'removeChild' on 'Node'"];a.s(["default",0,function({error:a,reset:d}){return(0,b.useEffect)(()=>{let b=a.message||"";c.some(a=>b.includes(a))?d():console.error("Unhandled error:",a)},[a,d]),null}])}];
+
+//# sourceMappingURL=apps_web_app_global-error_tsx_0zdba-u._.js.map

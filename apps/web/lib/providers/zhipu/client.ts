@@ -8,97 +8,98 @@ export class ZhipuClient {
   private rateLimiter = new RateLimiter();
   private circuitBreaker = new CircuitBreaker();
   private provider = 'zhipu';
+  private maxRetries = 3;
+  private baseDelay = 1000;
 
   private async request(endpoint: string, body: any, timeout = 30000, method = 'POST') {
     const startTime = Date.now();
-    console.log(`[Zhipu] Request to ${endpoint}`);
+    console.log(`[Zhipu] 📤 Request to ${endpoint}`);
 
     if (!ZHIPU_API_KEY) {
-      console.error('[Zhipu] No API key');
+      console.error('[Zhipu] ❌ No API key');
       throw new Error('ZHIPU_API_KEY not set');
     }
 
     if (this.circuitBreaker.isOpen(this.provider)) {
-      console.warn('[Zhipu] Circuit breaker open');
+      console.warn('[Zhipu] ⚠️ Circuit breaker open');
       throw new Error(`Circuit breaker open for ${this.provider}`);
     }
 
     if (!(await this.rateLimiter.check(this.provider))) {
-      console.warn('[Zhipu] Rate limit exceeded');
+      console.warn('[Zhipu] ⚠️ Rate limit exceeded');
       throw new Error(`Rate limit exceeded for ${this.provider}`);
     }
 
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
+    let attempt = 0;
+    let delay = this.baseDelay;
+    while (attempt < this.maxRetries) {
+      try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(`${ZHIPU_BASE}/${endpoint}`, {
+          method,
+          headers: {
+            'Authorization': `Bearer ${ZHIPU_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(id);
+        const latency = Date.now() - startTime;
 
-    try {
-      const response = await fetch(`${ZHIPU_BASE}/${endpoint}`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      clearTimeout(id);
-      const latency = Date.now() - startTime;
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(`[Zhipu] HTTP ${response.status} (${latency}ms): ${text}`);
-        if (response.status === 429) {
-          const retryAfter = response.headers.get('retry-after');
-          if (retryAfter) console.warn(`[Zhipu] Rate limit, retry after ${retryAfter}s`);
-          throw new Error(`Rate limit exceeded (429): ${text}`);
+        if (!response.ok) {
+          const text = await response.text();
+          console.error(`[Zhipu] ❌ HTTP ${response.status} (${latency}ms): ${text}`);
+          if (response.status === 429 || response.status >= 500) {
+            console.warn(`[Zhipu] Retryable error (${response.status}), attempt ${attempt+1}/${this.maxRetries}`);
+            attempt++;
+            await this.sleep(delay);
+            delay *= 2;
+            continue;
+          }
+          throw new Error(`Zhipu error ${response.status}: ${text}`);
         }
-        if (response.status >= 500 && response.status < 600) {
-          throw new Error(`Server error ${response.status}: ${text}`);
+
+        this.circuitBreaker.recordSuccess(this.provider);
+        console.log(`[Zhipu] ✅ Success (${latency}ms)`);
+        return response.json();
+      } catch (error) {
+        if (attempt >= this.maxRetries) {
+          this.circuitBreaker.recordFailure(this.provider);
+          throw error;
         }
-        throw new Error(`Zhipu error ${response.status}: ${text}`);
+        console.warn(`[Zhipu] Request failed (attempt ${attempt+1}/${this.maxRetries}):`, error);
+        attempt++;
+        await this.sleep(delay);
+        delay *= 2;
       }
-
-      this.circuitBreaker.recordSuccess(this.provider);
-      console.log(`[Zhipu] Success (${latency}ms)`);
-      return response.json();
-    } catch (error: any) {
-      clearTimeout(id);
-      console.error(`[Zhipu] Request failed after ${Date.now() - startTime}ms:`, error.message);
-      this.circuitBreaker.recordFailure(this.provider);
-      throw error;
     }
+    throw new Error('All retries exhausted for Zhipu');
   }
 
-  // ─── Regular chat (non‑streaming) ───────────────────────────────────
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async chat(body: any) {
     const requestBody = { ...body };
     if (requestBody.max_tokens) {
       requestBody.max_completion_tokens = requestBody.max_tokens;
       delete requestBody.max_tokens;
     }
-    // Ensure stream is false
     requestBody.stream = false;
     return this.request('chat/completions', requestBody);
   }
 
-  // ─── Streaming chat ──────────────────────────────────────────────────
   async chatStream(body: any) {
-    const startTime = Date.now();
-    console.log('[Zhipu] Streaming request');
-
-    if (!ZHIPU_API_KEY) {
-      console.error('[Zhipu] No API key');
-      throw new Error('ZHIPU_API_KEY not set');
-    }
-
+    // Streaming doesn't retry; we'll let the orchestrator handle fallback.
+    console.log('[Zhipu] 📡 Streaming request');
+    if (!ZHIPU_API_KEY) throw new Error('ZHIPU_API_KEY not set');
     if (this.circuitBreaker.isOpen(this.provider)) {
-      console.warn('[Zhipu] Circuit breaker open');
       throw new Error(`Circuit breaker open for ${this.provider}`);
     }
-
     if (!(await this.rateLimiter.check(this.provider))) {
-      console.warn('[Zhipu] Rate limit exceeded');
       throw new Error(`Rate limit exceeded for ${this.provider}`);
     }
 
@@ -111,7 +112,6 @@ export class ZhipuClient {
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 30000);
-
     try {
       const response = await fetch(`${ZHIPU_BASE}/chat/completions`, {
         method: 'POST',
@@ -122,21 +122,17 @@ export class ZhipuClient {
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
-
       clearTimeout(id);
-
       if (!response.ok) {
         const text = await response.text();
-        console.error(`[Zhipu] Stream error ${response.status}: ${text}`);
+        console.error(`[Zhipu] ❌ Stream error ${response.status}: ${text}`);
         throw new Error(`Zhipu stream error ${response.status}: ${text}`);
       }
-
       this.circuitBreaker.recordSuccess(this.provider);
-      console.log(`[Zhipu] Stream obtained (${Date.now() - startTime}ms)`);
+      console.log('[Zhipu] ✅ Stream obtained');
       return response.body;
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(id);
-      console.error('[Zhipu] Stream request failed:', error.message);
       this.circuitBreaker.recordFailure(this.provider);
       throw error;
     }

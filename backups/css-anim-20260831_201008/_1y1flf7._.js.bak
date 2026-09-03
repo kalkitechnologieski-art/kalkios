@@ -1,0 +1,782 @@
+module.exports = [
+"[project]/apps/web/lib/mock/services.json.[json].cjs [app-ssr] (ecmascript)", ((__turbopack_context__, module, exports) => {
+
+module.exports = JSON.parse("[{\"id\":\"mock-1\",\"name\":\"Landing Page (5 Pages)\",\"slug\":\"landing-page-5-pages\",\"category\":\"Web Development\",\"sub_category\":\"Starter Websites\",\"description\":\"Professional 5-page landing page to establish your digital presence.\",\"long_description\":\"Get a stunning, fully responsive 5-page website (Home, About, Services, Contact, Blog). Perfect for small businesses, freelancers, and startups looking to go online quickly with modern design and fast load times.\",\"price\":5000,\"features\":[\"5 Custom Designed Pages\",\"Mobile Responsive\",\"Contact Form Integration\",\"Basic SEO Setup\",\"1 Month Free Hosting\",\"Social Media Links\"],\"target_industries\":[\"All Industries\"],\"icon\":\"🌐\",\"image_url\":\"/images/services/landing-page.jpg\",\"video_url\":null,\"rating\":4.8,\"review_count\":45,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":7,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-2\",\"name\":\"AI E-Commerce Platform (Multi-Vendor)\",\"slug\":\"ai-multivendor-ecommerce\",\"category\":\"Web Development\",\"sub_category\":\"AI E-Commerce\",\"description\":\"Fully AI-integrated multi-vendor marketplace platform.\",\"long_description\":\"A complete white-label e-commerce solution with AI-powered product recommendations, vendor dashboards, multi-currency support, and automated inventory sync. Ideal for astrologers selling consultations, real estate agents listing properties, or general retail.\",\"price\":250000,\"features\":[\"AI Product Recommendations\",\"Multi-Vendor Support\",\"Vendor Dashboards\",\"Payment Gateway Integration\",\"Real-time Analytics\",\"Astrology/Real Estate Templates\",\"Mobile App Ready\"],\"target_industries\":[\"Astrology\",\"Real Estate\",\"Retail\",\"E-commerce\"],\"icon\":\"🏪\",\"image_url\":\"/images/services/ecommerce-platform.jpg\",\"video_url\":null,\"rating\":5.0,\"review_count\":12,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":30,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-3\",\"name\":\"Simple Business App\",\"slug\":\"simple-business-app\",\"category\":\"App Development\",\"sub_category\":\"Basic Apps\",\"description\":\"Cross-platform mobile app for your business or service.\",\"long_description\":\"A cross-platform (iOS/Android) app built with React Native. Includes user authentication, push notifications, and a CMS backend.\",\"price\":12000,\"features\":[\"Cross-Platform (iOS/Android)\",\"Push Notifications\",\"User Authentication\",\"CMS Backend\",\"Basic Analytics\",\"App Store Deployment\"],\"target_industries\":[\"Astrology\",\"Real Estate\",\"Fitness\",\"Education\"],\"icon\":\"📱\",\"image_url\":\"/images/services/simple-app.jpg\",\"video_url\":null,\"rating\":4.5,\"review_count\":30,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":14,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-4\",\"name\":\"Fully Managed AI App\",\"slug\":\"fully-managed-ai-app\",\"category\":\"App Development\",\"sub_category\":\"Enterprise Apps\",\"description\":\"Full lifecycle management with integrated AI and dedicated support.\",\"long_description\":\"A turn-key, fully managed application with AI chatbots, predictive analytics, automated workflows, and a dedicated development team handling updates, hosting, and scaling 24/7.\",\"price\":1200000,\"features\":[\"AI Chatbot Integration\",\"Predictive Analytics\",\"Dedicated Team\",\"24/7 Support\",\"Scalable Architecture\",\"Custom AI Model Training\",\"Horoscope/Kundali API Integration\"],\"target_industries\":[\"Astrology\",\"FinTech\",\"Healthcare\",\"Real Estate\"],\"icon\":\"🤖\",\"image_url\":\"/images/services/ai-app.jpg\",\"video_url\":null,\"rating\":4.9,\"review_count\":8,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":60,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-5\",\"name\":\"SMO & Viral Marketing\",\"slug\":\"smo-viral-marketing\",\"category\":\"Marketing\",\"sub_category\":\"Social Media\",\"description\":\"Guaranteed viral growth across Instagram, Facebook, and YouTube.\",\"long_description\":\"We use advanced AI trend analysis and influencer mapping to create content that goes viral. Includes daily engagement, story marketing, and viral video strategies to 10x your brand visibility within 90 days.\",\"price\":20000,\"features\":[\"AI Trend Analysis\",\"Daily Engagement\",\"Story Marketing\",\"Influencer Outreach\",\"Viral Video Strategy\",\"Monthly ROI Reports\"],\"target_industries\":[\"All Industries\"],\"icon\":\"📈\",\"image_url\":\"/images/services/smo.jpg\",\"video_url\":null,\"rating\":4.7,\"review_count\":220,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":90,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-6\",\"name\":\"Premium Logo Design\",\"slug\":\"premium-logo-design\",\"category\":\"Design\",\"sub_category\":\"Branding\",\"description\":\"Professional logo design with 3 unique concepts and unlimited revisions.\",\"long_description\":\"Stand out with a high-end logo designed by our expert team. Includes 3 initial concepts, 5 color palettes, and unlimited revisions until you are 100% satisfied. Delivered in all popular formats (PNG, SVG, PDF).\",\"price\":499,\"features\":[\"3 Unique Concepts\",\"Unlimited Revisions\",\"5 Color Palettes\",\"All Formats (PNG/SVG/PDF)\",\"Commercial Rights\",\"48-Hour Delivery\"],\"target_industries\":[\"All Industries\"],\"icon\":\"🎨\",\"image_url\":\"/images/services/logo-design.jpg\",\"video_url\":null,\"rating\":4.9,\"review_count\":580,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":2,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-7\",\"name\":\"Single Graphic Design\",\"slug\":\"single-graphic-design\",\"category\":\"Design\",\"sub_category\":\"Visual Content\",\"description\":\"High-quality social media posts, banners, or thumbnails.\",\"long_description\":\"Get a single stunning graphic design for your social media, ads, or website. Choose from social media posts, YouTube thumbnails, Instagram stories, or ad banners.\",\"price\":299,\"features\":[\"Custom Design\",\"Social Media Optimized\",\"Editable Source Files\",\"2 Revisions\",\"24-Hour Delivery\"],\"target_industries\":[\"All Industries\"],\"icon\":\"🖼️\",\"image_url\":\"/images/services/graphic-design.jpg\",\"video_url\":null,\"rating\":4.6,\"review_count\":340,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":1,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-8\",\"name\":\"Basic Video Editing\",\"slug\":\"basic-video-editing\",\"category\":\"Media\",\"sub_category\":\"Video Production\",\"description\":\"Professional trimming, transitions, and color grading for short videos.\",\"long_description\":\"Get your raw footage polished with professional color grading, smooth transitions, and background audio mixing. Perfect for social media reels, YouTube shorts, and promotional clips.\",\"price\":999,\"features\":[\"Color Grading\",\"Transitions\",\"Audio Mixing\",\"Subtitles/Closed Captions\",\"Export in 1080p\",\"24-Hour Turnaround\"],\"target_industries\":[\"All Industries\"],\"icon\":\"🎬\",\"image_url\":\"/images/services/video-editing.jpg\",\"video_url\":null,\"rating\":4.8,\"review_count\":115,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":2,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-9\",\"name\":\"Cinematic & Motion Graphics\",\"slug\":\"cinematic-motion-graphics\",\"category\":\"Media\",\"sub_category\":\"Video Production\",\"description\":\"Full-scale video production with motion graphics, 3D elements, and custom animations.\",\"long_description\":\"High-end video production including 3D motion graphics, kinetic typography, and custom animation sequences. Ideal for product launches, brand commercials, and explainer videos.\",\"price\":9999,\"features\":[\"4K Resolution\",\"3D Motion Graphics\",\"Kinetic Typography\",\"Professional Voiceover\",\"Custom Soundtrack\",\"Multiple Revisions\"],\"target_industries\":[\"Real Estate\",\"Technology\",\"Fashion\",\"Astrology\"],\"icon\":\"🎥\",\"image_url\":\"/images/services/cinematic.jpg\",\"video_url\":null,\"rating\":5.0,\"review_count\":22,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":7,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-10\",\"name\":\"AI Chatbot Automation\",\"slug\":\"ai-chatbot-automation\",\"category\":\"AI Automation\",\"sub_category\":\"Lead Generation\",\"description\":\"Automate lead qualification and appointment booking via AI chat.\",\"long_description\":\"Deploy an AI agent on your website to automatically qualify leads, answer FAQs, and book appointments 24/7. Trained on your specific industry data.\",\"price\":5999,\"features\":[\"24/7 Availability\",\"Lead Qualification\",\"Appointment Booking\",\"CRM Integration\",\"Multi-language Support\",\"Email Follow-ups\"],\"target_industries\":[\"Astrology\",\"Real Estate\",\"Healthcare\",\"Education\"],\"icon\":\"💬\",\"image_url\":\"/images/services/chatbot.jpg\",\"video_url\":null,\"rating\":4.5,\"review_count\":67,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":5,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-11\",\"name\":\"AI Horoscope & Kundali API\",\"slug\":\"ai-horoscope-kundali-api\",\"category\":\"AI Automation\",\"sub_category\":\"Astrology Tech\",\"description\":\"Integrate AI-powered horoscope and kundali generation into your app or website.\",\"long_description\":\"Ready-to-use APIs for daily horoscopes, compatibility checks, and detailed kundali (birth chart) generation powered by advanced AI algorithms. Perfect for astrology platforms and mobile apps.\",\"price\":29999,\"features\":[\"Daily Horoscope API\",\"Kundali Generation\",\"Compatibility Matching\",\"Muhurta (Auspicious Time) API\",\"Scalable Infrastructure\",\"White-label Ready\"],\"target_industries\":[\"Astrology\"],\"icon\":\"🔮\",\"image_url\":\"/images/services/horoscope-api.jpg\",\"video_url\":null,\"rating\":4.9,\"review_count\":15,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":10,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-12\",\"name\":\"Custom AI Support Bot\",\"slug\":\"custom-ai-support-bot\",\"category\":\"AI Chatbots\",\"sub_category\":\"Customer Support\",\"description\":\"A fully trained AI support bot integrated into your website 24/7.\",\"long_description\":\"We build, train, and host a custom AI support bot on your domain. It learns from your website content, knowledge base, and FAQs to handle 80%+ of customer queries automatically, reducing support costs drastically. Includes monthly retraining.\",\"price\":7999,\"features\":[\"Domain-Specific Training\",\"24/7 Availability\",\"Human Handoff\",\"Analytics Dashboard\",\"Monthly Retraining\",\"Multi-channel (Web/WhatsApp)\"],\"target_industries\":[\"E-commerce\",\"SaaS\",\"Healthcare\",\"Real Estate\"],\"icon\":\"🤖\",\"image_url\":\"/images/services/support-bot.jpg\",\"video_url\":null,\"rating\":4.8,\"review_count\":34,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":7,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-13\",\"name\":\"Standard Admin Dashboard\",\"slug\":\"standard-admin-dashboard\",\"category\":\"Development\",\"sub_category\":\"Dashboards\",\"description\":\"A beautiful custom dashboard for managing your business operations.\",\"long_description\":\"Get a tailor-made admin dashboard with user management, content editing, analytics charts, and data tables. Built with Next.js and Supabase for enterprise-grade security.\",\"price\":19999,\"features\":[\"User Management\",\"Content Editing (CMS)\",\"Analytics Charts\",\"Data Tables\",\"Role-Based Access\",\"Responsive Design\"],\"target_industries\":[\"All Industries\"],\"icon\":\"📊\",\"image_url\":\"/images/services/dashboard.jpg\",\"video_url\":null,\"rating\":4.6,\"review_count\":89,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":14,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"},{\"id\":\"mock-14\",\"name\":\"AI-Powered Enterprise Suite\",\"slug\":\"ai-enterprise-dashboard-suite\",\"category\":\"Development\",\"sub_category\":\"Dashboards\",\"description\":\"A fully managed, AI-powered analytics suite with predictive insights.\",\"long_description\":\"A comprehensive enterprise dashboard featuring predictive analytics, anomaly detection, resource planning, and full integration with your existing business apps. Includes dedicated dashboard engineers for custom modifications.\",\"price\":580000,\"features\":[\"Predictive Analytics\",\"Anomaly Detection\",\"Resource Planning\",\"Custom Integrations\",\"Dedicated Engineers\",\"Real-time Data Sync\",\"White-label Branding\"],\"target_industries\":[\"FinTech\",\"Real Estate\",\"Manufacturing\",\"Astrology\"],\"icon\":\"🏢\",\"image_url\":\"/images/services/enterprise-suite.jpg\",\"video_url\":null,\"rating\":5.0,\"review_count\":5,\"is_active\":true,\"meta_title\":null,\"meta_description\":null,\"duration_days\":45,\"created_at\":\"2025-01-01T00:00:00Z\",\"updated_at\":\"2025-01-01T00:00:00Z\"}]");
+}),
+"[project]/apps/web/lib/services.ts [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "checkSupabaseConnection",
+    ()=>checkSupabaseConnection,
+    "fetchServiceBySlug",
+    ()=>fetchServiceBySlug,
+    "fetchServices",
+    ()=>fetchServices,
+    "getSupabaseStatus",
+    ()=>getSupabaseStatus
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/supabase/client.ts [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/mock/services.json.[json].cjs [app-ssr] (ecmascript)");
+;
+;
+let isSupabaseAvailable = null;
+async function checkSupabaseConnection() {
+    if (isSupabaseAvailable !== null) return isSupabaseAvailable;
+    try {
+        const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from('services').select('id').limit(1);
+        isSupabaseAvailable = !error;
+        return isSupabaseAvailable;
+    } catch  {
+        isSupabaseAvailable = false;
+        return false;
+    }
+}
+async function fetchServices() {
+    const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["createClient"])();
+    try {
+        const { data, error } = await supabase.from('services').select('*').eq('is_active', true).order('price', {
+            ascending: true
+        });
+        if (error) {
+            console.warn('⚠️ Supabase error, falling back to mock JSON:', error.message);
+            isSupabaseAvailable = false;
+            return __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"];
+        }
+        if (data && data.length > 0) {
+            isSupabaseAvailable = true;
+            return data;
+        }
+        console.warn('⚠️ No services found in Supabase, using mock JSON');
+        isSupabaseAvailable = false;
+        return __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"];
+    } catch (err) {
+        console.warn('⚠️ Failed to fetch from Supabase, using mock JSON:', err);
+        isSupabaseAvailable = false;
+        return __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"];
+    }
+}
+async function fetchServiceBySlug(category, slug) {
+    const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["createClient"])();
+    try {
+        const { data, error } = await supabase.from('services').select('*').eq('slug', slug).eq('category', category).single();
+        if (error) {
+            console.warn('⚠️ Supabase error, looking in mock JSON:', error.message);
+            isSupabaseAvailable = false;
+            const mock = __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].find((s)=>s.slug === slug && s.category === category);
+            return mock || null;
+        }
+        if (data) {
+            isSupabaseAvailable = true;
+            return data;
+        }
+        // Fallback to mock
+        const mock = __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].find((s)=>s.slug === slug && s.category === category);
+        return mock || null;
+    } catch  {
+        const mock = __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$mock$2f$services$2e$json$2e5b$json$5d2e$cjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].find((s)=>s.slug === slug && s.category === category);
+        return mock || null;
+    }
+}
+function getSupabaseStatus() {
+    return isSupabaseAvailable ?? false;
+}
+}),
+"[project]/apps/web/app/marketplace/page.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>MarketplacePage
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$services$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/services.ts [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/client/app-dir/link.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/search.js [app-ssr] (ecmascript) <export default as Search>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$star$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Star$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/star.js [app-ssr] (ecmascript) <export default as Star>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shopping$2d$bag$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShoppingBag$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/shopping-bag.js [app-ssr] (ecmascript) <export default as ShoppingBag>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/sparkles.js [app-ssr] (ecmascript) <export default as Sparkles>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertCircle$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/circle-alert.js [app-ssr] (ecmascript) <export default as AlertCircle>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Wifi$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/wifi.js [app-ssr] (ecmascript) <export default as Wifi>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2d$off$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__WifiOff$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/wifi-off.js [app-ssr] (ecmascript) <export default as WifiOff>");
+'use client';
+;
+;
+;
+;
+;
+const CATEGORIES = [
+    'All',
+    'Web Development',
+    'App Development',
+    'Marketing',
+    'Design',
+    'Media',
+    'AI Automation',
+    'AI Chatbots',
+    'Development',
+    'Consulting',
+    'AI'
+];
+function MarketplacePage() {
+    const [services, setServices] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [filtered, setFiltered] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
+    const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [search, setSearch] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('');
+    const [category, setCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('All');
+    const [online, setOnline] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        const loadServices = async ()=>{
+            setLoading(true);
+            setError(null);
+            try {
+                const data = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$services$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["fetchServices"])();
+                setServices(data);
+                setFiltered(data);
+                const status = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$services$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["checkSupabaseConnection"])();
+                setOnline(status);
+            } catch (err) {
+                setError(String(err));
+            } finally{
+                setLoading(false);
+            }
+        };
+        loadServices();
+    }, []);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        let result = services;
+        if (category !== 'All') {
+            result = result.filter((s)=>s.category === category);
+        }
+        if (search) {
+            const q = search.toLowerCase();
+            result = result.filter((s)=>s.name.toLowerCase().includes(q) || (s.description?.toLowerCase() || '').includes(q));
+        }
+        setFiltered(result);
+    }, [
+        category,
+        search,
+        services
+    ]);
+    if (loading) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "max-w-7xl mx-auto px-4 py-6",
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4",
+                children: [
+                    ...Array(8)
+                ].map((_, i)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "aspect-square bg-white/5 rounded-xl animate-pulse"
+                    }, i, false, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 68,
+                        columnNumber: 13
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 66,
+                columnNumber: 9
+            }, this)
+        }, void 0, false, {
+            fileName: "[project]/apps/web/app/marketplace/page.tsx",
+            lineNumber: 65,
+            columnNumber: 7
+        }, this);
+    }
+    if (error) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "max-w-7xl mx-auto px-4 py-6",
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-red-400 flex items-start gap-3",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertCircle$3e$__["AlertCircle"], {
+                        className: "w-5 h-5 mt-0.5 flex-shrink-0"
+                    }, void 0, false, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 79,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                className: "font-bold",
+                                children: "Error loading services"
+                            }, void 0, false, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 81,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: "text-sm mt-1",
+                                children: error
+                            }, void 0, false, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 82,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 80,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 78,
+                columnNumber: 9
+            }, this)
+        }, void 0, false, {
+            fileName: "[project]/apps/web/app/marketplace/page.tsx",
+            lineNumber: 77,
+            columnNumber: 7
+        }, this);
+    }
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        className: "max-w-7xl mx-auto px-4 py-6",
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex items-center justify-between mb-6 flex-wrap gap-4",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-3",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
+                                className: "text-3xl font-bold text-white flex items-center gap-2",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shopping$2d$bag$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShoppingBag$3e$__["ShoppingBag"], {
+                                        className: "w-8 h-8 text-cyan-400"
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 94,
+                                        columnNumber: 13
+                                    }, this),
+                                    "Marketplace"
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 93,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "text-sm text-cyan-400/40 font-mono",
+                                children: [
+                                    filtered.length,
+                                    " services"
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 97,
+                                columnNumber: 11
+                            }, this),
+                            online ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "flex items-center gap-1 text-xs text-green-400 border border-green-500/20 px-2 py-1 rounded-full",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Wifi$3e$__["Wifi"], {
+                                        className: "w-3 h-3"
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 100,
+                                        columnNumber: 15
+                                    }, this),
+                                    " Live"
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 99,
+                                columnNumber: 13
+                            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "flex items-center gap-1 text-xs text-yellow-400 border border-yellow-500/20 px-2 py-1 rounded-full",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2d$off$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__WifiOff$3e$__["WifiOff"], {
+                                        className: "w-3 h-3"
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 104,
+                                        columnNumber: 15
+                                    }, this),
+                                    " Offline (Mock)"
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 103,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 92,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "relative w-full md:w-64",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__["Search"], {
+                                className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
+                            }, void 0, false, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 109,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                type: "text",
+                                value: search,
+                                onChange: (e)=>setSearch(e.target.value),
+                                placeholder: "Search services...",
+                                className: "w-full bg-white/5 border border-cyan-500/10 rounded-xl pl-10 pr-4 py-2 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition"
+                            }, void 0, false, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 110,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 108,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 91,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex flex-wrap gap-2 mb-6",
+                children: CATEGORIES.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: ()=>setCategory(c),
+                        className: `px-3 py-1.5 rounded-full text-sm font-mono transition ${category === c ? 'bg-cyan-600/30 text-cyan-400 border border-cyan-500/30' : 'bg-white/5 text-white/50 hover:text-white hover:bg-white/10'}`,
+                        children: c
+                    }, c, false, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 122,
+                        columnNumber: 11
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 120,
+                columnNumber: 7
+            }, this),
+            filtered.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "text-center py-20 text-white/40",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__["Sparkles"], {
+                        className: "w-12 h-12 mx-auto mb-4 opacity-30"
+                    }, void 0, false, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 138,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        children: "No services match your criteria."
+                    }, void 0, false, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 139,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 137,
+                columnNumber: 9
+            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4",
+                children: filtered.map((service)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
+                        href: `/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
+                        className: "group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10 flex flex-col cursor-pointer",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 flex items-center justify-center relative overflow-hidden",
+                                children: [
+                                    service.image_url ? // eslint-disable-next-line @next/next/no-img-element
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                                        src: service.image_url,
+                                        alt: service.name,
+                                        className: "w-full h-full object-cover opacity-60 group-hover:opacity-100 transition"
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 152,
+                                        columnNumber: 19
+                                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-6xl opacity-30",
+                                        children: service.icon || '📦'
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 158,
+                                        columnNumber: 19
+                                    }, this),
+                                    service.price && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "absolute top-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg",
+                                        children: service.price < 1000 ? 'Starter' : service.price < 100000 ? 'Pro' : 'Enterprise'
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 161,
+                                        columnNumber: 19
+                                    }, this),
+                                    service.rating && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full flex items-center gap-1 border border-white/10",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$star$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Star$3e$__["Star"], {
+                                                className: "w-3 h-3 fill-yellow-400 text-yellow-400"
+                                            }, void 0, false, {
+                                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                                lineNumber: 167,
+                                                columnNumber: 21
+                                            }, this),
+                                            service.rating
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 166,
+                                        columnNumber: 19
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 149,
+                                columnNumber: 15
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "p-4 flex-1 flex flex-col",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-xs text-cyan-400/60 uppercase tracking-wider",
+                                        children: service.category
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 173,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                        className: "text-white font-medium text-sm mt-1 line-clamp-2 group-hover:text-cyan-300 transition",
+                                        children: service.name
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 174,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex flex-wrap gap-1 mt-1",
+                                        children: [
+                                            (service.target_industries || []).slice(0, 2).map((ind)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                    className: "text-[8px] bg-cyan-600/20 text-cyan-400 px-1.5 py-0.5 rounded-full",
+                                                    children: ind
+                                                }, ind, false, {
+                                                    fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                                    lineNumber: 179,
+                                                    columnNumber: 21
+                                                }, this)),
+                                            (service.target_industries || []).length > 2 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-[8px] text-cyan-400/30",
+                                                children: [
+                                                    "+",
+                                                    (service.target_industries || []).length - 2
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                                lineNumber: 181,
+                                                columnNumber: 68
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 177,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-cyan-400/40 text-xs mt-1 line-clamp-2 flex-1",
+                                        children: service.description
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 183,
+                                        columnNumber: 17
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex items-center justify-between mt-3 pt-2 border-t border-cyan-500/10",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-white font-bold",
+                                                children: [
+                                                    "₹",
+                                                    (service.price ?? 0).toLocaleString()
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                                lineNumber: 185,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-xs text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full",
+                                                children: "View"
+                                            }, void 0, false, {
+                                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                                lineNumber: 186,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                        lineNumber: 184,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                                lineNumber: 172,
+                                columnNumber: 15
+                            }, this)
+                        ]
+                    }, service.id, true, {
+                        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                        lineNumber: 144,
+                        columnNumber: 13
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/apps/web/app/marketplace/page.tsx",
+                lineNumber: 142,
+                columnNumber: 9
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/apps/web/app/marketplace/page.tsx",
+        lineNumber: 90,
+        columnNumber: 5
+    }, this);
+}
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/search.js [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>Search
+]);
+/**
+ * @license lucide-react v0.468.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/createLucideIcon.js [app-ssr] (ecmascript)");
+;
+const Search = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])("Search", [
+    [
+        "circle",
+        {
+            cx: "11",
+            cy: "11",
+            r: "8",
+            key: "4ej97u"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "m21 21-4.3-4.3",
+            key: "1qie3q"
+        }
+    ]
+]);
+;
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/search.js [app-ssr] (ecmascript) <export default as Search>", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "Search",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"]
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/search.js [app-ssr] (ecmascript)");
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/circle-alert.js [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>CircleAlert
+]);
+/**
+ * @license lucide-react v0.468.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/createLucideIcon.js [app-ssr] (ecmascript)");
+;
+const CircleAlert = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])("CircleAlert", [
+    [
+        "circle",
+        {
+            cx: "12",
+            cy: "12",
+            r: "10",
+            key: "1mglay"
+        }
+    ],
+    [
+        "line",
+        {
+            x1: "12",
+            x2: "12",
+            y1: "8",
+            y2: "12",
+            key: "1pkeuh"
+        }
+    ],
+    [
+        "line",
+        {
+            x1: "12",
+            x2: "12.01",
+            y1: "16",
+            y2: "16",
+            key: "4dfq90"
+        }
+    ]
+]);
+;
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/circle-alert.js [app-ssr] (ecmascript) <export default as AlertCircle>", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "AlertCircle",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"]
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$alert$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/circle-alert.js [app-ssr] (ecmascript)");
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/wifi.js [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>Wifi
+]);
+/**
+ * @license lucide-react v0.468.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/createLucideIcon.js [app-ssr] (ecmascript)");
+;
+const Wifi = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])("Wifi", [
+    [
+        "path",
+        {
+            d: "M12 20h.01",
+            key: "zekei9"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M2 8.82a15 15 0 0 1 20 0",
+            key: "dnpr2z"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M5 12.859a10 10 0 0 1 14 0",
+            key: "1x1e6c"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M8.5 16.429a5 5 0 0 1 7 0",
+            key: "1bycff"
+        }
+    ]
+]);
+;
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/wifi.js [app-ssr] (ecmascript) <export default as Wifi>", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "Wifi",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"]
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/wifi.js [app-ssr] (ecmascript)");
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/wifi-off.js [app-ssr] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>WifiOff
+]);
+/**
+ * @license lucide-react v0.468.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/createLucideIcon.js [app-ssr] (ecmascript)");
+;
+const WifiOff = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$createLucideIcon$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"])("WifiOff", [
+    [
+        "path",
+        {
+            d: "M12 20h.01",
+            key: "zekei9"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M8.5 16.429a5 5 0 0 1 7 0",
+            key: "1bycff"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M5 12.859a10 10 0 0 1 5.17-2.69",
+            key: "1dl1wf"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M19 12.859a10 10 0 0 0-2.007-1.523",
+            key: "4k23kn"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M2 8.82a15 15 0 0 1 4.177-2.643",
+            key: "1grhjp"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "M22 8.82a15 15 0 0 0-11.288-3.764",
+            key: "z3jwby"
+        }
+    ],
+    [
+        "path",
+        {
+            d: "m2 2 20 20",
+            key: "1ooewy"
+        }
+    ]
+]);
+;
+}),
+"[project]/node_modules/lucide-react/dist/esm/icons/wifi-off.js [app-ssr] (ecmascript) <export default as WifiOff>", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "WifiOff",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2d$off$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"]
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wifi$2d$off$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/wifi-off.js [app-ssr] (ecmascript)");
+}),
+];
+
+//# sourceMappingURL=_1y1flf7._.js.map

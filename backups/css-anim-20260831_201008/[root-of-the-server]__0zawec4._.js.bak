@@ -1,0 +1,1688 @@
+module.exports = [
+"[externals]/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js [external] (next/dist/compiled/next-server/app-route-turbo.runtime.dev.js, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/compiled/next-server/app-route-turbo.runtime.dev.js", () => require("next/dist/compiled/next-server/app-route-turbo.runtime.dev.js"));
+
+module.exports = mod;
+}),
+"[externals]/next/dist/compiled/@opentelemetry/api [external] (next/dist/compiled/@opentelemetry/api, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/compiled/@opentelemetry/api", () => require("next/dist/compiled/@opentelemetry/api"));
+
+module.exports = mod;
+}),
+"[externals]/next/dist/compiled/next-server/app-page-turbo.runtime.dev.js [external] (next/dist/compiled/next-server/app-page-turbo.runtime.dev.js, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/compiled/next-server/app-page-turbo.runtime.dev.js", () => require("next/dist/compiled/next-server/app-page-turbo.runtime.dev.js"));
+
+module.exports = mod;
+}),
+"[externals]/next/dist/server/app-render/work-unit-async-storage.external.js [external] (next/dist/server/app-render/work-unit-async-storage.external.js, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/server/app-render/work-unit-async-storage.external.js", () => require("next/dist/server/app-render/work-unit-async-storage.external.js"));
+
+module.exports = mod;
+}),
+"[externals]/next/dist/server/app-render/work-async-storage.external.js [external] (next/dist/server/app-render/work-async-storage.external.js, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/server/app-render/work-async-storage.external.js", () => require("next/dist/server/app-render/work-async-storage.external.js"));
+
+module.exports = mod;
+}),
+"[externals]/next/dist/shared/lib/no-fallback-error.external.js [external] (next/dist/shared/lib/no-fallback-error.external.js, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("next/dist/shared/lib/no-fallback-error.external.js", () => require("next/dist/shared/lib/no-fallback-error.external.js"));
+
+module.exports = mod;
+}),
+"[project]/apps/web/lib/providers/agnes/client.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "AgnesChatRequestSchema",
+    ()=>AgnesChatRequestSchema,
+    "AgnesClient",
+    ()=>AgnesClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/v3/external.js [app-route] (ecmascript) <export * as z>");
+;
+const AGNES_BASE = "https://apihub.agnes-ai.com/v1";
+const AgnesChatRequestSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+    model: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string().default("agnes-2.0-flash"),
+    messages: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].array(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+        role: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+            "system",
+            "user",
+            "assistant",
+            "tool"
+        ]),
+        content: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string()
+    })),
+    temperature: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().min(0).max(2).default(0.7),
+    max_tokens: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().positive().default(4096),
+    stream: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].boolean().default(false)
+});
+class AgnesClient {
+    apiKey;
+    baseUrl;
+    constructor(){
+        const key = process.env.AGNES_API_KEY;
+        if (!key) throw new Error("AGNES_API_KEY not set");
+        this.apiKey = key;
+        this.baseUrl = AGNES_BASE;
+    }
+    async fetchWithTimeout(url, options, timeout = 30000) {
+        const controller = new AbortController();
+        const id = setTimeout(()=>controller.abort(), timeout);
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    }
+    async chat(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(request)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Agnes chat error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async chatStream(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ...request,
+                stream: true
+            })
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Agnes stream error ${response.status}: ${text}`);
+        }
+        return response.body;
+    }
+    async image(body) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/images/generations`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Agnes image error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async video(body) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/videos`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Agnes video error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async videoStatus(videoId, modelName) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/agnesapi?video_id=${videoId}&model_name=${modelName}`, {
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`
+            }
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Agnes video status error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+}
+}),
+"[project]/apps/web/lib/providers/groq/client.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "GroqChatRequestSchema",
+    ()=>GroqChatRequestSchema,
+    "GroqClient",
+    ()=>GroqClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/v3/external.js [app-route] (ecmascript) <export * as z>");
+;
+const GROQ_BASE = "https://api.groq.com/openai/v1";
+const GroqChatRequestSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+    messages: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].array(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+        role: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+            "system",
+            "user",
+            "assistant",
+            "tool"
+        ]),
+        content: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string()
+    })),
+    model: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string().default("llama-3.3-70b-versatile"),
+    temperature: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().min(0).max(2).default(0.7),
+    max_tokens: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().positive().default(4096),
+    stream: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].boolean().default(false)
+});
+class GroqClient {
+    apiKey;
+    baseUrl;
+    constructor(){
+        const key = process.env.GROQ_API_KEY;
+        if (!key) throw new Error("GROQ_API_KEY not set");
+        this.apiKey = key;
+        this.baseUrl = GROQ_BASE;
+    }
+    async fetchWithTimeout(url, options, timeout = 30000) {
+        const controller = new AbortController();
+        const id = setTimeout(()=>controller.abort(), timeout);
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    }
+    async chat(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(request)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Groq chat error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async chatStream(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ...request,
+                stream: true
+            })
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Groq stream error ${response.status}: ${text}`);
+        }
+        return response.body;
+    }
+}
+}),
+"[project]/apps/web/lib/providers/openrouter/client.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "OpenRouterChatRequestSchema",
+    ()=>OpenRouterChatRequestSchema,
+    "OpenRouterClient",
+    ()=>OpenRouterClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/v3/external.js [app-route] (ecmascript) <export * as z>");
+;
+const OR_BASE = "https://openrouter.ai/api/v1";
+const OpenRouterChatRequestSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+    messages: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].array(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+        role: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+            "system",
+            "user",
+            "assistant",
+            "tool"
+        ]),
+        content: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string()
+    })),
+    model: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string().default("meta-llama/llama-3.2-3b-instruct:free"),
+    temperature: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().min(0).max(2).default(0.7),
+    max_tokens: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().positive().default(4096),
+    stream: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].boolean().default(false)
+});
+class OpenRouterClient {
+    apiKey;
+    baseUrl;
+    constructor(){
+        const key = process.env.OPENROUTER_API_KEY;
+        if (!key) throw new Error("OPENROUTER_API_KEY not set");
+        this.apiKey = key;
+        this.baseUrl = OR_BASE;
+    }
+    async fetchWithTimeout(url, options, timeout = 30000) {
+        const controller = new AbortController();
+        const id = setTimeout(()=>controller.abort(), timeout);
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    }
+    async chat(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(request)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`OpenRouter chat error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async chatStream(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ...request,
+                stream: true
+            })
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`OpenRouter stream error ${response.status}: ${text}`);
+        }
+        return response.body;
+    }
+}
+}),
+"[project]/apps/web/lib/providers/zhipu/client.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "ZhipuChatRequestSchema",
+    ()=>ZhipuChatRequestSchema,
+    "ZhipuClient",
+    ()=>ZhipuClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/v3/external.js [app-route] (ecmascript) <export * as z>");
+;
+const ZHIPU_BASE = "https://api.z.ai/api/paas/v4";
+const ZhipuChatRequestSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+    messages: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].array(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+        role: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+            "system",
+            "user",
+            "assistant",
+            "tool"
+        ]),
+        content: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string()
+    })),
+    model: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string().default("glm-5.3"),
+    temperature: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().min(0).max(2).default(0.7),
+    max_tokens: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].number().positive().default(4096),
+    thinking: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
+        type: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+            "enabled",
+            "disabled"
+        ]),
+        clear_thinking: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].boolean().optional()
+    }).optional(),
+    reasoning_effort: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$v3$2f$external$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].enum([
+        "low",
+        "medium",
+        "high",
+        "max"
+    ]).optional()
+});
+class ZhipuClient {
+    apiKey;
+    baseUrl;
+    constructor(){
+        const key = process.env.ZHIPU_API_KEY;
+        if (!key) throw new Error("ZHIPU_API_KEY not set");
+        this.apiKey = key;
+        this.baseUrl = ZHIPU_BASE;
+    }
+    async fetchWithTimeout(url, options, timeout = 30000) {
+        const controller = new AbortController();
+        const id = setTimeout(()=>controller.abort(), timeout);
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    }
+    async chat(request) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json",
+                "Accept-Language": "en-US,en"
+            },
+            body: JSON.stringify(request)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Zhipu chat error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async webSearch(body) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/web_search`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json",
+                "Accept-Language": "en-US,en"
+            },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Zhipu web search error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+    async webReader(body) {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/reader`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Zhipu web reader error ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+}
+}),
+"[externals]/events [external] (events, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("events", () => require("events"));
+
+module.exports = mod;
+}),
+"[externals]/assert [external] (assert, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("assert", () => require("assert"));
+
+module.exports = mod;
+}),
+"[externals]/util [external] (util, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("util", () => require("util"));
+
+module.exports = mod;
+}),
+"[externals]/tty [external] (tty, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("tty", () => require("tty"));
+
+module.exports = mod;
+}),
+"[externals]/os [external] (os, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("os", () => require("os"));
+
+module.exports = mod;
+}),
+"[externals]/stream [external] (stream, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("stream", () => require("stream"));
+
+module.exports = mod;
+}),
+"[externals]/buffer [external] (buffer, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("buffer", () => require("buffer"));
+
+module.exports = mod;
+}),
+"[externals]/crypto [external] (crypto, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("crypto", () => require("crypto"));
+
+module.exports = mod;
+}),
+"[externals]/node:diagnostics_channel [external] (node:diagnostics_channel, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("node:diagnostics_channel", () => require("node:diagnostics_channel"));
+
+module.exports = mod;
+}),
+"[externals]/dns [external] (dns, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("dns", () => require("dns"));
+
+module.exports = mod;
+}),
+"[externals]/net [external] (net, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("net", () => require("net"));
+
+module.exports = mod;
+}),
+"[externals]/tls [external] (tls, cjs)", ((__turbopack_context__, module, exports) => {
+
+const mod = __turbopack_context__.x("tls", () => require("tls"));
+
+module.exports = mod;
+}),
+"[project]/apps/web/lib/cache/redis.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "redisClient",
+    ()=>redisClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$ioredis$2f$built$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/ioredis/built/index.js [app-route] (ecmascript)");
+;
+const REDIS_URL = process.env.REDIS_URL || "";
+let redis = null;
+if (REDIS_URL) {
+    try {
+        redis = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$ioredis$2f$built$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"](REDIS_URL, {
+            lazyConnect: true,
+            maxRetriesPerRequest: 3
+        });
+    } catch (e) {
+        console.warn("Redis connection failed, caching disabled.", e);
+        redis = null;
+    }
+} else {
+    console.warn("REDIS_URL not set, caching disabled.");
+}
+const redisClient = redis;
+}),
+"[project]/apps/web/lib/orchestration/rate-limiter.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "RateLimiter",
+    ()=>RateLimiter
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$cache$2f$redis$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/cache/redis.ts [app-route] (ecmascript)");
+;
+const RPM_LIMITS = {
+    agnes: 20,
+    groq: 30,
+    openrouter: 20,
+    zhipu: 100
+};
+class RateLimiter {
+    async check(provider) {
+        const key = `ratelimit:${provider}`;
+        if (!__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$cache$2f$redis$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["redisClient"]) return true;
+        const current = await __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$cache$2f$redis$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["redisClient"].incr(key);
+        if (current === 1) {
+            await __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$cache$2f$redis$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["redisClient"].expire(key, 60);
+        }
+        const limit = RPM_LIMITS[provider] || 10;
+        return current <= limit;
+    }
+}
+}),
+"[project]/apps/web/lib/orchestration/circuit-breaker.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "CircuitBreaker",
+    ()=>CircuitBreaker
+]);
+class CircuitBreaker {
+    failures = {};
+    lastFailure = {};
+    threshold = 3;
+    resetTimeout = 60000;
+    isOpen(provider) {
+        const failures = this.failures[provider] || 0;
+        const last = this.lastFailure[provider] || 0;
+        if (failures >= this.threshold) {
+            if (Date.now() - last > this.resetTimeout) {
+                this.failures[provider] = 0;
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+    recordSuccess(provider) {
+        this.failures[provider] = 0;
+    }
+    recordFailure(provider) {
+        this.failures[provider] = (this.failures[provider] || 0) + 1;
+        this.lastFailure[provider] = Date.now();
+    }
+}
+}),
+"[project]/apps/web/lib/orchestration/retry.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "withRetry",
+    ()=>withRetry
+]);
+async function withRetry(fn, provider, circuitBreaker, maxRetries = 3) {
+    let lastError = null;
+    let delay = 500;
+    for(let attempt = 1; attempt <= maxRetries; attempt++){
+        try {
+            const result = await fn();
+            circuitBreaker.recordSuccess(provider);
+            return result;
+        } catch (error) {
+            lastError = error;
+            circuitBreaker.recordFailure(provider);
+            if (attempt < maxRetries) {
+                await new Promise((resolve)=>setTimeout(resolve, delay * attempt));
+                delay *= 2;
+            }
+        }
+    }
+    throw lastError || new Error(`All retries failed for ${provider}`);
+}
+}),
+"[project]/apps/web/lib/supabase/client.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "createClient",
+    ()=>createClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/@supabase/ssr/dist/module/index.js [app-route] (ecmascript) <locals>");
+;
+// Safe client that only initializes on the client side
+// This avoids the Math.random() issue during prerendering
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch  {
+        return false;
+    }
+}
+function createClient() {
+    const url = ("TURBOPACK compile-time value", "https://rvrdojpyewnvboxoebie.supabase.co")?.trim() || '';
+    const key = ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cmRvanB5ZXdudmJveG9lYmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNjAyNzMsImV4cCI6MjEwMDczNjI3M30.oeiEF0_qGWQ32NO5TAcf--j5QqDW5dDlfpusfioZ2mI")?.trim() || '';
+    const isInvalid = !isValidUrl(url) || !key || key === '' || key === 'your-anon-key';
+    // Return a safe dummy client during prerendering
+    if ("TURBOPACK compile-time truthy", 1) {
+        return {
+            auth: {
+                getUser: ()=>Promise.resolve({
+                        data: {
+                            user: null
+                        },
+                        error: null
+                    }),
+                getSession: ()=>Promise.resolve({
+                        data: {
+                            session: null
+                        },
+                        error: null
+                    }),
+                signOut: ()=>Promise.resolve({
+                        error: null
+                    }),
+                onAuthStateChange: ()=>({
+                        data: {
+                            subscription: {
+                                unsubscribe: ()=>{}
+                            }
+                        }
+                    }),
+                signInWithPassword: ()=>Promise.resolve({
+                        data: {
+                            user: null,
+                            session: null
+                        },
+                        error: null
+                    }),
+                signInWithOAuth: ()=>Promise.resolve({
+                        data: {
+                            user: null,
+                            session: null
+                        },
+                        error: null
+                    })
+            },
+            from: ()=>({
+                    select: ()=>({
+                            eq: ()=>({
+                                    single: ()=>Promise.resolve({
+                                            data: null,
+                                            error: null
+                                        }),
+                                    order: ()=>({
+                                            limit: ()=>Promise.resolve({
+                                                    data: [],
+                                                    error: null
+                                                })
+                                        }),
+                                    limit: ()=>Promise.resolve({
+                                            data: [],
+                                            error: null
+                                        })
+                                }),
+                            order: ()=>({
+                                    limit: ()=>Promise.resolve({
+                                            data: [],
+                                            error: null
+                                        })
+                                }),
+                            limit: ()=>Promise.resolve({
+                                    data: [],
+                                    error: null
+                                })
+                        }),
+                    insert: ()=>Promise.resolve({
+                            data: null,
+                            error: null
+                        }),
+                    update: ()=>Promise.resolve({
+                            data: null,
+                            error: null
+                        }),
+                    delete: ()=>Promise.resolve({
+                            data: null,
+                            error: null
+                        })
+                }),
+            channel: ()=>({
+                    on: ()=>({
+                            subscribe: ()=>({
+                                    unsubscribe: ()=>{}
+                                })
+                        })
+                })
+        };
+    }
+    //TURBOPACK unreachable
+    ;
+}
+}),
+"[project]/apps/web/lib/security/audit.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "auditLog",
+    ()=>auditLog,
+    "notifyAdmin",
+    ()=>notifyAdmin
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/supabase/client.ts [app-route] (ecmascript)");
+;
+async function auditLog(userId, action, provider, details) {
+    try {
+        const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$supabase$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["createClient"])();
+        await supabase.from("ai_audit_logs").insert({
+            user_id: userId || null,
+            action,
+            provider,
+            details,
+            created_at: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error("Failed to write audit log:", error);
+    }
+}
+function notifyAdmin(error, context) {
+    console.error("[ADMIN ALERT]", error.message, context);
+}
+}),
+"[project]/apps/web/lib/orchestration/router.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "IntelligentRouter",
+    ()=>IntelligentRouter
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/agnes/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$groq$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/groq/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$openrouter$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/openrouter/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/zhipu/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$rate$2d$limiter$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/orchestration/rate-limiter.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$circuit$2d$breaker$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/orchestration/circuit-breaker.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$retry$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/orchestration/retry.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$security$2f$audit$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/security/audit.ts [app-route] (ecmascript)");
+;
+;
+;
+;
+;
+;
+;
+;
+class IntelligentRouter {
+    agnes;
+    groq;
+    openrouter;
+    zhipu;
+    rateLimiter;
+    circuitBreaker;
+    providerOrder;
+    clients;
+    constructor(){
+        this.agnes = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["AgnesClient"]();
+        this.groq = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$groq$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["GroqClient"]();
+        this.openrouter = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$openrouter$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["OpenRouterClient"]();
+        this.zhipu = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["ZhipuClient"]();
+        this.rateLimiter = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$rate$2d$limiter$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["RateLimiter"]();
+        this.circuitBreaker = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$circuit$2d$breaker$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["CircuitBreaker"]();
+        this.providerOrder = [
+            "agnes",
+            "groq",
+            "openrouter",
+            "zhipu"
+        ];
+        this.clients = {
+            agnes: this.agnes,
+            groq: this.groq,
+            openrouter: this.openrouter,
+            zhipu: this.zhipu
+        };
+    }
+    async route(request) {
+        const { messages, stream = false, deep, tools, image_url, provider: preferred, userId } = request;
+        let providers;
+        if (preferred) {
+            providers = [
+                preferred,
+                ...this.providerOrder.filter((p)=>p !== preferred)
+            ];
+        } else {
+            providers = this.providerOrder;
+        }
+        let lastError = null;
+        for (const provider of providers){
+            if (this.circuitBreaker.isOpen(provider)) continue;
+            if (!await this.rateLimiter.check(provider)) continue;
+            try {
+                const result = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$retry$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["withRetry"])(()=>this.callProvider(provider, request), provider, this.circuitBreaker);
+                await (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$security$2f$audit$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["auditLog"])(userId, "ai_chat_success", provider, result);
+                return result;
+            } catch (error) {
+                const err = error;
+                lastError = err;
+                await (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$security$2f$audit$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["auditLog"])(userId, "ai_chat_failure", provider, {
+                    error: err.message
+                });
+            }
+        }
+        return this.fallbackResponse(messages, lastError, userId);
+    }
+    async callProvider(provider, request) {
+        const { messages, stream, deep, tools, image_url } = request;
+        const body = {
+            messages,
+            temperature: 0.7,
+            max_tokens: 4096
+        };
+        if (tools) body.tools = tools;
+        if (image_url) {
+            const last = messages[messages.length - 1];
+            if (last?.role === "user") {
+                last.content = [
+                    {
+                        type: "text",
+                        text: last.content
+                    },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: image_url
+                        }
+                    }
+                ];
+            }
+        }
+        const client = this.clients[provider];
+        switch(provider){
+            case "agnes":
+                body.model = "agnes-2.0-flash";
+                if (deep) body.chat_template_kwargs = {
+                    enable_thinking: true
+                };
+                if (stream) {
+                    const agnesStream = await client.chatStream(body);
+                    if (!agnesStream) throw new Error("Agnes stream returned null");
+                    return agnesStream;
+                }
+                return client.chat(body);
+            case "groq":
+                body.model = "llama-3.3-70b-versatile";
+                if (stream) {
+                    const groqStream = await client.chatStream(body);
+                    if (!groqStream) throw new Error("Groq stream returned null");
+                    return groqStream;
+                }
+                return client.chat(body);
+            case "openrouter":
+                body.model = "meta-llama/llama-3.2-3b-instruct:free";
+                if (stream) {
+                    const orStream = await client.chatStream(body);
+                    if (!orStream) throw new Error("OpenRouter stream returned null");
+                    return orStream;
+                }
+                return client.chat(body);
+            case "zhipu":
+                body.model = "glm-5.3";
+                if (deep) {
+                    body.thinking = {
+                        type: "enabled",
+                        clear_thinking: false
+                    };
+                    body.reasoning_effort = "max";
+                }
+                if (stream) {
+                    return client.chat(body);
+                }
+                return client.chat(body);
+            default:
+                throw new Error(`Unsupported provider: ${provider}`);
+        }
+    }
+    fallbackResponse(messages, error, userId) {
+        const content = "I'm having trouble connecting right now. Please try again in a moment. If the issue persists, our team has been notified.";
+        if (error) {
+            console.error(`All providers failed for user ${userId}:`, error);
+        }
+        return {
+            choices: [
+                {
+                    message: {
+                        content
+                    }
+                }
+            ],
+            usage: {
+                total_tokens: 0
+            },
+            provider: "fallback"
+        };
+    }
+}
+}),
+"[project]/apps/web/lib/reasoning/chain-of-thought.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "ChainOfThought",
+    ()=>ChainOfThought
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/agnes/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/zhipu/client.ts [app-route] (ecmascript)");
+;
+;
+class ChainOfThought {
+    agnes;
+    zhipu;
+    constructor(){
+        this.agnes = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["AgnesClient"]();
+        this.zhipu = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["ZhipuClient"]();
+    }
+    async generate(query, options = {}) {
+        const { stream = true, deep = false } = options;
+        let sources = [];
+        let groundedPrompt = query;
+        if (deep) {
+            try {
+                const searchResults = await this.zhipu.webSearch({
+                    search_query: query,
+                    count: 8,
+                    search_recency_filter: "noLimit"
+                });
+                for (const result of searchResults.search_result || []){
+                    try {
+                        const reader = await this.zhipu.webReader({
+                            url: result.link,
+                            return_format: "markdown"
+                        });
+                        sources.push({
+                            ...result,
+                            content: reader.reader_result?.content || ""
+                        });
+                    } catch (_) {}
+                }
+                const context = sources.map((s)=>`[${s.title}](${s.link}): ${s.content.slice(0, 500)}`).join("\n\n");
+                groundedPrompt = `Answer the following question based on these sources:\n${context}\n\nQuestion: ${query}`;
+            } catch (error) {
+                console.warn("Web grounding failed, falling back to regular query:", error);
+                groundedPrompt = query;
+            }
+        }
+        const messages = [
+            {
+                role: "system",
+                content: "You are Siddhi, an AI assistant that provides step‑by‑step reasoning."
+            },
+            {
+                role: "user",
+                content: groundedPrompt
+            }
+        ];
+        const body = {
+            messages,
+            model: "agnes-2.0-flash",
+            temperature: 0.3,
+            max_tokens: 4096,
+            stream
+        };
+        if (deep) body.chat_template_kwargs = {
+            enable_thinking: true
+        };
+        const streamBody = await this.agnes.chatStream(body);
+        if (!streamBody) throw new Error("Agnes stream returned null");
+        return this.processStream(streamBody, sources);
+    }
+    async *processStream(stream, sources) {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let reasoning = "";
+        let content = "";
+        let hasContent = false;
+        let timeout;
+        try {
+            const timeoutPromise = new Promise((_, reject)=>{
+                timeout = setTimeout(()=>reject(new Error("Stream timeout")), 60000);
+            });
+            while(true){
+                const readPromise = reader.read();
+                const { done, value } = await Promise.race([
+                    readPromise,
+                    timeoutPromise
+                ]);
+                if (done) break;
+                buffer += decoder.decode(value, {
+                    stream: true
+                });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (const line of lines){
+                    if (line.startsWith("data: ")) {
+                        const data = line.slice(6);
+                        if (data === "[DONE]") continue;
+                        try {
+                            const parsed = JSON.parse(data);
+                            const delta = parsed.choices?.[0]?.delta;
+                            if (delta?.reasoning_content) {
+                                reasoning += delta.reasoning_content;
+                                yield {
+                                    type: "reasoning",
+                                    content: delta.reasoning_content,
+                                    sources
+                                };
+                            }
+                            if (delta?.content) {
+                                content += delta.content;
+                                hasContent = true;
+                                yield {
+                                    type: "content",
+                                    content: delta.content
+                                };
+                            }
+                            if (parsed.usage) {
+                                yield {
+                                    type: "usage",
+                                    tokens: parsed.usage.total_tokens
+                                };
+                            }
+                        } catch (_) {}
+                    }
+                }
+            }
+            if (!hasContent && content.length === 0) {
+                yield {
+                    type: "content",
+                    content: "I could not generate a complete response. Please try rephrasing your question."
+                };
+            }
+            yield {
+                type: "complete",
+                reasoning,
+                content,
+                sources
+            };
+        } catch (error) {
+            yield {
+                type: "error",
+                message: error.message || "An error occurred during reasoning"
+            };
+        } finally{
+            if (timeout) clearTimeout(timeout);
+            try {
+                await reader.cancel();
+            } catch (_) {}
+        }
+    }
+}
+}),
+"[project]/apps/web/lib/reasoning/socratic.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "Socratic",
+    ()=>Socratic
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/agnes/client.ts [app-route] (ecmascript)");
+;
+class Socratic {
+    agnes;
+    constructor(){
+        this.agnes = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["AgnesClient"]();
+    }
+    async generateQuestions(query) {
+        const prompt = `
+You are a Socratic questioner. Generate 3‑5 clarifying questions for this query:
+"${query}"
+Return only the questions, one per line, as a numbered list.
+`;
+        const response = await this.agnes.chat({
+            messages: [
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            model: "agnes-2.0-flash",
+            temperature: 0.3,
+            max_tokens: 1024,
+            stream: false
+        });
+        const content = response.choices?.[0]?.message?.content || "";
+        return content.split("\n").filter((line)=>line.trim().length > 10).map((line)=>line.replace(/^\d+\.\s*/, "").trim());
+    }
+}
+}),
+"[project]/apps/web/lib/agents/setu/agent.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "SETUAgent",
+    ()=>SETUAgent
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/zhipu/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/providers/agnes/client.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$reasoning$2f$socratic$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/reasoning/socratic.ts [app-route] (ecmascript)");
+;
+;
+;
+class SETUAgent {
+    socratic = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$reasoning$2f$socratic$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["Socratic"]();
+    originalQuery;
+    refinedQuery = "";
+    questions = [];
+    answers = [];
+    leads = [];
+    constructor(query){
+        this.originalQuery = query;
+    }
+    async generateQuestions() {
+        this.questions = await this.socratic.generateQuestions(this.originalQuery);
+        return this.questions;
+    }
+    async answerQuestions(answers) {
+        this.answers = answers;
+        await this.refineSearch();
+    }
+    async refineSearch() {
+        const agnes = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["AgnesClient"]();
+        const response = await agnes.chat({
+            messages: [
+                {
+                    role: "system",
+                    content: "Combine the original query and user answers into a refined search query."
+                },
+                {
+                    role: "user",
+                    content: `Original: ${this.originalQuery}\nAnswers: ${this.answers.join("\n")}`
+                }
+            ],
+            model: "agnes-2.0-flash",
+            temperature: 0.3,
+            max_tokens: 1024,
+            stream: false
+        });
+        this.refinedQuery = response.choices?.[0]?.message?.content || this.originalQuery;
+    }
+    async executeSearch() {
+        const zhipu = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$zhipu$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["ZhipuClient"]();
+        const searchResults = await zhipu.webSearch({
+            search_query: this.refinedQuery,
+            count: 20
+        });
+        const pages = [];
+        for (const result of (searchResults.search_result || []).slice(0, 5)){
+            try {
+                const reader = await zhipu.webReader({
+                    url: result.link,
+                    return_format: "markdown",
+                    retain_images: false
+                });
+                pages.push({
+                    ...result,
+                    content: reader.reader_result?.content || ""
+                });
+            } catch (_) {}
+        }
+        const agnes = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$providers$2f$agnes$2f$client$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["AgnesClient"]();
+        for (const page of pages){
+            const extraction = await agnes.chat({
+                messages: [
+                    {
+                        role: "system",
+                        content: "Extract contact information (name, email, phone, company, job_title) from the text. Return JSON array."
+                    },
+                    {
+                        role: "user",
+                        content: page.content.slice(0, 6000)
+                    }
+                ],
+                model: "agnes-2.0-flash",
+                temperature: 0.1,
+                max_tokens: 4096,
+                stream: false
+            });
+            try {
+                const extracted = JSON.parse(extraction.choices?.[0]?.message?.content || "[]");
+                for (const item of extracted){
+                    this.leads.push({
+                        ...item,
+                        source_url: page.link,
+                        confidence: this.calculateConfidence(item),
+                        verified: false
+                    });
+                }
+            } catch (_) {}
+        }
+        this.leads = this.leads.filter((lead)=>!!(lead.email || lead.phone || lead.name));
+        this.leads = this.deduplicateLeads(this.leads);
+    }
+    calculateConfidence(item) {
+        let conf = 0;
+        if (item.email) conf += 0.3;
+        if (item.phone) conf += 0.2;
+        if (item.name) conf += 0.15;
+        if (item.company) conf += 0.15;
+        if (item.job_title) conf += 0.1;
+        return Math.min(conf, 1);
+    }
+    deduplicateLeads(leads) {
+        const seen = new Map();
+        for (const lead of leads){
+            const key = lead.email || lead.phone || lead.name || "unknown";
+            if (!seen.has(key) || seen.get(key).confidence < lead.confidence) {
+                seen.set(key, lead);
+            }
+        }
+        return Array.from(seen.values());
+    }
+    getLeads() {
+        return this.leads;
+    }
+    getCSV() {
+        if (!this.leads.length) return "No leads found.";
+        const headers = [
+            "Name",
+            "Email",
+            "Phone",
+            "Company",
+            "Job Title",
+            "Source URL",
+            "Confidence"
+        ];
+        const rows = this.leads.map((l)=>[
+                l.name || "",
+                l.email || "",
+                l.phone || "",
+                l.company || "",
+                l.job_title || "",
+                l.source_url || "",
+                `${Math.round(l.confidence * 100)}%`
+            ]);
+        const csv = [
+            headers.join(","),
+            ...rows.map((r)=>r.map((v)=>`"${String(v).replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+        return "\uFEFF" + csv;
+    }
+    getSummary() {
+        return {
+            total: this.leads.length,
+            verified: this.leads.filter((l)=>l.verified).length,
+            averageConfidence: this.leads.reduce((acc, l)=>acc + l.confidence, 0) / (this.leads.length || 1)
+        };
+    }
+}
+}),
+"[project]/apps/web/lib/prompts/siddhi-system.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "SIDDHI_SYSTEM_PROMPT",
+    ()=>SIDDHI_SYSTEM_PROMPT
+]);
+const SIDDHI_SYSTEM_PROMPT = `
+You are **Siddhi**, the quantum AI concierge of KALKI OS – the Temple of Technology.
+
+**Your Core Purpose:**
+- Be a wise, helpful, and proactive assistant.
+- Understand the user's intent and autonomously choose the best way to help.
+- You can: chat, reason deeply, search the web, generate images/videos, and run lead generation (SETU).
+- Always explain your reasoning in a clear, step‑by‑step manner (show your thinking).
+
+**Your Capabilities & Tools:**
+1. **General Chat** – Answer questions, provide advice, engage in conversation.
+2. **DeepThink** – For complex questions, you can perform multi‑step reasoning, ask clarifying questions, and search the web for up‑to‑date information. Show your reasoning traces.
+3. **Web Search** – When you need current facts, data, or news, perform a web search and cite your sources.
+4. **Image Generation** – Generate images from text prompts. Offer choices for size, ratio, quality.
+5. **Video Generation** – Generate short videos from text prompts. Offer duration and resolution options.
+6. **SETU (Lead Generation)** – Find business leads based on user criteria. Ask clarifying questions (Socratic), then search, extract, and present leads with a downloadable CSV.
+
+**Decision‑Making Guidelines:**
+- If the user asks a factual question that may require recent data → do a web search.
+- If the user asks a complex, open‑ended question → use DeepThink (chain‑of‑thought reasoning).
+- If the user mentions "image", "picture", "draw", "generate image" → use Image Generation.
+- If the user mentions "video", "animation", "generate video" → use Video Generation.
+- If the user mentions "leads", "prospects", "find customers", "find [industry] leads" → use SETU.
+- For general conversation, just chat.
+
+**Response Style:**
+- Use markdown for structure: **bold**, bullet points, numbered lists, headings (##, ###), code blocks, blockquotes.
+- End with a summary or action item.
+- Keep responses concise but comprehensive.
+- When you generate media, display the result inline with a download link.
+- When you find leads, present a summary and provide a **Download CSV** button.
+
+**Memory & Context:**
+- Remember the conversation history.
+- Use the context to provide personalized responses.
+- If you need clarification, ask a follow‑up question.
+
+**Ethics & Safety:**
+- Do not generate harmful, illegal, or inappropriate content.
+- Respect user privacy.
+
+**Formatting Instructions:**
+- Always respond with clean, well‑structured markdown.
+- Code blocks should be fenced with triple backticks.
+- Use headings for sections when appropriate.
+- Always cite sources when you use web search results.
+`;
+}),
+"[project]/apps/web/lib/agents/siddhi-agent.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "SiddhiAgent",
+    ()=>SiddhiAgent
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$router$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/orchestration/router.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$reasoning$2f$chain$2d$of$2d$thought$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/reasoning/chain-of-thought.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$agents$2f$setu$2f$agent$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/agents/setu/agent.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$prompts$2f$siddhi$2d$system$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/prompts/siddhi-system.ts [app-route] (ecmascript)");
+;
+;
+;
+;
+class SiddhiAgent {
+    router;
+    cot;
+    constructor(){
+        this.router = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$orchestration$2f$router$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["IntelligentRouter"]();
+        this.cot = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$reasoning$2f$chain$2d$of$2d$thought$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["ChainOfThought"]();
+    }
+    async process(request) {
+        const { messages, userId, stream = true } = request;
+        const lastMessage = messages[messages.length - 1]?.content || "";
+        const intent = this.detectIntent(lastMessage);
+        if (intent === "deep_think") {
+            return this.handleDeepThink(lastMessage, stream);
+        }
+        if (intent === "web_search") {
+            return this.handleWebSearch(lastMessage, stream);
+        }
+        if (intent === "run_setu") {
+            return this.handleSETU(lastMessage, stream);
+        }
+        if (intent === "generate_image") {
+            return this.handleImageGeneration(lastMessage, stream);
+        }
+        if (intent === "generate_video") {
+            return this.handleVideoGeneration(lastMessage, stream);
+        }
+        const enhancedMessages = [
+            {
+                role: "system",
+                content: __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$prompts$2f$siddhi$2d$system$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["SIDDHI_SYSTEM_PROMPT"]
+            },
+            ...messages
+        ];
+        return this.router.route({
+            messages: enhancedMessages,
+            stream,
+            userId,
+            tools: [
+                {
+                    type: "function",
+                    function: {
+                        name: "web_search",
+                        description: "Search the web for real-time information.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "The search query."
+                                }
+                            },
+                            required: [
+                                "query"
+                            ]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "generate_image",
+                        description: "Generate an image from a text prompt.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                prompt: {
+                                    type: "string",
+                                    description: "The image description."
+                                },
+                                size: {
+                                    type: "string",
+                                    enum: [
+                                        "1K",
+                                        "2K",
+                                        "3K",
+                                        "4K"
+                                    ]
+                                },
+                                ratio: {
+                                    type: "string",
+                                    enum: [
+                                        "1:1",
+                                        "16:9",
+                                        "9:16",
+                                        "4:3",
+                                        "3:4",
+                                        "21:9"
+                                    ]
+                                }
+                            },
+                            required: [
+                                "prompt"
+                            ]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "generate_video",
+                        description: "Generate a short video from a text prompt.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                prompt: {
+                                    type: "string",
+                                    description: "The video description."
+                                },
+                                duration: {
+                                    type: "string",
+                                    enum: [
+                                        "5",
+                                        "10"
+                                    ]
+                                },
+                                resolution: {
+                                    type: "string",
+                                    enum: [
+                                        "720P",
+                                        "1080P",
+                                        "4K"
+                                    ]
+                                }
+                            },
+                            required: [
+                                "prompt"
+                            ]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "run_setu",
+                        description: "Find business leads based on criteria.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "The lead search query."
+                                },
+                                count: {
+                                    type: "number",
+                                    description: "Number of leads to find."
+                                }
+                            },
+                            required: [
+                                "query"
+                            ]
+                        }
+                    }
+                }
+            ]
+        });
+    }
+    detectIntent(query) {
+        const lower = query.toLowerCase();
+        if (lower.includes("generate image") || lower.includes("create image") || lower.includes("draw")) return "generate_image";
+        if (lower.includes("generate video") || lower.includes("create video") || lower.includes("animate")) return "generate_video";
+        if (lower.includes("lead") || lower.includes("prospect") || lower.includes("find customers")) return "run_setu";
+        if (lower.includes("search") || lower.includes("find") || lower.includes("latest news")) return "web_search";
+        if (lower.includes("explain") || lower.includes("analyze") || lower.includes("why") || lower.includes("how") || lower.length > 30) {
+            return "deep_think";
+        }
+        return "general";
+    }
+    async handleDeepThink(query, stream) {
+        return this.cot.generate(query, {
+            stream,
+            deep: true
+        });
+    }
+    async handleWebSearch(query, stream) {
+        return this.cot.generate(query, {
+            stream,
+            deep: false
+        });
+    }
+    async handleSETU(query, stream) {
+        const agent = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$agents$2f$setu$2f$agent$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["SETUAgent"](query);
+        const questions = await agent.generateQuestions();
+        if (questions.length > 0) {
+            return {
+                type: "questions",
+                questions,
+                stream: false
+            };
+        }
+        return {
+            type: "setu_pending",
+            message: "Please answer the clarifying questions.",
+            questions,
+            stream: false
+        };
+    }
+    async handleImageGeneration(query, stream) {
+        return this.router.route({
+            messages: [
+                {
+                    role: "user",
+                    content: `Generate image: ${query}`
+                }
+            ],
+            stream
+        });
+    }
+    async handleVideoGeneration(query, stream) {
+        return this.router.route({
+            messages: [
+                {
+                    role: "user",
+                    content: `Generate video: ${query}`
+                }
+            ],
+            stream
+        });
+    }
+}
+}),
+"[project]/apps/web/app/api/ai/stream/route.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "POST",
+    ()=>POST
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$agents$2f$siddhi$2d$agent$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/agents/siddhi-agent.ts [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$security$2f$audit$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/lib/security/audit.ts [app-route] (ecmascript)");
+;
+;
+async function POST(req) {
+    const body = await req.json();
+    const { messages, userId } = body;
+    if (!messages || !Array.isArray(messages)) {
+        return new Response(JSON.stringify({
+            error: "Invalid messages"
+        }), {
+            status: 400
+        });
+    }
+    const agent = new __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$agents$2f$siddhi$2d$agent$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["SiddhiAgent"]();
+    const result = await agent.process({
+        messages,
+        userId,
+        stream: true
+    });
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        async start (controller) {
+            const send = (data)=>{
+                try {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                } catch (_) {}
+            };
+            try {
+                if (result && typeof result[Symbol.asyncIterator] === "function") {
+                    for await (const chunk of result){
+                        send(chunk);
+                    }
+                } else if (result?.type === "questions") {
+                    send({
+                        type: "questions",
+                        questions: result.questions
+                    });
+                } else if (result?.type === "setu_pending") {
+                    send({
+                        type: "setu_pending",
+                        message: result.message,
+                        questions: result.questions
+                    });
+                } else {
+                    send({
+                        type: "content",
+                        content: result
+                    });
+                }
+                send({
+                    type: "complete"
+                });
+            } catch (error) {
+                console.error("[ADMIN] SiddhiAgent error:", error);
+                (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$lib$2f$security$2f$audit$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["notifyAdmin"])(error, {
+                    userId,
+                    messages
+                });
+                send({
+                    type: "error",
+                    message: "I encountered an issue. Please try again."
+                });
+            } finally{
+                try {
+                    controller.close();
+                } catch (_) {}
+            }
+        }
+    });
+    return new Response(stream, {
+        headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive"
+        }
+    });
+}
+}),
+];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__0zawec4._.js.map

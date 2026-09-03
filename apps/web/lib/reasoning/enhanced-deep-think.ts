@@ -4,10 +4,25 @@ import { GroqClient } from '@/lib/providers/groq/client';
 import { ZhipuClient } from '@/lib/providers/zhipu/client';
 import { deepThinkCache } from '../ai/enhanced/cache';
 
+export interface TraceStep {
+  id: string;
+  type: 'search' | 'reasoning' | 'scoring' | 'consensus' | 'refinement' | 'complete';
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  message: string;
+  details?: any;
+  timestamp: number;
+  duration?: number;
+  tokens?: number;
+  provider?: string;
+}
+
 export class EnhancedDeepThink {
   private agnes = new AgnesClient();
   private groq = new GroqClient();
   private zhipu = new ZhipuClient();
+  private traceSteps: TraceStep[] = [];
+  private onTraceUpdate?: (step: TraceStep) => void;
+  private onReasoning?: (path: ReasoningPath) => void;
 
   private systemPrompt = `You are Siddhi, an expert reasoning AI. Provide a detailed, step‑by‑step chain‑of‑thought.
 
@@ -26,18 +41,25 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
       consensus_threshold?: number;
       stream?: boolean;
       onReasoning?: (path: ReasoningPath) => void;
+      onTrace?: (step: TraceStep) => void;
       useWeb?: boolean;
     } = {}
   ): Promise<ConsensusResult> {
-    const { num_paths = 3, consensus_threshold = 0.6, stream = false, onReasoning, useWeb = true } = options;
+    const { num_paths = 3, consensus_threshold = 0.6, stream = false, onReasoning, onTrace, useWeb = true } = options;
+    this.onTraceUpdate = onTrace;
+    this.onReasoning = onReasoning;
+    this.traceSteps = [];
 
+    // ─── Cache ──────────────────────────────────────────────────────────
     if (!stream) {
       const cached = deepThinkCache.get(this.getCacheKey(query));
       if (cached) return cached;
     }
 
+    // ─── 1. Web Search ────────────────────────────────────────────────
     let webContext = '';
     if (useWeb) {
+      const searchStep = this.addTraceStep('search', '🔍 Searching the web...', 'running');
       try {
         const searchResults = await this.zhipu.webSearch({
           search_query: query,
@@ -49,24 +71,56 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
           .map((r: any) => `- ${r.title}: ${r.content?.slice(0, 200)}...`)
           .join('\n');
         if (snippets) {
-          webContext = `\n\n## Web Context\n${snippets}`;
+          webContext = `\n\n## Web Context (for grounding)\n${snippets}`;
+          this.updateTraceStep(searchStep.id, 'completed', '✅ Web search complete', { results: snippets.length });
+        } else {
+          this.updateTraceStep(searchStep.id, 'completed', '⚠️ No web results found');
         }
-      } catch (e) {
-        console.warn('[DeepThink] Web grounding failed:', e);
+      } catch (error: any) {
+        if (error?.code === 1302 || error?.status === 429) {
+          this.updateTraceStep(searchStep.id, 'failed', '⚠️ Web search rate-limited, using fallback...');
+          // Fallback: DuckDuckGo
+          try {
+            const ddgResults = await this.searchDuckDuckGo(query);
+            if (ddgResults.length > 0) {
+              const snippets = ddgResults.map(r => `- ${r.title}: ${r.snippet.slice(0, 200)}...`).join('\n');
+              webContext = `\n\n## Web Context (fallback)\n${snippets}`;
+              this.updateTraceStep(searchStep.id, 'completed', '✅ Fallback search complete', { results: ddgResults.length });
+            }
+          } catch (e) {
+            this.updateTraceStep(searchStep.id, 'failed', '⚠️ Fallback search also failed');
+          }
+        } else {
+          this.updateTraceStep(searchStep.id, 'failed', `❌ Web search failed: ${error.message}`);
+        }
       }
     }
 
-    const paths = await this.generatePaths(query, num_paths, webContext, onReasoning);
+    // ─── 2. Generate Paths ────────────────────────────────────────────
+    const genStep = this.addTraceStep('reasoning', '🧠 Generating reasoning paths...', 'running');
+    const paths = await this.generatePaths(query, num_paths, webContext);
     if (paths.length === 0) {
+      this.updateTraceStep(genStep.id, 'failed', '❌ All reasoning paths failed');
       return this.fallbackResponse(query);
     }
+    this.updateTraceStep(genStep.id, 'completed', `✅ ${paths.length} reasoning paths generated`, { paths: paths.map(p => p.provider) });
 
+    // ─── 3. Score ──────────────────────────────────────────────────────
+    const scoreStep = this.addTraceStep('scoring', '📊 Scoring reasoning paths...', 'running');
     const scoredPaths = await this.scorePaths(paths, query);
-    const consensus = this.computeConsensus(scoredPaths, consensus_threshold);
+    this.updateTraceStep(scoreStep.id, 'completed', '✅ Paths scored', { scores: scoredPaths.map(p => ({ provider: p.provider, confidence: p.confidence })) });
 
+    // ─── 4. Consensus ──────────────────────────────────────────────────
+    const consensusStep = this.addTraceStep('consensus', '🤝 Computing consensus...', 'running');
+    const consensus = this.computeConsensus(scoredPaths, consensus_threshold);
+    this.updateTraceStep(consensusStep.id, 'completed', `✅ Consensus score: ${(consensus.score * 100).toFixed(0)}%`);
+
+    // ─── 5. Refine or final ───────────────────────────────────────────
     let finalResult: ConsensusResult;
     if (consensus.score < consensus_threshold && scoredPaths.length >= 2) {
+      const refineStep = this.addTraceStep('refinement', '🔧 Refining answer with consensus...', 'running');
       finalResult = await this.refineReasoning(query, scoredPaths);
+      this.updateTraceStep(refineStep.id, 'completed', '✅ Refined answer generated');
     } else {
       const best = scoredPaths.reduce((a, b) => a.confidence > b.confidence ? a : b);
       finalResult = {
@@ -79,6 +133,8 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
       };
     }
 
+    this.addTraceStep('complete', `✅ DeepThink complete (${finalResult.tokens} tokens)`, 'completed', { provider: finalResult.provider });
+
     if (!stream) {
       deepThinkCache.set(this.getCacheKey(query), finalResult);
     }
@@ -86,12 +142,32 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
     return finalResult;
   }
 
-  private async generatePaths(
-    query: string,
-    numPaths: number,
-    webContext: string,
-    onReasoning?: (path: ReasoningPath) => void
-  ): Promise<ReasoningPath[]> {
+  private addTraceStep(type: TraceStep['type'], message: string, status: TraceStep['status'] = 'pending', details?: any): TraceStep {
+    const step: TraceStep = {
+      id: generateUUID(),
+      type,
+      status,
+      message,
+      details,
+      timestamp: Date.now(),
+    };
+    this.traceSteps.push(step);
+    this.onTraceUpdate?.(step);
+    return step;
+  }
+
+  private updateTraceStep(id: string, status: TraceStep['status'], message: string, details?: any): void {
+    const step = this.traceSteps.find(s => s.id === id);
+    if (step) {
+      step.status = status;
+      step.message = message;
+      if (details) step.details = { ...step.details, ...details };
+      step.duration = Date.now() - step.timestamp;
+      this.onTraceUpdate?.(step);
+    }
+  }
+
+  private async generatePaths(query: string, numPaths: number, webContext: string): Promise<ReasoningPath[]> {
     const providers = [
       { client: this.agnes, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes', supportsThinking: true },
       { client: this.groq, model: 'llama-3.3-70b-versatile', temp: 0.5, name: 'groq', supportsThinking: false },
@@ -135,8 +211,7 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
           steps,
           sources: [],
         };
-
-        if (onReasoning) onReasoning(path);
+        this.onReasoning?.(path);
         return path;
       } catch (error) {
         console.error(`[DeepThink] ${p.name} failed:`, error);
@@ -195,7 +270,6 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
         max_tokens: 500,
         stream: false,
       });
-
       const content = response?.choices?.[0]?.message?.content || '{}';
       const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
       let scores: Record<string, { relevance: number; coherence: number; completeness: number }> = {};
@@ -352,5 +426,26 @@ Produce a refined reasoning and final answer. Use the same structured format.`;
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
+  }
+
+  // ─── DuckDuckGo fallback search ────────────────────────────────────
+  private async searchDuckDuckGo(query: string, limit = 5): Promise<{ title: string; snippet: string; link: string }[]> {
+    const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+    if (!response.ok) throw new Error('DuckDuckGo search failed');
+    const data = await response.json();
+    const results: { title: string; snippet: string; link: string }[] = [];
+    if (data.RelatedTopics) {
+      for (const topic of data.RelatedTopics) {
+        if (topic.Text && topic.FirstURL) {
+          results.push({
+            title: topic.Text.slice(0, 100),
+            snippet: topic.Text.slice(0, 300),
+            link: topic.FirstURL,
+          });
+          if (results.length >= limit) break;
+        }
+      }
+    }
+    return results;
   }
 }

@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
   darkMode: "class",
@@ -11,12 +11,12 @@ const config: Config = {
   theme: {
     extend: {
       screens: {
-        'xs': '360px',   // Small phones (iPhone SE, Pixel 4a)
-        'sm': '481px',   // Large phones
-        'md': '769px',   // Tablets portrait
-        'lg': '1025px',  // Tablets landscape / small laptops
-        'xl': '1201px',  // Desktops
-        '2xl': '1440px', // Large desktops
+        'xs': '360px',
+        'sm': '481px',
+        'md': '769px',
+        'lg': '1025px',
+        'xl': '1201px',
+        '2xl': '1440px',
       },
       colors: {
         background: "hsl(var(--background))",
@@ -80,15 +80,6 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      animation: {
-        "fade-in": "fade-in 0.5s ease-out both",
-        "fade-out": "fade-out 0.3s ease-out both",
-        "shimmer": "shimmer 3s linear infinite",
-        "float": "float 3s ease-in-out infinite",
-        "pulse-glow": "pulse-glow 3s ease-in-out infinite",
-        "slide-in": "slide-in 0.3s ease-out both",
-        "scale-in": "scale-in 0.3s ease-out both",
-      },
       keyframes: {
         "fade-in": {
           from: { opacity: "0", transform: "translateY(8px)" },
@@ -98,26 +89,50 @@ const config: Config = {
           from: { opacity: "1", transform: "translateY(0)" },
           to: { opacity: "0", transform: "translateY(-8px)" },
         },
+        "slide-in-from-bottom": {
+          from: { transform: "translateY(100%)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
+        "slide-in": {
+          from: { transform: "translateX(-16px)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+        "scale-in": {
+          from: { transform: "scale(0.95)", opacity: "0" },
+          to: { transform: "scale(1)", opacity: "1" },
+        },
+        "zoom-in": {
+          from: { transform: "scale(0.8)", opacity: "0" },
+          to: { transform: "scale(1)", opacity: "1" },
+        },
         "shimmer": {
           "0%": { backgroundPosition: "-200% center" },
           "100%": { backgroundPosition: "200% center" },
-        },
-        "float": {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-8px)" },
         },
         "pulse-glow": {
           "0%, 100%": { boxShadow: "0 0 20px rgba(0,255,255,0.05)" },
           "50%": { boxShadow: "0 0 50px rgba(0,255,255,0.15)" },
         },
-        "slide-in": {
-          from: { opacity: "0", transform: "translateX(-16px)" },
-          to: { opacity: "1", transform: "translateX(0)" },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
         },
-        "scale-in": {
-          from: { opacity: "0", transform: "scale(0.95)" },
-          to: { opacity: "1", transform: "scale(1)" },
+        "slide-in-from-bottom-2": {
+          from: { transform: "translateY(2rem)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
         },
+      },
+      animation: {
+        "fade-in": "fade-in 0.5s ease-out both",
+        "fade-out": "fade-out 0.3s ease-out both",
+        "slide-in-from-bottom": "slide-in-from-bottom 0.3s ease-out both",
+        "slide-in": "slide-in 0.3s ease-out both",
+        "scale-in": "scale-in 0.3s ease-out both",
+        "zoom-in": "zoom-in 0.3s ease-out both",
+        "shimmer": "shimmer 3s linear infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "float": "float 3s ease-in-out infinite",
+        "slide-in-from-bottom-2": "slide-in-from-bottom-2 0.3s ease-out both",
       },
     },
   },

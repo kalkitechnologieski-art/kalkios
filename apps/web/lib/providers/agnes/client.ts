@@ -8,6 +8,8 @@ export class AgnesClient {
   private rateLimiter = new RateLimiter();
   private circuitBreaker = new CircuitBreaker();
   private provider = 'agnes';
+  private maxRetries = 3;
+  private baseDelay = 1000;
 
   private async request(endpoint: string, body: any, timeout = 30000) {
     console.log(`[Agnes] Request to ${endpoint}`);
@@ -24,31 +26,53 @@ export class AgnesClient {
       throw new Error(`Rate limit exceeded for ${this.provider}`);
     }
 
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-      const response = await fetch(`${AGNES_BASE}/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${AGNES_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(`[Agnes] HTTP ${response.status}: ${text}`);
-        throw new Error(`Agnes error ${response.status}: ${text}`);
+    let attempt = 0;
+    let delay = this.baseDelay;
+    while (attempt < this.maxRetries) {
+      try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(`${AGNES_BASE}/${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${AGNES_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(id);
+        if (!response.ok) {
+          const text = await response.text();
+          if (response.status === 429 || response.status >= 500) {
+            // Retryable error
+            console.warn(`[Agnes] Retryable error ${response.status} (attempt ${attempt+1}/${this.maxRetries}): ${text}`);
+            attempt++;
+            await this.sleep(delay);
+            delay *= 2; // exponential backoff
+            continue;
+          }
+          console.error(`[Agnes] HTTP ${response.status}: ${text}`);
+          throw new Error(`Agnes error ${response.status}: ${text}`);
+        }
+        this.circuitBreaker.recordSuccess(this.provider);
+        return response.json();
+      } catch (error) {
+        if (attempt >= this.maxRetries) {
+          this.circuitBreaker.recordFailure(this.provider);
+          throw error;
+        }
+        console.warn(`[Agnes] Request failed (attempt ${attempt+1}/${this.maxRetries}):`, error);
+        attempt++;
+        await this.sleep(delay);
+        delay *= 2;
       }
-      this.circuitBreaker.recordSuccess(this.provider);
-      return response.json();
-    } catch (error) {
-      console.error('[Agnes] Request failed:', error);
-      this.circuitBreaker.recordFailure(this.provider);
-      throw error;
     }
+    throw new Error('All retries exhausted');
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async chat(body: any) {
@@ -56,7 +80,7 @@ export class AgnesClient {
   }
 
   async chatStream(body: any) {
-    console.log('[Agnes] Chat stream requested');
+    // Streaming doesn't retry because we cannot retry a stream easily.
     if (!AGNES_API_KEY) throw new Error('AGNES_API_KEY not set');
     if (this.circuitBreaker.isOpen(this.provider)) {
       throw new Error(`Circuit breaker open for ${this.provider}`);
@@ -79,15 +103,16 @@ export class AgnesClient {
       throw new Error(`Agnes stream error ${response.status}: ${text}`);
     }
     this.circuitBreaker.recordSuccess(this.provider);
-    console.log('[Agnes] Stream obtained');
     return response.body;
   }
 
   async image(body: any) {
+    // Image generation – use retry logic
     return this.request('images/generations', body);
   }
 
   async video(body: any) {
+    // Video generation – async, but request can retry
     return this.request('videos', body);
   }
 
