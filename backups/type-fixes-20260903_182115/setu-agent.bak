@@ -47,14 +47,14 @@ export class SETUAgent {
     });
 
     const pages = [];
-    for (const result of ((searchResults as any).search_result || []).slice(0, 5)) {
+    for (const result of (searchResults.search_result || []).slice(0, 5)) {
       try {
         const reader = await zhipu.webReader({
           url: result.link,
           return_format: "markdown",
           retain_images: false,
         });
-        pages.push({ ...result, content: (reader as any).reader_result?.content || "" });
+        pages.push({ ...result, content: reader.reader_result?.content || "" });
       } catch (_) {}
     }
 

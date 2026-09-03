@@ -27,13 +27,13 @@ export class ChainOfThought {
           search_recency_filter: "noLimit",
         });
 
-        for (const result of (searchResults as any).search_result || []) {
+        for (const result of searchResults.search_result || []) {
           try {
             const reader = await this.zhipu.webReader({
               url: result.link,
               return_format: "markdown",
             });
-            sources.push({ ...result, content: (reader as any).reader_result?.content || "" });
+            sources.push({ ...result, content: reader.reader_result?.content || "" });
           } catch (_) {}
         }
 

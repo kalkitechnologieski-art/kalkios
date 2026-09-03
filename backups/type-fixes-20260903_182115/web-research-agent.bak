@@ -18,7 +18,7 @@ export class WebResearchAgent {
           search_engine: 'search_pro',
         });
 
-        const urls = ((searchResults as any).search_result || [])
+        const urls = (searchResults.search_result || [])
           .slice(0, 8)
           .map((r: any) => r.link)
           .filter(Boolean);
@@ -31,7 +31,7 @@ export class WebResearchAgent {
                 return_format: 'markdown',
                 retain_images: false,
               });
-              return { url, content: (reader as any).reader_result?.content || '' };
+              return { url, content: reader.reader_result?.content || '' };
             } catch {
               return { url, content: '' };
             }
@@ -59,7 +59,7 @@ export class WebResearchAgent {
           count: 5,
         });
 
-        for (const result of ((results as any).search_result || [])) {
+        for (const result of (results.search_result || [])) {
           const url = result.link;
           if (!url) continue;
 
@@ -68,7 +68,7 @@ export class WebResearchAgent {
               url,
               return_format: 'markdown',
             });
-            const content = (reader as any).reader_result?.content || '';
+            const content = reader.reader_result?.content || '';
             if (content.length > 100) {
               const leads = await this.extractLeads(content, url);
               for (const lead of leads) {

@@ -10,7 +10,7 @@ import { generateCSV } from '@/lib/ai/enhanced/utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 function safeString(data: unknown): string {
   if (typeof data === 'string') return data;
