@@ -4,6 +4,7 @@ import { CircuitBreaker } from '../../orchestration/circuit-breaker';
 const ZHIPU_BASE = 'https://api.z.ai/api/paas/v4';
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || '';
 
+// ─── Zhipu error codes for rate limiting ──────────────────────────────
 const ERROR_CODES = {
   RATE_LIMIT: 1302,
   MODEL_OVERLOADED: 1305,
@@ -61,28 +62,22 @@ export class ZhipuClient {
       clearTimeout(id);
 
       const latency = Date.now() - startTime;
-      const responseClone = response.clone();
+      const data = await response.json();
+
+      // Check Zhipu error codes in response
+      if (data?.code && data.code !== 0) {
+        const error = new Error(`Zhipu error ${data.code}: ${data.message}`);
+        (error as any).code = data.code;
+        (error as any).status = response.status;
+        (error as any).headers = response.headers;
+        throw error;
+      }
 
       if (!response.ok) {
         const text = await response.text();
         const error = new Error(`Zhipu HTTP ${response.status}: ${text}`);
         (error as any).status = response.status;
         (error as any).headers = response.headers;
-        throw error;
-      }
-
-      let data: any;
-      try {
-        data = await responseClone.json();
-      } catch (jsonError) {
-        const text = await response.text();
-        throw new Error(`Zhipu invalid JSON: ${text}`);
-      }
-
-      if (data?.code && data.code !== 0) {
-        const error = new Error(`Zhipu error ${data.code}: ${data.message}`);
-        (error as any).code = data.code;
-        (error as any).status = response.status;
         throw error;
       }
 
@@ -98,6 +93,7 @@ export class ZhipuClient {
     }
   }
 
+  // ─── Queue requests to respect 1 concurrent limit ──────────────────
   async request(endpoint: string, body: any, timeout = 30000, method = 'POST') {
     return new Promise((resolve, reject) => {
       this.requestQueue = this.requestQueue
@@ -163,6 +159,7 @@ export class ZhipuClient {
   }
 
   async webSearch(body: any) {
+    // Search is rate-limited; we'll queue it.
     return this.request('web_search', body);
   }
 

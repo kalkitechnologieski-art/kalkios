@@ -1,5 +1,3 @@
-import { searchWebRobust } from '@/lib/search/proven-search';
-import { searchDuckDuckGo } from '@/lib/search/duckduckgo';
 import { ReasoningPath, ConsensusResult, generateUUID } from '../ai/enhanced/types';
 import { AgnesClient } from '@/lib/providers/agnes/client';
 import { GroqClient } from '@/lib/providers/groq/client';

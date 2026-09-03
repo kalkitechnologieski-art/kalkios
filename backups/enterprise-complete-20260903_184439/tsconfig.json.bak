@@ -1,0 +1,97 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./apps/web/*",
+        "./*"
+      ],
+      "@/lib/*": [
+        "./apps/web/lib/*",
+        "./lib/*"
+      ],
+      "@/components/*": [
+        "./apps/web/components/*",
+        "./components/*"
+      ],
+      "@/hooks/*": [
+        "./apps/web/hooks/*",
+        "./hooks/*"
+      ],
+      "@/store/*": [
+        "./apps/web/store/*",
+        "./store/*"
+      ],
+      "@/types/*": [
+        "./apps/web/types/*",
+        "./types/*"
+      ],
+      "@/providers/*": [
+        "./apps/web/lib/providers/*",
+        "./lib/providers/*"
+      ],
+      "@/orchestration/*": [
+        "./apps/web/lib/orchestration/*",
+        "./lib/orchestration/*"
+      ],
+      "@/ai/*": [
+        "./apps/web/lib/ai/*",
+        "./lib/ai/*"
+      ],
+      "@/agents/*": [
+        "./apps/web/lib/agents/*",
+        "./lib/agents/*"
+      ],
+      "@/reasoning/*": [
+        "./apps/web/lib/reasoning/*",
+        "./lib/reasoning/*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build"
+  ]
+}

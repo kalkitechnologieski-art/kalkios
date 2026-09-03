@@ -1,24 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Menu, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Home,
-  Compass,
-  ShoppingBag,
-  MessageCircle,
-  User,
-  Settings,
-  LogOut,
-  FolderKanban,
-  BarChart3,
-  Users,
-  Menu,
-  X,
+import { Menu, usePathname } from 'next/navigation';
+import { Menu, motion, AnimatePresence } from 'framer-motion';
+import { Menu,
+  Home, Compass, ShoppingBag, MessageCircle, User,
+  Settings, LogOut, FolderKanban, BarChart3, Users,
+  X
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Menu, cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
@@ -46,16 +37,20 @@ interface EnterpriseSidebarProps {
 
 export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
 
+  // ─── Hover logic with delay ──────────────────────────────────────────
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsHovering(true);
     if (window.innerWidth >= 768) setIsExpanded(true);
   };
 
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
+      setIsHovering(false);
       if (window.innerWidth >= 768) setIsExpanded(false);
     }, 200);
   };
@@ -68,6 +63,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
 
+  // ─── Render link ──────────────────────────────────────────────────────
   const renderLink = (item: typeof NAV_ITEMS[0]) => {
     const active = isActive(item.href);
     const Icon = item.icon;
@@ -82,13 +78,13 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
           active
             ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20'
             : 'text-white/60 hover:bg-white/5 hover:text-white',
+          // Collapsed: center icons, no padding left/right
           !isExpanded && 'justify-center px-0'
         )}
         title={!isExpanded ? item.label : undefined}
-        aria-current={active ? 'page' : undefined}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {isExpanded && (
             <motion.span
               initial={{ opacity: 0, width: 0 }}
@@ -119,12 +115,10 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
         onMouseLeave={handleMouseLeave}
       >
         {/* Brand */}
-        <div
-          className={cn(
-            'flex items-center h-14 border-b border-cyan-500/10 flex-shrink-0 px-3',
-            !isExpanded && 'justify-center'
-          )}
-        >
+        <div className={cn(
+          'flex items-center h-14 border-b border-cyan-500/10 flex-shrink-0 px-3',
+          !isExpanded && 'justify-center'
+        )}>
           {isExpanded ? (
             <span className="text-white font-mono text-sm tracking-wider">KALKI OS</span>
           ) : (
@@ -145,7 +139,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
         </div>
       </motion.aside>
 
-      {/* ─── Mobile Trigger ─── */}
+      {/* ─── Mobile Drawer ─── */}
       <button
         onClick={() => setMobileOpen(true)}
         className="fixed top-20 left-3 z-40 md:hidden p-2 rounded-full bg-black/80 backdrop-blur-sm border border-cyan-500/20 text-white/60 hover:text-white transition"
@@ -154,7 +148,6 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* ─── Mobile Drawer ─── */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -174,11 +167,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-xs font-bold tracking-widest text-white/40">MENU</span>
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-full hover:bg-white/5 transition"
-                  aria-label="Close menu"
-                >
+                <button onClick={() => setMobileOpen(false)} className="p-2 rounded-full hover:bg-white/5 transition">
                   <X className="w-5 h-5 text-white/60" />
                 </button>
               </div>

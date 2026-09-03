@@ -44,7 +44,7 @@ export class GroqClient {
   }
 
   async chat(body: any) {
-    return this.request('chat/completions', { ...body, model: body.model || 'llama-3.1-70b-versatile' });
+    return this.request('chat/completions', { ...body, model: body.model || 'llama-3.3-70b-versatile' });
   }
 
   async chatStream(body: any) {
@@ -62,7 +62,7 @@ export class GroqClient {
         'Authorization': `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...body, model: body.model || 'llama-3.1-70b-versatile', stream: true }),
+      body: JSON.stringify({ ...body, model: body.model || 'llama-3.3-70b-versatile', stream: true }),
     });
     if (!response.ok) {
       const text = await response.text();

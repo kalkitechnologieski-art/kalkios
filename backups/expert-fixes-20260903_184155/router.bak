@@ -21,7 +21,7 @@ const PROVIDERS: ProviderConfig[] = [
     name: 'agnes',
     client: new AgnesClient(),
     model: 'agnes-2.5-flash',
-    weight: 0.99,
+    weight: 0.9,
     rpmLimit: 20,
     supportsStreaming: true,
     supportsThinking: true,
@@ -30,8 +30,8 @@ const PROVIDERS: ProviderConfig[] = [
   {
     name: 'groq',
     client: new GroqClient(),
-    model: 'llama-3.1-70b-versatile',
-    weight: 0.998,
+    model: 'llama-3.3-70b-versatile',
+    weight: 0.98,
     rpmLimit: 30,
     supportsStreaming: true,
     supportsThinking: false,
@@ -50,7 +50,7 @@ const PROVIDERS: ProviderConfig[] = [
   {
     name: 'openrouter',
     client: new OpenRouterClient(),
-    model: 'meta-llama/llama-3.1-70b-instruct:free',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
     weight: 0.6,
     rpmLimit: 20,
     supportsStreaming: true,
