@@ -1,9 +1,10 @@
+import { searchWebRobust } from '@/lib/search/proven-search';
+import { searchDuckDuckGo } from '@/lib/search/duckduckgo';
 import { ReasoningPath, ConsensusResult, generateUUID } from '../ai/enhanced/types';
 import { AgnesClient } from '@/lib/providers/agnes/client';
 import { GroqClient } from '@/lib/providers/groq/client';
 import { ZhipuClient } from '@/lib/providers/zhipu/client';
 import { deepThinkCache } from '../ai/enhanced/cache';
-import { searchWithContext } from '@/lib/search/orchestrator';
 
 export interface TraceStep {
   id: string;
@@ -56,29 +57,51 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
       if (cached) return cached;
     }
 
-    // ─── Web Search ──────────────────────────────────────────────
+    // ─── Web Search ────────────────────────────────────────────────
     let webContext = '';
     if (useWeb) {
       const searchStep = this.addTraceStep('search', '🔍 Searching the web...', 'running');
       try {
-        const { results, summary } = await searchWithContext(query, { limit: 5, timeout: 8000 });
-        if (results.length > 0) {
-          webContext = `\n\n## Web Context (for grounding)\n${summary}`;
-          this.updateTraceStep(searchStep.id, 'completed', `✅ Found ${results.length} results`, {
-            results: results.length,
-            sources: results.map(r => r.url),
-          });
+        // Try Zhipu search with a short timeout
+        const searchPromise = this.zhipu.webSearch({ search_query: query, count: 5, search_engine: 'search_pro' });
+        const searchResults = await Promise.race([
+          searchPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Search timeout')), 5000))
+        ]);
+        const snippets = (searchResults as any)?.search_result?.slice(0, 3)
+          .map((r: any) => `- ${r.title}: ${r.content?.slice(0, 200)}...`)
+          .join('\n');
+        if (snippets) {
+          webContext = `\n\n## Web Context (for grounding)\n${snippets}`;
+          this.updateTraceStep(searchStep.id, 'completed', '✅ Web search complete', { results: snippets.length });
         } else {
           this.updateTraceStep(searchStep.id, 'completed', '⚠️ No web results found');
         }
-      } catch (error) {
-        this.updateTraceStep(searchStep.id, 'failed', `❌ Search failed: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
+      } catch (error: any) {
+        if (error.message === 'Search timeout') {
+          this.updateTraceStep(searchStep.id, 'failed', '⏱️ Web search timeout, skipping');
+        } else if (error?.code === 1302 || error?.status === 429) {
+          this.updateTraceStep(searchStep.id, 'failed', '⚠️ Web search rate-limited, skipping');
+        } else {
+          this.updateTraceStep(searchStep.id, 'failed', '❌ Web search failed: ' + error.message);
+        }
+        // Fallback: DuckDuckGo (fast, no rate limit)
+        try {
+          const ddgResults = await this.searchDuckDuckGo(query);
+          if (ddgResults.length > 0) {
+            const snippets = ddgResults.slice(0, 3).map(r => `- ${r.title}: ${r.snippet.slice(0, 200)}...`).join('\n');
+            webContext = `\n\n## Web Context (fallback)\n${snippets}`;
+            this.updateTraceStep(searchStep.id, 'completed', '✅ Fallback search complete', { results: ddgResults.length });
+          }
+        } catch (e) {
+          // Ignore fallback failures
+        }
       }
     }
 
-    // ─── Generate Paths ──────────────────────────────────────────
-    const genStep = this.addTraceStep('reasoning', '🧠 Generating reasoning paths...', 'running');
-    const paths = await this.generatePaths(query, num_paths, webContext);
+    // ─── Generate Paths (Sequential) ──────────────────────────────
+    const genStep = this.addTraceStep('reasoning', '🧠 Generating reasoning paths (sequential)...', 'running');
+    const paths = await this.generatePathsSequential(query, num_paths, webContext);
     if (paths.length === 0) {
       this.updateTraceStep(genStep.id, 'failed', '❌ All reasoning paths failed');
       return this.fallbackResponse(query);
@@ -122,10 +145,96 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
     return finalResult;
   }
 
-  // ─── Helper methods ──────────────────────────────────────────────
-  // (These are the same as before; we keep them unchanged for brevity)
-  // ... (the script will include the full file content)
-  // For the complete file, please refer to the previous implementation.
+  // ─── Sequential path generation ──────────────────────────────────────
+  private async generatePathsSequential(query: string, numPaths: number, webContext: string): Promise<ReasoningPath[]> {
+    const providerList = [
+      { client: this.agnes, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes', supportsThinking: true, timeout: 15000 },
+      { client: this.groq, model: 'llama-3.3-70b-versatile', temp: 0.5, name: 'groq', supportsThinking: false, timeout: 10000 },
+      { client: this.zhipu, model: 'glm-4.7', temp: 0.7, name: 'zhipu', supportsThinking: true, timeout: 20000 },
+    ].slice(0, numPaths);
+
+    const fullSystem = this.systemPrompt + webContext;
+    const results: ReasoningPath[] = [];
+
+    for (const p of providerList) {
+      const start = Date.now();
+      try {
+        const baseRequest: any = {
+          messages: [
+            { role: 'system', content: fullSystem },
+            { role: 'user', content: query },
+          ],
+          model: p.model,
+          temperature: p.temp,
+          max_tokens: 2048, // reduced for speed
+          stream: false,
+        };
+        if (p.supportsThinking) {
+          baseRequest.thinking = { type: 'enabled' };
+        }
+
+        // Use a timeout for the provider call
+        const callPromise = p.client.chat(baseRequest);
+        const response = await Promise.race([
+          callPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), p.timeout))
+        ]);
+
+        const content = (response as any).choices?.[0]?.message?.content || '';
+        const reasoning = (response as any).choices?.[0]?.message?.reasoning_content || '';
+
+        const parsed = this.parseReasoning(content);
+        const steps = this.extractSteps(parsed.reasoning || reasoning || content);
+
+        const path: ReasoningPath = {
+          id: generateUUID(),
+          provider: p.name,
+          reasoning: parsed.reasoning || reasoning || content,
+          summary: parsed.summary || content.slice(0, 200) + '...',
+          answer: parsed.answer || content,
+          confidence: 0,
+          tokens: (response as any).usage?.total_tokens || 0,
+          timeMs: Date.now() - start,
+          steps,
+          sources: [],
+        };
+        results.push(path);
+        this.onReasoning?.(path);
+        // Break early if we have a high-confidence path? We'll collect all.
+      } catch (error) {
+        console.warn(`[DeepThink] ${p.name} failed:`, error);
+        // Continue to next provider
+      }
+    }
+    return results;
+  }
+
+  // ─── Helper methods (parseReasoning, extractSteps, scorePaths, computeConsensus, refineReasoning, fallbackResponse, searchDuckDuckGo) ───
+  // ... (keep existing implementations, but they are long; we'll include them in the full script)
+  // For brevity in this response, we'll truncate; the full script will include them.
+
+  // ─── DuckDuckGo fallback ──────────────────────────────────────────────
+  private async searchDuckDuckGo(query: string, limit = 5): Promise<{ title: string; snippet: string; link: string }[]> {
+    const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error('DuckDuckGo search failed');
+    const data = await response.json();
+    const results: { title: string; snippet: string; link: string }[] = [];
+    if (data.RelatedTopics) {
+      for (const topic of data.RelatedTopics) {
+        if (topic.Text && topic.FirstURL) {
+          results.push({
+            title: topic.Text.slice(0, 100),
+            snippet: topic.Text.slice(0, 300),
+            link: topic.FirstURL,
+          });
+          if (results.length >= limit) break;
+        }
+      }
+    }
+    return results;
+  }
 
   private addTraceStep(type: TraceStep['type'], message: string, status: TraceStep['status'] = 'pending', details?: any): TraceStep {
     const step: TraceStep = {
@@ -150,62 +259,6 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
       step.duration = Date.now() - step.timestamp;
       this.onTraceUpdate?.(step);
     }
-  }
-
-  private async generatePaths(query: string, numPaths: number, webContext: string): Promise<ReasoningPath[]> {
-    const providers = [
-      { client: this.agnes, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes', supportsThinking: true },
-      { client: this.groq, model: 'llama-3.1-70b-versatile', temp: 0.5, name: 'groq', supportsThinking: false },
-      { client: this.zhipu, model: 'glm-4.7', temp: 0.7, name: 'zhipu', supportsThinking: true },
-    ].slice(0, numPaths);
-
-    const fullSystem = this.systemPrompt + webContext;
-
-    const tasks = providers.map(async (p) => {
-      const start = Date.now();
-      try {
-        const baseRequest: any = {
-          messages: [
-            { role: 'system', content: fullSystem },
-            { role: 'user', content: query },
-          ],
-          model: p.model,
-          temperature: p.temp,
-          max_tokens: 4096,
-          stream: false,
-        };
-        if (p.supportsThinking) {
-          baseRequest.thinking = { type: 'enabled' };
-        }
-        const response = await p.client.chat(baseRequest);
-        const content = response.choices?.[0]?.message?.content || '';
-        const reasoning = response.choices?.[0]?.message?.reasoning_content || '';
-
-        const parsed = this.parseReasoning(content);
-        const steps = this.extractSteps(parsed.reasoning || reasoning || content);
-
-        const path: ReasoningPath = {
-          id: generateUUID(),
-          provider: p.name,
-          reasoning: parsed.reasoning || reasoning || content,
-          summary: parsed.summary || content.slice(0, 200) + '...',
-          answer: parsed.answer || content,
-          confidence: 0,
-          tokens: response.usage?.total_tokens || 0,
-          timeMs: Date.now() - start,
-          steps,
-          sources: [],
-        };
-        this.onReasoning?.(path);
-        return path;
-      } catch (error) {
-        console.error(`[DeepThink] ${p.name} failed:`, error);
-        return null;
-      }
-    });
-
-    const results = await Promise.all(tasks);
-    return results.filter((p): p is ReasoningPath => p !== null);
   }
 
   private parseReasoning(content: string): { reasoning: string; summary: string; answer: string } {
@@ -250,7 +303,7 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
     try {
       const response = await this.groq.chat({
         messages: [{ role: 'user', content: judgePrompt }],
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.1,
         max_tokens: 500,
         stream: false,
@@ -351,7 +404,7 @@ Produce a refined reasoning and final answer. Use the same structured format.`;
     try {
       const response = await this.groq.chat({
         messages: [{ role: 'user', content: refinePrompt }],
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.3,
         max_tokens: 2000,
         stream: false,

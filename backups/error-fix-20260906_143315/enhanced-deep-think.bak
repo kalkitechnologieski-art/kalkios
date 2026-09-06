@@ -72,7 +72,7 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
           this.updateTraceStep(searchStep.id, 'completed', '⚠️ No web results found');
         }
       } catch (error) {
-        this.updateTraceStep(searchStep.id, 'failed', `❌ Search failed: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
+        this.updateTraceStep(searchStep.id, 'failed', `❌ Search failed: ${error.message}`);
       }
     }
 
