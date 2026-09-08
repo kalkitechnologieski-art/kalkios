@@ -1,16 +1,11 @@
 // app/api/ai/stream/route.ts
-// ──────────────────────────────────────────────────────────────────
-// EXPERT IMPLEMENTATION – SSE streaming with robust error handling,
-// timeouts, and support for all media types.
-// ──────────────────────────────────────────────────────────────────
-
 import { NextRequest } from 'next/server';
 import { SiddhiAgent } from '@/lib/agents/siddhi-agent';
 import { logger } from '@/lib/utils/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
@@ -21,9 +16,7 @@ export async function POST(req: NextRequest) {
     try {
       const data = `data: ${JSON.stringify(event)}\n\n`;
       await writer.write(encoder.encode(data));
-    } catch (error) {
-      logger.warn('[Stream] Failed to send event:', error);
-    }
+    } catch (_) {}
   };
 
   const response = new Response(stream.readable, {
@@ -34,27 +27,20 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Process the request in the background
   (async () => {
     let timeoutId: NodeJS.Timeout | null = null;
     try {
       const body = await req.json();
-      const { messages, userId } = body;
-
-      if (!messages || !Array.isArray(messages)) {
-        await sendEvent({ type: 'error', message: 'Invalid request: messages array required.' });
-        return;
-      }
+      const { messages, userId, deep = true, setu = false, search = false, image } = body;
 
       const agent = new SiddhiAgent();
 
-      // Global timeout: 55 seconds
       timeoutId = setTimeout(() => {
         sendEvent({ type: 'error', message: 'Request timed out. Please try again.' });
         writer.close();
       }, 55000);
 
-      const result = await agent.process({ messages, userId, stream: true });
+      const result = await agent.process({ messages, userId, stream: true, deep, setu, search, image });
 
       // Emit events based on result structure
       if (result.reasoning) {
@@ -67,22 +53,18 @@ export async function POST(req: NextRequest) {
         await sendEvent({ type: 'content', content: result.content });
       }
 
-      // Leads
       if (result.leads && result.leads.length > 0) {
         await sendEvent({ type: 'leads', leads: result.leads, csv: result.csv });
       }
 
-      // Image
       if (result.imageUrl) {
         await sendEvent({ type: 'image', url: result.imageUrl });
       }
 
-      // Video
       if (result.videoUrl) {
         await sendEvent({ type: 'video', url: result.videoUrl });
       }
 
-      // DeepThink traces
       if (result.paths) {
         for (const path of result.paths) {
           await sendEvent({
@@ -98,7 +80,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Optional progress events from SETU
       if (result.progress) {
         for (const ev of result.progress) {
           await sendEvent(ev);
@@ -111,7 +92,7 @@ export async function POST(req: NextRequest) {
       await sendEvent({ type: 'error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
-      try { await writer.close(); } catch (_) { /* ignore */ }
+      try { await writer.close(); } catch (_) {}
     }
   })();
 

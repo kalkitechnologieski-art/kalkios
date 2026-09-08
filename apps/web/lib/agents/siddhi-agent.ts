@@ -1,8 +1,4 @@
 // lib/agents/siddhi-agent.ts
-// ──────────────────────────────────────────────────────────────────
-// FIXED: Handler signatures now all accept (query, messages, stream, userId)
-// ──────────────────────────────────────────────────────────────────
-
 import { EnhancedDeepThink } from '@/lib/reasoning/enhanced-deep-think';
 import { SETUAgent } from '@/lib/agents/setu/agent';
 import { EnhancedImageGenerator } from '@/lib/ai/enhanced/image';
@@ -31,18 +27,51 @@ export class SiddhiAgent {
     messages: any[];
     userId?: string;
     stream?: boolean;
+    deep?: boolean;
+    setu?: boolean;
+    search?: boolean;
+    image?: string;
   }): Promise<any> {
-    const { messages, userId, stream = true } = request;
+    const { messages, userId, stream = true, deep = true, setu = false, search = false, image } = request;
+
     const lastUser = messages.filter((m: any) => m.role === 'user').pop();
     const query = lastUser?.content || '';
 
-    const intent = await this.detectIntent(query);
-    logger.info(`[SiddhiAgent] Intent: ${intent}`);
+    // Intent detection (with override for deep)
+    let intent = this.detectIntent(query);
+
+    // If deep flag is true, always use deep_think (override)
+    if (deep) {
+      intent = 'deep_think';
+    }
+
+    // If setu flag is true, override
+    if (setu) {
+      intent = 'setu';
+    }
+
+    // If image flag is provided, override
+    if (image) {
+      intent = 'image';
+    }
+
+    logger.info(`[SiddhiAgent] Intent: ${intent} (deep=${deep}, setu=${setu})`);
 
     try {
-      const handler = this.getHandler(intent);
-      return await handler(query, messages, stream, userId);
-    } catch (error) {
+      switch (intent) {
+        case 'deep_think':
+          return this.handleDeepThink(query, messages, stream, userId);
+        case 'setu':
+          return this.handleSETU(query, stream);
+        case 'image':
+          return this.handleImage(query, image, stream);
+        case 'video':
+          return this.handleVideo(query, stream);
+        default:
+          // Chat always uses DeepThink (fallback)
+          return this.handleDeepThink(query, messages, stream, userId);
+      }
+    } catch (error: any) {
       logger.error('[SiddhiAgent] Handler error:', error);
       return {
         content: "I'm having trouble with that request. Please try again later.",
@@ -56,31 +85,10 @@ export class SiddhiAgent {
     if (/generate image|create image|draw|paint|render|make an image/.test(lower)) return 'image';
     if (/generate video|create video|animate|make video|render video/.test(lower)) return 'video';
     if (/lead|prospect|find customers|generate leads|sales|b2b|find contacts/.test(lower)) return 'setu';
-    if (/explain|analyze|why|how|what if|compare|detail|thorough|comprehensive/.test(lower) || query.length > 80) {
-      return 'deep_think';
-    }
-    return 'chat';
+    return 'deep_think'; // Default to DeepThink
   }
 
-  private getHandler(intent: Intent):
-    (query: string, messages: any[], stream: boolean, userId?: string) => Promise<any> {
-    switch (intent) {
-      case 'deep_think': return this.handleDeepThink.bind(this);
-      case 'setu': return this.handleSETU.bind(this);
-      case 'image': return this.handleImage.bind(this);
-      case 'video': return this.handleVideo.bind(this);
-      default: return this.handleChat.bind(this);
-    }
-  }
-
-  // ---- Handlers (all accept query, messages, stream, userId) ----
-
-  private async handleDeepThink(
-    query: string,
-    messages: any[],
-    stream: boolean,
-    userId?: string
-  ) {
+  private async handleDeepThink(query: string, messages: any[], stream: boolean, userId?: string) {
     if (!stream) {
       const cached = this.deepThink.cacheGet(query);
       if (cached) return cached;
@@ -88,18 +96,13 @@ export class SiddhiAgent {
     const result = await this.deepThink.reason(query, {
       num_paths: 3,
       consensus_threshold: 0.6,
-      stream,
+      stream: stream,
       useWeb: true,
     });
     return result;
   }
 
-  private async handleSETU(
-    query: string,
-    _messages: any[],
-    stream: boolean,
-    _userId?: string
-  ) {
+  private async handleSETU(query: string, stream: boolean) {
     const agent = new SETUAgent(query);
     const progressEvents: any[] = [];
     const onProgress = stream ? (ev: any) => progressEvents.push(ev) : undefined;
@@ -112,30 +115,21 @@ export class SiddhiAgent {
     };
   }
 
-  private async handleImage(
-    query: string,
-    _messages: any[],
-    _stream: boolean,
-    _userId?: string
-  ) {
+  private async handleImage(query: string, imageBase64?: string, stream?: boolean) {
     const cacheKey = `image:${query}`;
     const cachedUrl = imageCache.get(cacheKey);
     if (cachedUrl) return { imageUrl: cachedUrl, provider: 'cache' };
 
     const result = await this.imageGen.generate({
       prompt: query,
+      image: imageBase64,
       quality: 'standard',
       cache: true,
     });
     return { imageUrl: result.url, provider: result.provider };
   }
 
-  private async handleVideo(
-    query: string,
-    _messages: any[],
-    _stream: boolean,
-    _userId?: string
-  ) {
+  private async handleVideo(query: string, stream?: boolean) {
     const cacheKey = `video:${query}`;
     const cachedUrl = videoCache.get(cacheKey);
     if (cachedUrl) return { videoUrl: cachedUrl, provider: 'cache', taskId: 'cached' };
@@ -146,20 +140,5 @@ export class SiddhiAgent {
       cache: true,
     });
     return { videoUrl: result.url, provider: result.provider, taskId: result.taskId };
-  }
-
-  private async handleChat(
-    query: string,          // unused, kept for signature consistency
-    messages: any[],
-    stream: boolean,
-    userId?: string
-  ) {
-    const systemMessage = { role: 'system', content: SIDDHI_SYSTEM_PROMPT };
-    const allMessages = [systemMessage, ...messages];
-    return this.router.route({
-      messages: allMessages,
-      stream,
-      userId,
-    });
   }
 }

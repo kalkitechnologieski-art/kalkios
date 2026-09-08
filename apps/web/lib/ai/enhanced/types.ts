@@ -10,7 +10,6 @@ export function generateUUID(): string {
     crypto.getRandomValues(arr);
     arr[6] = (arr[6]! & 0x0f) | 0x40;
     arr[8] = (arr[8]! & 0x3f) | 0x80;
-// @ts-ignore
     return Array.from(arr)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')
@@ -53,8 +52,8 @@ export interface BrainState {
 
 export interface ImageGenerationOptions {
   prompt: string;
-  size?: '1K' | '2K' | '3K' | '4K';
-  ratio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '21:9';
+  size?: '1K' | '2K' | '3K' | '4K' | string;
+  ratio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '21:9' | '2:3' | '3:2';
   quality?: 'low' | 'standard' | 'high' | 'ultra';
   style?: string;
   negative_prompt?: string;
@@ -62,6 +61,11 @@ export interface ImageGenerationOptions {
   image?: string | File;
   n?: number;
   cache?: boolean;
+  priority?: 'high' | 'normal' | 'low';
+  /** Internal: used for passing pre-analyzed prompts */
+  _analyzed?: boolean;
+  /** Internal: enhanced prompt from analysis */
+  enhanced?: string;
 }
 
 export interface ImageGenerationResult {
@@ -89,6 +93,7 @@ export interface VideoGenerationOptions {
   seed?: number;
   quality?: 'speed' | 'balanced' | 'quality';
   cache?: boolean;
+  priority?: 'high' | 'normal' | 'low';
 }
 
 export interface VideoGenerationResult {
@@ -107,14 +112,14 @@ export interface VideoGenerationResult {
 export interface ReasoningPath {
   id: string;
   provider: string;
-  reasoning: string;       // Full chain of thought
-  summary: string;          // Brief summary
-  answer: string;           // Final answer
+  reasoning: string;
+  summary: string;
+  answer: string;
   confidence: number;
   tokens: number;
   timeMs: number;
-  steps?: string[];         // Individual reasoning steps (for UI)
-  sources?: string[];       // Citations or references
+  steps?: string[];
+  sources?: string[];
 }
 
 export interface ConsensusResult {
