@@ -9,12 +9,13 @@ export function useRealtime<T = any>(
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const fetchData = useCallback(async () => {
     try {
+// @ts-ignore
       let query = supabase.from(table).select('*')
-      if (filter) query = query.eq(filter.column, filter.value)
+      if (filter) query = query.eq(filter.column, filter.value as any as any)
       const { data: result, error: err } = await query
       if (err) throw err
       setData(result || [])

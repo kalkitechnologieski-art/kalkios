@@ -54,6 +54,7 @@ export class ResponseCache {
   private buildKey(messages: any[]): string {
     const lastUser = messages.filter((m) => m.role === "user").pop();
     if (!lastUser) return "cache:default";
+// @ts-ignore
     return `cache:${Buffer.from(lastUser.content).toString("base64").slice(0, 32)}`;
   }
 

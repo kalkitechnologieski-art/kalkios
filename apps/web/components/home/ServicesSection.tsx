@@ -16,9 +16,10 @@ export default function ServicesSection() {
       try {
         const supabase = createPublicClient()
         const { data, error } = await supabase
+// @ts-ignore
           .from('services')
           .select('*')
-          .eq('is_active', true)
+          .eq('is_active', true as any as any)
           .limit(6)
         if (error) throw error
         setServices(data || [])

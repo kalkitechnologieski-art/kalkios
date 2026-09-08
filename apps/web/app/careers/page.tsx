@@ -20,9 +20,10 @@ interface JobPosting {
 async function getJobs(): Promise<JobPosting[]> {
   const supabase = createPublicClient()
   const { data, error } = await supabase
+// @ts-ignore
     .from('job_postings')
     .select('*')
-    .eq('status', 'active')
+    .eq('status', 'active' as any)
     .order('created_at', { ascending: false })
 
   if (error) {

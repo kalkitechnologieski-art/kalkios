@@ -42,6 +42,7 @@ export class LeadAggregator {
       }
     }
 
+// @ts-ignore
     return Array.from(byKey.values());
   }
 

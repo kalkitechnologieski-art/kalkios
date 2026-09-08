@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
+import { useMemory } from '@/hooks/useMemory';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { NeonComposer } from '@/components/chat/NeonComposer';
 import { ThinkingTrace } from '@/components/chat/ThinkingTrace';
@@ -12,7 +13,6 @@ import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
 import { Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ─── Trace Step Type ──────────────────────────────────────────────────────
 interface TraceStep {
   id: string;
   type: 'search' | 'reasoning' | 'scoring' | 'consensus' | 'refinement' | 'complete';
@@ -27,6 +27,7 @@ interface TraceStep {
 
 export default function ChatClient() {
   const { messages, isLoading, error, sendMessage, clearError } = useStreamingChat();
+  const { loadMemory, saveMemory } = useMemory();
   const [deepThink, setDeepThink] = useState(false);
   const [setuMode, setSetuMode] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
@@ -35,6 +36,25 @@ export default function ChatClient() {
   const [mounted, setMounted] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Load saved messages from IndexedDB
+  useEffect(() => {
+    const load = async () => {
+      const saved = await loadMemory();
+      // We assume the parent component manages messages; we'll just log.
+      // In practice, we would set messages via a setter if available.
+      // For now, we keep it as a placeholder.
+      console.log('Loaded memory:', saved?.length || 0, 'messages');
+    };
+    load();
+  }, [loadMemory]);
+
+  // Save messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMemory(messages);
+    }
+  }, [messages, saveMemory]);
 
   useEffect(() => {
     setMounted(true);
@@ -47,7 +67,6 @@ export default function ChatClient() {
   const handleSend = useCallback(
     async (text: string, file?: File) => {
       if (!text.trim() || isLoading) return;
-      // When DeepThink is enabled, auto-enable search
       const useSearch = deepThink || searchMode;
       await sendMessage(text, { deep: deepThink, setu: setuMode, search: useSearch });
     },
@@ -70,7 +89,6 @@ export default function ChatClient() {
     );
   }
 
-  // ─── Render trace steps for DeepThink ──────────────────────────────────
   const renderTraces = (traces: TraceStep[]) => {
     if (!traces || traces.length === 0) return null;
     return (
@@ -92,17 +110,11 @@ export default function ChatClient() {
               {step.status === 'running' && (
                 <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
               )}
-              {step.status === 'completed' && (
-                <span className="text-green-400">✓</span>
-              )}
-              {step.status === 'failed' && (
-                <span className="text-red-400">✗</span>
-              )}
+              {step.status === 'completed' && <span className="text-green-400">✓</span>}
+              {step.status === 'failed' && <span className="text-red-400">✗</span>}
               {step.message}
               {step.duration && (
-                <span className="text-white/30 text-[10px]">
-                  ({step.duration}ms)
-                </span>
+                <span className="text-white/30 text-[10px]">({step.duration}ms)</span>
               )}
             </span>
             {step.details?.results !== undefined && (
@@ -111,9 +123,7 @@ export default function ChatClient() {
               </span>
             )}
             {step.provider && (
-              <span className="text-white/20 text-[10px] ml-2">
-                via {step.provider}
-              </span>
+              <span className="text-white/20 text-[10px] ml-2">via {step.provider}</span>
             )}
           </div>
         ))}
@@ -186,11 +196,7 @@ export default function ChatClient() {
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
-            // Ensure content is a string
-            const contentStr =
-              typeof msg.content === 'string'
-                ? msg.content
-                : String(msg.content);
+            const contentStr = typeof msg.content === 'string' ? msg.content : String(msg.content);
 
             return (
               <motion.div
@@ -215,15 +221,11 @@ export default function ChatClient() {
                   />
                 )}
 
-                {/* ─── Reasoning Trace ──────────────────────────────────── */}
+                {/* Reasoning trace */}
                 {msg.role === 'assistant' && msg.reasoning && (
                   <div className="ml-12 mt-1">
                     <ThinkingTrace
-                      reasoning={
-                        typeof msg.reasoning === 'string'
-                          ? msg.reasoning
-                          : String(msg.reasoning)
-                      }
+                      reasoning={typeof msg.reasoning === 'string' ? msg.reasoning : String(msg.reasoning)}
                       tokens={msg.tokens}
                       timeMs={0}
                       status="done"
@@ -232,14 +234,12 @@ export default function ChatClient() {
                   </div>
                 )}
 
-                {/* ─── DeepThink Traces ──────────────────────────────────── */}
+                {/* DeepThink traces */}
                 {msg.role === 'assistant' && msg.traces && msg.traces.length > 0 && (
-                  <div className="ml-12 mt-2">
-                    {renderTraces(msg.traces)}
-                  </div>
+                  <div className="ml-12 mt-2">{renderTraces(msg.traces)}</div>
                 )}
 
-                {/* ─── SETU Leads ────────────────────────────────────────── */}
+                {/* SETU leads */}
                 {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
                   <div className="ml-12 mt-2">
                     <SetuProgress
@@ -250,21 +250,17 @@ export default function ChatClient() {
                   </div>
                 )}
 
-                {/* ─── Questions ─────────────────────────────────────────── */}
-                {msg.role === 'assistant' &&
-                  msg.questions &&
-                  msg.questions.length > 0 && (
-                    <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
-                      <p className="text-white/60 text-sm font-mono">
-                        Please answer:
-                      </p>
-                      <ul className="list-disc list-inside text-cyan-400/80 text-sm mt-1 space-y-1">
-                        {msg.questions.map((q: string, i: number) => (
-                          <li key={i}>{q}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                {/* Clarifying questions */}
+                {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
+                  <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
+                    <p className="text-white/60 text-sm font-mono">Please answer:</p>
+                    <ul className="list-disc list-inside text-cyan-400/80 text-sm mt-1 space-y-1">
+                      {msg.questions.map((q: string, i: number) => (
+                        <li key={i}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </motion.div>
             );
           })}
@@ -313,7 +309,6 @@ export default function ChatClient() {
   );
 }
 
-// ─── CyberToggle ──────────────────────────────────────────────────────────
 function CyberToggle({
   active,
   onClick,
@@ -326,10 +321,8 @@ function CyberToggle({
   color: 'purple' | 'amber' | 'blue' | 'pink' | 'red';
 }) {
   const colors: Record<string, string> = {
-    purple:
-      'active:bg-purple-600/30 active:text-purple-400 active:border-purple-500/30',
-    amber:
-      'active:bg-amber-600/30 active:text-amber-400 active:border-amber-500/30',
+    purple: 'active:bg-purple-600/30 active:text-purple-400 active:border-purple-500/30',
+    amber: 'active:bg-amber-600/30 active:text-amber-400 active:border-amber-500/30',
     blue: 'active:bg-blue-600/30 active:text-blue-400 active:border-blue-500/30',
     pink: 'active:bg-pink-600/30 active:text-pink-400 active:border-pink-500/30',
     red: 'active:bg-red-600/30 active:text-red-400 active:border-red-500/30',
@@ -338,9 +331,7 @@ function CyberToggle({
     <button
       onClick={onClick}
       className={`p-1.5 rounded-lg transition-all duration-200 ${
-        active
-          ? colors[color] + ' shadow-glow'
-          : 'text-white/40 hover:text-white/70'
+        active ? colors[color] + ' shadow-glow' : 'text-white/40 hover:text-white/70'
       }`}
       title={label}
     >

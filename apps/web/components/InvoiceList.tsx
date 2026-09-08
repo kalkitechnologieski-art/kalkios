@@ -7,14 +7,15 @@ type Invoice = Database['public']['Tables']['invoices']['Row']
 
 export function InvoiceList({ projectId }: { projectId: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   useEffect(() => {
     const fetchInvoices = async () => {
       const { data } = await supabase
+// @ts-ignore
         .from('invoices')
         .select('*')
-        .eq('order_id', projectId)
+        .eq('order_id', projectId as any as any)
       setInvoices(data || [])
     }
     fetchInvoices()

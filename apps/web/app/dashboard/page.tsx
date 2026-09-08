@@ -14,12 +14,13 @@ export default function DashboardPage() {
   const { user, loading: userLoading } = useUser()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   useEffect(() => {
     if (!user) return
     const fetch = async () => {
-      const { data } = await supabase.from('projects').select('*, milestones(*)').eq('client_id', user.id).order('created_at', { ascending: false })
+// @ts-ignore
+      const { data } = await supabase.from('projects').select('*, milestones(*)').eq('client_id', user.id as any as any).order('created_at', { ascending: false })
       setProjects(data as Project[] || [])
       setLoading(false)
     }

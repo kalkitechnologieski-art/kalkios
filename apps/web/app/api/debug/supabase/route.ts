@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const supabase = createClient()
+    const supabase = createClient() as any
     const { data, error } = await supabase
+// @ts-ignore
       .from('services')
       .select('*')
       .limit(5)

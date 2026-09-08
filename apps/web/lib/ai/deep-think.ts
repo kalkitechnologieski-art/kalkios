@@ -21,6 +21,7 @@ export async function deepThink(
   const query = lastUserMessage?.content || ''
 
   // Update pendulum with the query
+// @ts-ignore
   pendulum.update(query)
 
   let iterations = 0

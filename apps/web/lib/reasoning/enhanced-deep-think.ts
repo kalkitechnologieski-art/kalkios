@@ -1,106 +1,108 @@
-import { ReasoningPath, ConsensusResult, generateUUID } from '../ai/enhanced/types';
-import { AgnesClient } from '@/lib/providers/agnes/client';
-import { GroqClient } from '@/lib/providers/groq/client';
-import { ZhipuClient } from '@/lib/providers/zhipu/client';
-import { deepThinkCache } from '../ai/enhanced/cache';
-import { searchWithContext } from '@/lib/search/orchestrator';
+// lib/reasoning/enhanced-deep-think.ts
+// ──────────────────────────────────────────────────────────────────
+// ULTIMATE FIX: Import provider CLASSES, not instances.
+// Instantiate them in the constructor.
+// ──────────────────────────────────────────────────────────────────
 
-export interface TraceStep {
-  id: string;
-  type: 'search' | 'reasoning' | 'scoring' | 'consensus' | 'refinement' | 'complete';
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  message: string;
-  details?: any;
-  timestamp: number;
-  duration?: number;
-  tokens?: number;
-  provider?: string;
-}
+import { ReasoningPath, ConsensusResult, generateUUID } from '@/lib/ai/enhanced/types';
+import { AgnesClient, GroqClient, ZhipuClient } from '@/lib/providers';
+import { deepThinkCache } from '@/lib/ai/enhanced/cache';
+import { searchWithContext } from '@/lib/search/orchestrator';
+import { logger } from '@/lib/utils/logger';
 
 export class EnhancedDeepThink {
-  private agnes = new AgnesClient();
-  private groq = new GroqClient();
-  private zhipu = new ZhipuClient();
-  private traceSteps: TraceStep[] = [];
-  private onTraceUpdate?: (step: TraceStep) => void;
-  private onReasoning?: (path: ReasoningPath) => void;
+  // ---- Provider clients ----
+  private agnesClient: AgnesClient;
+  private groqClient: GroqClient;
+  private zhipuClient: ZhipuClient;
 
-  private systemPrompt = `You are Siddhi, an expert reasoning AI. Provide a detailed, step‑by‑step chain‑of‑thought.
+  constructor() {
+    this.agnesClient = new AgnesClient();
+    this.groqClient = new GroqClient();
+    this.zhipuClient = new ZhipuClient();
+  }
 
-Follow this structure:
-## Problem Restatement
-## Assumptions
-## Analysis
-## Alternatives Considered
-## Conclusion
-Make your reasoning transparent. End with the final answer clearly marked.`;
+  // ---- Cache ----
+  cacheGet(query: string): ConsensusResult | null {
+    const key = this.getCacheKey(query);
+    return deepThinkCache.get(key) || null;
+  }
 
+  cacheSet(query: string, result: ConsensusResult): void {
+    const key = this.getCacheKey(query);
+    deepThinkCache.set(key, result);
+  }
+
+  private getCacheKey(query: string): string {
+    const hash = this.hashString(query);
+    return `deepthink:${hash}`;
+  }
+
+  private hashString(input: string): string {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      hash = ((hash << 5) - hash) + input.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  // ---- Main reasoning method ----
   async reason(
     query: string,
     options: {
       num_paths?: number;
       consensus_threshold?: number;
       stream?: boolean;
-      onReasoning?: (path: ReasoningPath) => void;
-      onTrace?: (step: TraceStep) => void;
       useWeb?: boolean;
+      onTrace?: (step: any) => void;
     } = {}
   ): Promise<ConsensusResult> {
-    const { num_paths = 3, consensus_threshold = 0.6, stream = false, onReasoning, onTrace, useWeb = true } = options;
-    this.onTraceUpdate = onTrace;
-    this.onReasoning = onReasoning;
-    this.traceSteps = [];
+    const { num_paths = 3, consensus_threshold = 0.6, stream = false, useWeb = true, onTrace } = options;
 
     if (!stream) {
-      const cached = deepThinkCache.get(this.getCacheKey(query));
+      const cached = this.cacheGet(query);
       if (cached) return cached;
     }
 
-    // ─── Web Search ──────────────────────────────────────────────
     let webContext = '';
     if (useWeb) {
-      const searchStep = this.addTraceStep('search', '🔍 Searching the web...', 'running');
+      onTrace?.({ type: 'search', status: 'running', message: 'Searching web...' });
       try {
         const { results, summary } = await searchWithContext(query, { limit: 5, timeout: 8000 });
         if (results.length > 0) {
           webContext = `\n\n## Web Context (for grounding)\n${summary}`;
-          this.updateTraceStep(searchStep.id, 'completed', `✅ Found ${results.length} results`, {
-            results: results.length,
-            sources: results.map(r => r.url),
-          });
+          onTrace?.({ type: 'search', status: 'completed', message: `Found ${results.length} sources` });
         } else {
-          this.updateTraceStep(searchStep.id, 'completed', '⚠️ No web results found');
+          onTrace?.({ type: 'search', status: 'completed', message: 'No web results found' });
         }
       } catch (error) {
-        this.updateTraceStep(searchStep.id, 'failed', `❌ Search failed: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
+        logger.warn('[DeepThink] Web search failed:', error);
+        onTrace?.({ type: 'search', status: 'failed', message: 'Web search failed' });
       }
     }
 
-    // ─── Generate Paths ──────────────────────────────────────────
-    const genStep = this.addTraceStep('reasoning', '🧠 Generating reasoning paths...', 'running');
+    onTrace?.({ type: 'reasoning', status: 'running', message: 'Generating reasoning paths...' });
     const paths = await this.generatePaths(query, num_paths, webContext);
     if (paths.length === 0) {
-      this.updateTraceStep(genStep.id, 'failed', '❌ All reasoning paths failed');
+      onTrace?.({ type: 'reasoning', status: 'failed', message: 'All reasoning paths failed' });
       return this.fallbackResponse(query);
     }
-    this.updateTraceStep(genStep.id, 'completed', `✅ ${paths.length} reasoning paths generated`, { paths: paths.map(p => p.provider) });
+    onTrace?.({ type: 'reasoning', status: 'completed', message: `Generated ${paths.length} paths` });
 
-    // ─── Scoring ──────────────────────────────────────────────────
-    const scoreStep = this.addTraceStep('scoring', '📊 Scoring reasoning paths...', 'running');
+    onTrace?.({ type: 'scoring', status: 'running', message: 'Scoring paths...' });
     const scoredPaths = await this.scorePaths(paths, query);
-    this.updateTraceStep(scoreStep.id, 'completed', '✅ Paths scored', { scores: scoredPaths.map(p => ({ provider: p.provider, confidence: p.confidence })) });
+    onTrace?.({ type: 'scoring', status: 'completed', message: 'Scoring complete' });
 
-    // ─── Consensus ──────────────────────────────────────────────────
-    const consensusStep = this.addTraceStep('consensus', '🤝 Computing consensus...', 'running');
+    onTrace?.({ type: 'consensus', status: 'running', message: 'Computing consensus...' });
     const consensus = this.computeConsensus(scoredPaths, consensus_threshold);
-    this.updateTraceStep(consensusStep.id, 'completed', `✅ Consensus score: ${(consensus.score * 100).toFixed(0)}%`);
+    onTrace?.({ type: 'consensus', status: 'completed', message: `Consensus score: ${(consensus.score * 100).toFixed(0)}%` });
 
-    // ─── Refine or final ───────────────────────────────────────────
     let finalResult: ConsensusResult;
     if (consensus.score < consensus_threshold && scoredPaths.length >= 2) {
-      const refineStep = this.addTraceStep('refinement', '🔧 Refining answer with consensus...', 'running');
+      onTrace?.({ type: 'refinement', status: 'running', message: 'Refining answer...' });
       finalResult = await this.refineReasoning(query, scoredPaths);
-      this.updateTraceStep(refineStep.id, 'completed', '✅ Refined answer generated');
+      onTrace?.({ type: 'refinement', status: 'completed', message: 'Refinement complete' });
     } else {
       const best = scoredPaths.reduce((a, b) => a.confidence > b.confidence ? a : b);
       finalResult = {
@@ -113,93 +115,61 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
       };
     }
 
-    this.addTraceStep('complete', `✅ DeepThink complete (${finalResult.tokens} tokens)`, 'completed', { provider: finalResult.provider });
-
-    if (!stream) {
-      deepThinkCache.set(this.getCacheKey(query), finalResult);
-    }
-
+    if (!stream) this.cacheSet(query, finalResult);
     return finalResult;
   }
 
-  // ─── Helper methods ──────────────────────────────────────────────
-  // (These are the same as before; we keep them unchanged for brevity)
-  // ... (the script will include the full file content)
-  // For the complete file, please refer to the previous implementation.
-
-  private addTraceStep(type: TraceStep['type'], message: string, status: TraceStep['status'] = 'pending', details?: any): TraceStep {
-    const step: TraceStep = {
-      id: generateUUID(),
-      type,
-      status,
-      message,
-      details,
-      timestamp: Date.now(),
-    };
-    this.traceSteps.push(step);
-    this.onTraceUpdate?.(step);
-    return step;
-  }
-
-  private updateTraceStep(id: string, status: TraceStep['status'], message: string, details?: any): void {
-    const step = this.traceSteps.find(s => s.id === id);
-    if (step) {
-      step.status = status;
-      step.message = message;
-      if (details) step.details = { ...step.details, ...details };
-      step.duration = Date.now() - step.timestamp;
-      this.onTraceUpdate?.(step);
-    }
-  }
-
+  // ---- Generate reasoning paths ----
   private async generatePaths(query: string, numPaths: number, webContext: string): Promise<ReasoningPath[]> {
     const providers = [
-      { client: this.agnes, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes', supportsThinking: true },
-      { client: this.groq, model: 'llama-3.1-70b-versatile', temp: 0.5, name: 'groq', supportsThinking: false },
-      { client: this.zhipu, model: 'glm-4.7', temp: 0.7, name: 'zhipu', supportsThinking: true },
+      { client: this.agnesClient, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes' },
+      { client: this.groqClient, model: 'llama-3.3-70b-versatile', temp: 0.5, name: 'groq' },
+      { client: this.zhipuClient, model: 'glm-4.7-flash', temp: 0.7, name: 'zhipu' },
     ].slice(0, numPaths);
 
-    const fullSystem = this.systemPrompt + webContext;
+    const systemPrompt = `You are Siddhi in DeepThink mode. Provide step‑by‑step reasoning for the user's query.
+Break down the problem, explore alternatives, and conclude with a final answer.
+Format:
+## Reasoning
+[Your step‑by‑step thinking]
+## Answer
+[Your final answer]
+${webContext}`;
 
     const tasks = providers.map(async (p) => {
       const start = Date.now();
       try {
-        const baseRequest: any = {
+        const body: any = {
           messages: [
-            { role: 'system', content: fullSystem },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: query },
           ],
           model: p.model,
           temperature: p.temp,
           max_tokens: 4096,
-          stream: false,
         };
-        if (p.supportsThinking) {
-          baseRequest.thinking = { type: 'enabled' };
-        }
-        const response = await p.client.chat(baseRequest);
-        const content = response.choices?.[0]?.message?.content || '';
-        const reasoning = response.choices?.[0]?.message?.reasoning_content || '';
+
+        if (p.name === 'zhipu') body.thinking = { type: 'enabled' };
+
+        const response = await p.client.chat(body);
+        // Safe access with fallback
+        const content = response?.choices?.[0]?.message?.content ?? '';
+        const reasoning = response?.choices?.[0]?.message?.reasoning_content ?? '';
 
         const parsed = this.parseReasoning(content);
-        const steps = this.extractSteps(parsed.reasoning || reasoning || content);
-
         const path: ReasoningPath = {
           id: generateUUID(),
           provider: p.name,
           reasoning: parsed.reasoning || reasoning || content,
-          summary: parsed.summary || content.slice(0, 200) + '...',
           answer: parsed.answer || content,
+          summary: (parsed.reasoning || reasoning || content).slice(0, 200) + '...',
           confidence: 0,
-          tokens: response.usage?.total_tokens || 0,
+          tokens: response?.usage?.total_tokens ?? 0,
           timeMs: Date.now() - start,
-          steps,
-          sources: [],
         };
-        this.onReasoning?.(path);
         return path;
       } catch (error) {
-        console.error(`[DeepThink] ${p.name} failed:`, error);
+        logger.warn(`[DeepThink] ${p.name} failed:`, error);
         return null;
       }
     });
@@ -208,82 +178,55 @@ Make your reasoning transparent. End with the final answer clearly marked.`;
     return results.filter((p): p is ReasoningPath => p !== null);
   }
 
-  private parseReasoning(content: string): { reasoning: string; summary: string; answer: string } {
-    const reasoningMatch = content.match(/## Reasoning\s*([\s\S]*?)(?=## Summary|## Conclusion|$)/i);
-    const summaryMatch = content.match(/## Summary\s*([\s\S]*?)(?=## Conclusion|$)/i);
-    const answerMatch = content.match(/## Answer|Conclusion\s*([\s\S]*?)$/i);
+  private parseReasoning(content: string): { reasoning: string; answer: string } {
+    const reasoningMatch = content.match(/## Reasoning\s*([\s\S]*?)(?=## Answer|$)/i);
+    const answerMatch = content.match(/## Answer\s*([\s\S]*?)$/i);
     return {
-      reasoning: reasoningMatch?.[1]?.trim() || content,
-      summary: summaryMatch?.[1]?.trim() || content.slice(0, 300),
-      answer: answerMatch?.[1]?.trim() || content,
+      reasoning: reasoningMatch?.[1]?.trim() ?? '',
+      answer: answerMatch?.[1]?.trim() ?? content,
     };
-  }
-
-  private extractSteps(reasoning: string): string[] {
-    const lines = reasoning.split('\n');
-    const steps: string[] = [];
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.match(/^(\d+\.|\*|-)\s/)) {
-        steps.push(trimmed);
-      }
-    }
-    if (steps.length === 0 && reasoning.length > 100) {
-      return reasoning.split(/[.!?]+\s/).filter(s => s.length > 20);
-    }
-    return steps;
   }
 
   private async scorePaths(paths: ReasoningPath[], query: string): Promise<ReasoningPath[]> {
     const judgePrompt = `You are a judge. Score each reasoning path for:
-1. Relevance to the query (0-1)
-2. Logical coherence (0-1)  
-3. Completeness (0-1)
+1. Relevance to the query (0‑1)
+2. Logical coherence (0‑1)
+3. Completeness (0‑1)
 
 Query: "${query}"
 
 Paths:
-${paths.map((p, i) => `Path ${i+1} (${p.provider}):\n${p.reasoning.slice(0, 400)}...`).join('\n\n')}
+${paths.map((p, i) => `Path ${i+1} (${p.provider}):\n${p.reasoning.slice(0, 300)}...`).join('\n\n')}
 
 Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completeness": 0.9 }, ... }`;
 
     try {
-      const response = await this.groq.chat({
+      const response = await this.groqClient.chat({
         messages: [{ role: 'user', content: judgePrompt }],
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.1,
         max_tokens: 500,
-        stream: false,
       });
-      const content = response?.choices?.[0]?.message?.content || '{}';
+      const content = response?.choices?.[0]?.message?.content ?? '{}';
       const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
       let scores: Record<string, { relevance: number; coherence: number; completeness: number }> = {};
       try {
-        const parsed = JSON.parse(cleanContent);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          scores = parsed;
-        }
-      } catch (_) {}
+        scores = JSON.parse(cleanContent);
+      } catch (_) {
+        scores = {};
+      }
+
       return paths.map((p, i) => {
-        const key = String(i);
-        const s = scores[key];
-        if (s && typeof s.relevance === 'number' && typeof s.coherence === 'number' && typeof s.completeness === 'number') {
-          p.confidence = (s.relevance + s.coherence + s.completeness) / 3;
-        } else {
-          const providerWeight: Record<string, number> = { agnes: 0.9, groq: 0.85, zhipu: 0.8 };
-          const weight = providerWeight[p.provider] || 0.7;
-          const lengthWeight = Math.min(1, p.reasoning.length / 400);
-          p.confidence = (weight + lengthWeight) / 2;
-        }
+        const score = scores[String(i)] ?? { relevance: 0.5, coherence: 0.5, completeness: 0.5 };
+        p.confidence = (score.relevance + score.coherence + score.completeness) / 3;
         return p;
       });
     } catch (error) {
-      console.warn('[DeepThink] Score parsing failed, using heuristic:', error);
-      return paths.map((p) => {
-        const providerWeight: Record<string, number> = { agnes: 0.9, groq: 0.85, zhipu: 0.8 };
-        const weight = providerWeight[p.provider] || 0.7;
-        const lengthWeight = Math.min(1, p.reasoning.length / 400);
-        p.confidence = (weight + lengthWeight) / 2;
+      logger.warn('[DeepThink] Score parsing failed, using heuristic:', error);
+      return paths.map(p => {
+        const providerWeight = { agnes: 0.9, groq: 0.85, zhipu: 0.8 }[p.provider] ?? 0.7;
+        const lengthWeight = Math.min(1, p.reasoning.length / 300);
+        p.confidence = (providerWeight + lengthWeight) / 2;
         return p;
       });
     }
@@ -294,24 +237,19 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
     best_answer: string;
     best_reasoning: string;
   } {
-    if (paths.length === 0) return { score: 0, best_answer: '', best_reasoning: '' };
-    const validPaths = paths.filter((p): p is ReasoningPath => p !== null && p !== undefined);
-    if (validPaths.length === 0) return { score: 0, best_answer: '', best_reasoning: '' };
-    const best = validPaths.reduce((a, b) => a.confidence > b.confidence ? a : b);
+    const best = paths.reduce((a, b) => a.confidence > b.confidence ? a : b);
+
     let agreement = 0;
-    const total = validPaths.length;
+    const total = paths.length;
     for (let i = 0; i < total; i++) {
-      const pi = validPaths[i];
-      if (!pi) continue;
       for (let j = i + 1; j < total; j++) {
-        const pj = validPaths[j];
-        if (!pj) continue;
-        const sim = this.wordOverlap(pi.answer, pj.answer);
+        const sim = this.wordOverlap(paths[i].answer, paths[j].answer);
         if (sim > 0.5) agreement++;
       }
     }
     const maxAgreement = (total * (total - 1)) / 2;
     const score = maxAgreement > 0 ? agreement / maxAgreement : 0;
+
     return {
       score,
       best_answer: best.answer,
@@ -328,15 +266,9 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
   }
 
   private async refineReasoning(query: string, paths: ReasoningPath[]): Promise<ConsensusResult> {
-    const sorted = [...paths].sort((a, b) => b.confidence - a.confidence);
-    const best = sorted[0];
-    const second = sorted.length > 1 ? sorted[1] : null;
-    if (!best) {
-      return this.fallbackResponse(query);
-    }
-    const secondReasoning = second?.reasoning?.slice(0, 400) || 'No alternative perspective available.';
-    const secondProvider = second?.provider || 'none';
-    const refinePrompt = `Refine and improve this reasoning and answer by incorporating the best elements from the alternative perspective.
+    const best = paths.reduce((a, b) => a.confidence > b.confidence ? a : b);
+
+    const refinePrompt = `Refine and improve this reasoning and answer based on the alternative perspectives.
 
 Original reasoning (${best.provider}):
 ${best.reasoning}
@@ -344,29 +276,31 @@ ${best.reasoning}
 Original answer:
 ${best.answer}
 
-Alternative perspective (${secondProvider}):
-${secondReasoning}
+Alternative perspectives:
+${paths.filter(p => p.id !== best.id).map(p => `- ${p.provider}: ${p.answer.slice(0, 200)}...`).join('\n')}
 
-Produce a refined reasoning and final answer. Use the same structured format.`;
+Provide a refined reasoning and final answer using the same format: ## Reasoning and ## Answer.`;
+
     try {
-      const response = await this.groq.chat({
+      const response = await this.groqClient.chat({
         messages: [{ role: 'user', content: refinePrompt }],
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.3,
         max_tokens: 2000,
-        stream: false,
       });
-      const content = response?.choices?.[0]?.message?.content || '';
+      const content = response?.choices?.[0]?.message?.content ?? '';
       const parsed = this.parseReasoning(content);
+
       return {
         final_answer: parsed.answer || content,
         reasoning: parsed.reasoning || content,
         paths,
         consensus_score: 0.8,
-        tokens: response?.usage?.total_tokens || 0,
+        tokens: response?.usage?.total_tokens ?? 0,
         provider: 'refined',
       };
-    } catch {
+    } catch (error) {
+      logger.warn('[DeepThink] Refinement failed, using best path:', error);
       return {
         final_answer: best.answer,
         reasoning: best.reasoning,
@@ -387,19 +321,5 @@ Produce a refined reasoning and final answer. Use the same structured format.`;
       tokens: 0,
       provider: 'fallback',
     };
-  }
-
-  private getCacheKey(query: string): string {
-    const hash = this.hashString(query);
-    return `deepthink:${hash}`;
-  }
-
-  private hashString(input: string): string {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      hash = ((hash << 5) - hash) + input.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
   }
 }

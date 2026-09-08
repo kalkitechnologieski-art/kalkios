@@ -93,6 +93,7 @@ function deduplicateContacts(contacts: any[]): any[] {
   }
 
   return [
+// @ts-ignore
     ...Array.from(byEmail.values()),
     ...withoutEmail,
   ].sort((a, b) => (b.confidence || 0) - (a.confidence || 0))

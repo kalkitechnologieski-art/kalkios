@@ -1,101 +1,165 @@
-import { IntelligentRouter } from "@/lib/orchestration/router";
-import { ChainOfThought } from "@/lib/reasoning/chain-of-thought";
-import { SETUAgent } from "./setu/agent";
-import { SIDDHI_SYSTEM_PROMPT } from "@/lib/prompts/siddhi-system";
+// lib/agents/siddhi-agent.ts
+// ──────────────────────────────────────────────────────────────────
+// FIXED: Handler signatures now all accept (query, messages, stream, userId)
+// ──────────────────────────────────────────────────────────────────
 
-type Intent = "general" | "deep_think" | "web_search" | "generate_image" | "generate_video" | "run_setu";
+import { EnhancedDeepThink } from '@/lib/reasoning/enhanced-deep-think';
+import { SETUAgent } from '@/lib/agents/setu/agent';
+import { EnhancedImageGenerator } from '@/lib/ai/enhanced/image';
+import { EnhancedVideoGenerator } from '@/lib/ai/enhanced/video';
+import { EnterpriseRouter } from '@/lib/orchestration/enterprise-router';
+import { SIDDHI_SYSTEM_PROMPT } from '@/lib/prompts/siddhi-system';
+import { imageCache, videoCache } from '@/lib/ai/enhanced/cache';
+import { logger } from '@/lib/utils/logger';
+
+type Intent = 'chat' | 'deep_think' | 'setu' | 'image' | 'video';
 
 export class SiddhiAgent {
-  private router: IntelligentRouter;
-  private cot: ChainOfThought;
+  private router: EnterpriseRouter;
+  private deepThink: EnhancedDeepThink;
+  private imageGen: EnhancedImageGenerator;
+  private videoGen: EnhancedVideoGenerator;
 
   constructor() {
-    this.router = new IntelligentRouter();
-    this.cot = new ChainOfThought();
+    this.router = new EnterpriseRouter();
+    this.deepThink = new EnhancedDeepThink();
+    this.imageGen = new EnhancedImageGenerator();
+    this.videoGen = new EnhancedVideoGenerator();
   }
 
-  async process(request: { messages: any[]; userId?: string; stream?: boolean }) {
+  async process(request: {
+    messages: any[];
+    userId?: string;
+    stream?: boolean;
+  }): Promise<any> {
     const { messages, userId, stream = true } = request;
-    const lastMessage = messages[messages.length - 1]?.content || "";
+    const lastUser = messages.filter((m: any) => m.role === 'user').pop();
+    const query = lastUser?.content || '';
 
-    const intent = this.detectIntent(lastMessage);
-    console.log("[SiddhiAgent] Intent:", intent);
+    const intent = await this.detectIntent(query);
+    logger.info(`[SiddhiAgent] Intent: ${intent}`);
 
     try {
-      switch (intent) {
-        case "deep_think":
-          return await this.handleDeepThink(lastMessage, stream);
-        case "web_search":
-          return await this.handleWebSearch(lastMessage, stream);
-        case "run_setu":
-          return await this.handleSETU(lastMessage, stream);
-        case "generate_image":
-          return await this.handleImageGeneration(lastMessage, stream);
-        case "generate_video":
-          return await this.handleVideoGeneration(lastMessage, stream);
-        default:
-          const enhancedMessages = [{ role: "system", content: SIDDHI_SYSTEM_PROMPT }, ...messages];
-          return await this.router.route({
-            messages: enhancedMessages,
-            stream,
-            userId,
-          });
-      }
-    } catch (error: any) {
-      console.error("[SiddhiAgent] Error:", error);
+      const handler = this.getHandler(intent);
+      return await handler(query, messages, stream, userId);
+    } catch (error) {
+      logger.error('[SiddhiAgent] Handler error:', error);
       return {
-        type: "content",
-        content: "I encountered an issue. Please try again.",
+        content: "I'm having trouble with that request. Please try again later.",
+        error: true,
       };
     }
   }
 
   private detectIntent(query: string): Intent {
     const lower = query.toLowerCase();
-    if (lower.includes("generate image") || lower.includes("create image") || lower.includes("draw")) return "generate_image";
-    if (lower.includes("generate video") || lower.includes("create video") || lower.includes("animate")) return "generate_video";
-    if (lower.includes("lead") || lower.includes("prospect") || lower.includes("find customers") || lower.includes("find leads")) return "run_setu";
-    if (lower.includes("search") || lower.includes("find") || lower.includes("latest news") || lower.includes("today")) return "web_search";
-    if (lower.includes("explain") || lower.includes("analyze") || lower.includes("why") || lower.includes("how") || lower.length > 30) {
-      return "deep_think";
+    if (/generate image|create image|draw|paint|render|make an image/.test(lower)) return 'image';
+    if (/generate video|create video|animate|make video|render video/.test(lower)) return 'video';
+    if (/lead|prospect|find customers|generate leads|sales|b2b|find contacts/.test(lower)) return 'setu';
+    if (/explain|analyze|why|how|what if|compare|detail|thorough|comprehensive/.test(lower) || query.length > 80) {
+      return 'deep_think';
     }
-    return "general";
+    return 'chat';
   }
 
-  private async handleDeepThink(query: string, stream: boolean) {
-    return this.cot.generate(query, { stream, deep: true });
+  private getHandler(intent: Intent):
+    (query: string, messages: any[], stream: boolean, userId?: string) => Promise<any> {
+    switch (intent) {
+      case 'deep_think': return this.handleDeepThink.bind(this);
+      case 'setu': return this.handleSETU.bind(this);
+      case 'image': return this.handleImage.bind(this);
+      case 'video': return this.handleVideo.bind(this);
+      default: return this.handleChat.bind(this);
+    }
   }
 
-  private async handleWebSearch(query: string, stream: boolean) {
-    // ChainOfThought with deep=false does web search and synthesis
-    return this.cot.generate(query, { stream, deep: false });
+  // ---- Handlers (all accept query, messages, stream, userId) ----
+
+  private async handleDeepThink(
+    query: string,
+    messages: any[],
+    stream: boolean,
+    userId?: string
+  ) {
+    if (!stream) {
+      const cached = this.deepThink.cacheGet(query);
+      if (cached) return cached;
+    }
+    const result = await this.deepThink.reason(query, {
+      num_paths: 3,
+      consensus_threshold: 0.6,
+      stream,
+      useWeb: true,
+    });
+    return result;
   }
 
-  private async handleSETU(query: string, stream: boolean) {
+  private async handleSETU(
+    query: string,
+    _messages: any[],
+    stream: boolean,
+    _userId?: string
+  ) {
     const agent = new SETUAgent(query);
-    const questions = await agent.generateQuestions();
-    if (questions.length > 0) {
-      return { type: "questions", questions, stream: false };
-    }
+    const progressEvents: any[] = [];
+    const onProgress = stream ? (ev: any) => progressEvents.push(ev) : undefined;
+    await agent.executeSearch(onProgress);
     return {
-      type: "setu_pending",
-      message: "Please answer the clarifying questions.",
-      questions,
-      stream: false,
+      leads: agent.getLeads(),
+      csv: agent.getCSV(),
+      summary: agent.getSummary(),
+      progress: stream ? progressEvents : undefined,
     };
   }
 
-  private async handleImageGeneration(query: string, stream: boolean) {
-    return this.router.route({
-      messages: [{ role: "user", content: `Generate image: ${query}` }],
-      stream,
+  private async handleImage(
+    query: string,
+    _messages: any[],
+    _stream: boolean,
+    _userId?: string
+  ) {
+    const cacheKey = `image:${query}`;
+    const cachedUrl = imageCache.get(cacheKey);
+    if (cachedUrl) return { imageUrl: cachedUrl, provider: 'cache' };
+
+    const result = await this.imageGen.generate({
+      prompt: query,
+      quality: 'standard',
+      cache: true,
     });
+    return { imageUrl: result.url, provider: result.provider };
   }
 
-  private async handleVideoGeneration(query: string, stream: boolean) {
+  private async handleVideo(
+    query: string,
+    _messages: any[],
+    _stream: boolean,
+    _userId?: string
+  ) {
+    const cacheKey = `video:${query}`;
+    const cachedUrl = videoCache.get(cacheKey);
+    if (cachedUrl) return { videoUrl: cachedUrl, provider: 'cache', taskId: 'cached' };
+
+    const result = await this.videoGen.generate({
+      prompt: query,
+      quality: 'balanced',
+      cache: true,
+    });
+    return { videoUrl: result.url, provider: result.provider, taskId: result.taskId };
+  }
+
+  private async handleChat(
+    query: string,          // unused, kept for signature consistency
+    messages: any[],
+    stream: boolean,
+    userId?: string
+  ) {
+    const systemMessage = { role: 'system', content: SIDDHI_SYSTEM_PROMPT };
+    const allMessages = [systemMessage, ...messages];
     return this.router.route({
-      messages: [{ role: "user", content: `Generate video: ${query}` }],
+      messages: allMessages,
       stream,
+      userId,
     });
   }
 }

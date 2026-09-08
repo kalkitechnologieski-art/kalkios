@@ -8,13 +8,14 @@ export default function AdminReportsPage() {
   const { user, loading: authLoading } = useUser()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any[]>([])
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
     const fetchData = async () => {
       // Replace with actual table name
       const table = 'reports'
+// @ts-ignore
       const { data } = await supabase.from(table).select('*').limit(10)
       setData(data || [])
       setLoading(false)

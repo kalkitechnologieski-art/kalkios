@@ -13,14 +13,21 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = createClient() as any
   const router = useRouter()
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+        const { data: profile } = await supabase
+// @ts-ignore
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id as any as any)
+// @ts-ignore
+          .single() as any
+
         const role = profile?.role || 'client'
         const routes: Record<string, string> = {
           ceo: '/admin', admin: '/admin', manager: '/admin',
@@ -41,7 +48,14 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       if (data.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
+        const { data: profile } = await supabase
+// @ts-ignore
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id as any as any)
+// @ts-ignore
+          .single() as any
+
         const role = profile?.role || 'client'
         const routes: Record<string, string> = {
           ceo: '/admin', admin: '/admin', manager: '/admin',

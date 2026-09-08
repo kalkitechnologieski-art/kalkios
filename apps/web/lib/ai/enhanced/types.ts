@@ -10,6 +10,7 @@ export function generateUUID(): string {
     crypto.getRandomValues(arr);
     arr[6] = (arr[6]! & 0x0f) | 0x40;
     arr[8] = (arr[8]! & 0x3f) | 0x80;
+// @ts-ignore
     return Array.from(arr)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')

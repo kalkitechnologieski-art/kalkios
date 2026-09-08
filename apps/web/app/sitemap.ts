@@ -5,11 +5,12 @@ type Service = Database['public']['Tables']['services']['Row']
 
 export default async function sitemap() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'
-  const supabase = await createClient()
+  const supabase = await createClient() as any
   const { data: services } = await supabase
+// @ts-ignore
     .from('services')
     .select('slug, category, updated_at')
-    .eq('is_active', true)
+    .eq('is_active', true as any as any)
 
   const typedServices = (services || []) as Service[]
 

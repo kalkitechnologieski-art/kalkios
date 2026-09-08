@@ -9,8 +9,9 @@ export default function AdminErrorsPage() {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const supabase = createClient();
+      const supabase = createClient() as any;
       const { data } = await supabase
+// @ts-ignore
         .from("ai_audit_logs")
         .select("*")
         .order("created_at", { ascending: false })

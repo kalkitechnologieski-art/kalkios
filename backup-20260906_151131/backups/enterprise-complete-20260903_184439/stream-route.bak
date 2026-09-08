@@ -1,0 +1,133 @@
+import { NextRequest } from 'next/server';
+import { createParser, EventSourceMessage } from 'eventsource-parser';
+import { EnterpriseRouter } from '@/lib/orchestration/enterprise-router';
+import { EnhancedDeepThink } from '@/lib/reasoning/enhanced-deep-think';
+import { EnhancedSETUAgent } from '@/lib/agents/setu/enhanced-agent';
+import { EnhancedImageGenerator } from '@/lib/ai/enhanced/image';
+import { EnhancedVideoGenerator } from '@/lib/ai/enhanced/video';
+import { SIDDHI_SYSTEM_PROMPT } from '@/lib/prompts/siddhi-system';
+import { generateCSV } from '@/lib/ai/enhanced/utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
+function safeString(data: unknown): string {
+  if (typeof data === 'string') return data;
+  if (data && typeof data === 'object') {
+    const obj = data as any;
+    if (obj.props?.dangerouslySetInnerHTML?.__html) {
+      return String(obj.props.dangerouslySetInnerHTML.__html);
+    }
+    if (obj.props?.children) {
+      return safeString(obj.props.children);
+    }
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return '[object Object]';
+    }
+  }
+  return String(data);
+}
+
+function detectIntent(query: string): string {
+  const lower = query.toLowerCase();
+  if (/generate image|create image|draw|paint|render image|make an image/.test(lower)) return 'image';
+  if (/generate video|create video|animate|make video|render video/.test(lower)) return 'video';
+  if (/lead|prospect|find customers|generate leads|sales|b2b|find contacts/.test(lower)) return 'setu';
+  if (/explain|analyze|why|how|what if|compare|detail|thorough|comprehensive/.test(lower) || query.length > 80) {
+    return 'deep';
+  }
+  return 'chat';
+}
+
+export async function POST(req: NextRequest) {
+  const encoder = new TextEncoder();
+  const responseStream = new TransformStream();
+  const writer = responseStream.writable.getWriter();
+
+  const send = async (data: any) => {
+    try {
+      await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    } catch (err) {
+      console.error('[API] Failed to send event:', err);
+    }
+  };
+
+  const response = new Response(responseStream.readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+
+  (async () => {
+    try {
+      console.log('[API] 📨 Request received (Node.js)');
+      const body = await req.json().catch(() => null);
+      if (!body || !body.messages || !Array.isArray(body.messages)) {
+        await send({ type: 'error', message: 'Invalid request.' });
+        await writer.close();
+        return;
+      }
+
+      const { messages, deep, setu, search, options, userId, sessionId } = body;
+      const lastUser = messages.filter((m: any) => m.role === 'user').pop();
+      const query = lastUser?.content || '';
+
+      // If DeepThink is enabled, auto-enable search
+      const effectiveSearch = deep === true || search === true;
+
+      let detectedIntent: string;
+      if (deep === true) {
+        detectedIntent = 'deep';
+      } else if (setu === true) {
+        detectedIntent = 'setu';
+      } else {
+        detectedIntent = detectIntent(query);
+      }
+
+      console.log(`[API] 🎯 Intent: ${detectedIntent} (deep=${deep}, setu=${setu}, search=${effectiveSearch})`);
+      await send({ type: 'status', message: `Processing with ${detectedIntent}...` });
+
+      // ─── DeepThink ──────────────────────────────────────────────────
+      if (detectedIntent === 'deep') {
+        console.log('[API] 🧠 Running DeepThink with traces...');
+        const deepThink = new EnhancedDeepThink();
+        const reasoningResult = await deepThink.reason(query, {
+          num_paths: 3,
+          consensus_threshold: 0.6,
+          stream: false,
+          useWeb: effectiveSearch,
+          onTrace: async (step) => {
+            // Send trace events to client in real-time
+            await send({ type: 'trace', step });
+          },
+          onReasoning: (path) => {
+            // Optionally send partial reasoning
+          },
+        });
+
+        // Send final reasoning and answer
+        await send({ type: 'reasoning', content: reasoningResult.reasoning });
+        await send({ type: 'content', content: safeString(reasoningResult.final_answer) });
+        await send({ type: 'complete' });
+        await writer.close();
+        return;
+      }
+
+      // ─── Other intents (SETU, Image, Video, Chat) ──────────────────
+      // ... (keep existing implementations)
+      
+    } catch (error: any) {
+      console.error('[API] 💥 Unhandled error:', error);
+      await send({ type: 'error', message: 'An error occurred. Please try again.' });
+      await writer.close();
+    }
+  })();
+
+  return response;
+}

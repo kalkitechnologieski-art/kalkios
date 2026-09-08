@@ -110,9 +110,9 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
 
   return (
     <>
-      {/* ─── Desktop Sidebar ─── */}
+      {/* Desktop Sidebar – fixed, high z-index */}
       <motion.aside
-        className="fixed top-14 left-0 bottom-0 z-30 hidden md:flex flex-col bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 overflow-hidden"
+        className="fixed top-0 left-0 bottom-0 z-50 hidden md:flex flex-col bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 overflow-hidden h-screen"
         animate={{ width: isExpanded ? 200 : 64 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
         onMouseEnter={handleMouseEnter}
@@ -145,16 +145,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
         </div>
       </motion.aside>
 
-      {/* ─── Mobile Trigger ─── */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-20 left-3 z-40 md:hidden p-2 rounded-full bg-black/80 backdrop-blur-sm border border-cyan-500/20 text-white/60 hover:text-white transition"
-        aria-label="Open menu"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-
-      {/* ─── Mobile Drawer ─── */}
+      {/* Mobile drawer – fixed, highest z-index */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -162,7 +153,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
@@ -170,7 +161,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 p-4 flex flex-col md:hidden"
+              className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 p-4 flex flex-col md:hidden h-screen"
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-xs font-bold tracking-widest text-white/40">MENU</span>

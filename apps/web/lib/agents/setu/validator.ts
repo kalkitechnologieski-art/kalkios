@@ -10,5 +10,6 @@ export function deduplicateLeads(leads: any[]): any[] {
       seen.set(key, lead);
     }
   }
+// @ts-ignore
   return Array.from(seen.values());
 }

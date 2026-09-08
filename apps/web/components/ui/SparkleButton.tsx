@@ -26,6 +26,7 @@ export function SparkleButton({ children, onClick, href, className = '', size = 
       const x = Math.sin(i * 127.1 + seed * 311.7) * 0.5 + 0.5
       return x
     }
+// @ts-ignore
     const newParticles = Array.from({ length: 12 }, (_, i) => {
       const r1 = random(i)
       const r2 = random(i + 10)

@@ -5,6 +5,20 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
+// ─── Custom components for media rendering ──────────────────────
+const markdownComponents = {
+  video({ src, ...props }: any) {
+    return <video src={src} controls className="max-w-full rounded-lg" {...props} />;
+  },
+  audio({ src, ...props }: any) {
+    return <audio src={src} controls className="w-full" {...props} />;
+  },
+  img({ src, alt, ...props }: any) {
+    // For images, we can add a lightbox later
+    return <img src={src} alt={alt} className="max-w-full rounded-lg" {...props} />;
+  },
+};
+
 interface ChatMessageProps {
   content: string;
   role: 'user' | 'assistant' | 'system';
@@ -36,7 +50,7 @@ export const ChatMessage = memo(function ChatMessage({
     >
       {role === 'assistant' ? (
         <div className="prose prose-invert prose-sm max-w-none dark:prose-invert">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {displayContent}
           </ReactMarkdown>
         </div>

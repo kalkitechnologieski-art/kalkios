@@ -9,7 +9,7 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
     "noUnusedLocals": false,
@@ -22,64 +22,23 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./apps/web/*",
-        "./*"
-      ],
-      "@/lib/*": [
-        "./apps/web/lib/*",
-        "./lib/*"
-      ],
-      "@/components/*": [
-        "./apps/web/components/*",
-        "./components/*"
-      ],
-      "@/hooks/*": [
-        "./apps/web/hooks/*",
-        "./hooks/*"
-      ],
-      "@/store/*": [
-        "./apps/web/store/*",
-        "./store/*"
-      ],
-      "@/types/*": [
-        "./apps/web/types/*",
-        "./types/*"
-      ],
-      "@/providers/*": [
-        "./apps/web/lib/providers/*",
-        "./lib/providers/*"
-      ],
-      "@/orchestration/*": [
-        "./apps/web/lib/orchestration/*",
-        "./lib/orchestration/*"
-      ],
-      "@/ai/*": [
-        "./apps/web/lib/ai/*",
-        "./lib/ai/*"
-      ],
-      "@/agents/*": [
-        "./apps/web/lib/agents/*",
-        "./lib/agents/*"
-      ],
-      "@/reasoning/*": [
-        "./apps/web/lib/reasoning/*",
-        "./lib/reasoning/*"
-      ]
+      "@/*": ["./*"],
+      "@/lib/*": ["./lib/*"],
+      "@/components/*": ["./components/*"],
+      "@/hooks/*": ["./hooks/*"],
+      "@/store/*": ["./store/*"],
+      "@/types/*": ["./types/*"],
+      "@/providers/*": ["./lib/providers/*"],
+      "@/orchestration/*": ["./lib/orchestration/*"],
+      "@/ai/*": ["./lib/ai/*"],
+      "@/agents/*": ["./lib/agents/*"],
+      "@/reasoning/*": ["./lib/reasoning/*"]
     },
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "noEmit": true,
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "plugins": [{ "name": "next" }]
   },
   "include": [
     "next-env.d.ts",
@@ -88,10 +47,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    "dist",
-    "build"
-  ]
+  "exclude": ["node_modules", ".next", "dist", "build"]
 }

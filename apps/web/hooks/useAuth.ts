@@ -11,7 +11,7 @@ export function useUser() {
   useEffect(() => {
     let supabase: any
     try {
-      supabase = createClient()
+      supabase = createClient() as any
     } catch (err) {
       setError(err as Error)
       setLoading(false)

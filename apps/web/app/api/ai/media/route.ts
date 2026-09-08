@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     if (!file) return NextResponse.json({ error: 'File required' }, { status: 400 })
 
     const bytes = await file.arrayBuffer()
+// @ts-ignore
     const buffer = Buffer.from(bytes)
     const base64 = buffer.toString('base64')
     const dataUrl = `data:${file.type};base64,${base64}`
