@@ -36,6 +36,12 @@ export default function ChatClient() {
     quality: 'standard',
     style: 'photorealistic',
   });
+  const [videoSettings, setVideoSettings] = useState({
+    resolution: '720P',
+    duration: '5',
+    aspectRatio: '16:9',
+    quality: 'balanced',
+  });
   const [mounted, setMounted] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
@@ -72,14 +78,39 @@ export default function ChatClient() {
       }
 
       if (mode === 'video') {
-        const enhancedPrompt = `Generate video: ${text}`;
+        const enhancedPrompt = `Generate video: ${text} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
         await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false });
         return;
       }
 
       await sendMessage(text, { deep: true, setu: setuMode, search: searchMode });
     },
-    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings]
+    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings, videoSettings]
+  );
+
+  // ─── Handle Image/Video Edit: regenerate with new prompt ────────
+  const handleEdit = useCallback(
+    async (messageId: string, newPrompt: string) => {
+      const originalMsg = messages.find(m => m.id === messageId);
+      if (!originalMsg) return;
+
+      // Find the user message that preceded this assistant message
+      const userMsgIndex = messages.findIndex(m => m.id === messageId) - 1;
+      if (userMsgIndex < 0) return;
+      const userMsg = messages[userMsgIndex];
+      if (!userMsg || userMsg.role !== 'user') return;
+
+      // Determine if it's an image or video
+      const isImage = originalMsg.content.includes('![');
+      if (isImage) {
+        const fullPrompt = `Generate image: ${newPrompt} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
+        await sendMessage(fullPrompt, { deep: true, setu: false, search: false, image: true });
+      } else {
+        const fullPrompt = `Generate video: ${newPrompt} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
+        await sendMessage(fullPrompt, { deep: true, setu: false, search: false });
+      }
+    },
+    [sendMessage, messages, imageSettings, videoSettings]
   );
 
   const handleModeToggle = (newMode: 'chat' | 'image' | 'video') => {
@@ -259,6 +290,73 @@ export default function ChatClient() {
     </motion.div>
   );
 
+  const VideoSettingsPanel = () => (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className="bg-white/5 border border-cyan-500/10 rounded-xl p-3 mb-2 overflow-hidden"
+    >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Resolution</label>
+          <select
+            value={videoSettings.resolution}
+            onChange={(e) => setVideoSettings(prev => ({ ...prev, resolution: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="720P">720P</option>
+            <option value="1080P">1080P</option>
+            <option value="2K">2K</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Duration (s)</label>
+          <select
+            value={videoSettings.duration}
+            onChange={(e) => setVideoSettings(prev => ({ ...prev, duration: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="4">4s</option>
+            <option value="5">5s</option>
+            <option value="6">6s</option>
+            <option value="7">7s</option>
+            <option value="8">8s</option>
+            <option value="9">9s</option>
+            <option value="10">10s</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Aspect Ratio</label>
+          <select
+            value={videoSettings.aspectRatio}
+            onChange={(e) => setVideoSettings(prev => ({ ...prev, aspectRatio: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="1:1">1:1</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="21:9">21:9</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Quality</label>
+          <select
+            value={videoSettings.quality}
+            onChange={(e) => setVideoSettings(prev => ({ ...prev, quality: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="speed">Speed</option>
+            <option value="balanced">Balanced</option>
+            <option value="quality">Quality</option>
+          </select>
+        </div>
+      </div>
+    </motion.div>
+  );
+
   return (
     <div className="chat-fullscreen relative">
       <GradientGlowBackground isThinking={isLoading} />
@@ -319,12 +417,15 @@ export default function ChatClient() {
 
       <AnimatePresence>
         {mode === 'image' && <ImageSettingsPanel />}
+        {mode === 'video' && <VideoSettingsPanel />}
       </AnimatePresence>
 
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
             const contentStr = typeof msg.content === 'string' ? msg.content : String(msg.content);
+            const isImageMessage = msg.role === 'assistant' && contentStr.includes('![');
+            const isVideoMessage = msg.role === 'assistant' && contentStr.includes('<video');
 
             return (
               <motion.div
@@ -346,6 +447,8 @@ export default function ChatClient() {
                     role={msg.role}
                     timestamp={new Date()}
                     isStreaming={msg.isStreaming}
+                    onEdit={(isImageMessage || isVideoMessage) ? (newPrompt: string) => handleEdit(msg.id, newPrompt) : undefined}
+                    messageId={msg.id}
                   />
                 )}
 

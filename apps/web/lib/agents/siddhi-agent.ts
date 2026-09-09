@@ -79,8 +79,9 @@ Rules:
     setu?: boolean;
     search?: boolean;
     image?: boolean;
+    video?: boolean;
   }): Promise<any> {
-    const { messages, userId, stream = true, deep = true, setu = false, search = true, image = false } = request;
+    const { messages, userId, stream = true, deep = true, setu = false, search = true, image = false, video = false } = request;
 
     const lastUser = messages.filter((m: any) => m.role === 'user').pop();
     const query = lastUser?.content || '';
@@ -89,13 +90,15 @@ Rules:
     let intent = this.detectIntent(query);
     if (image) {
       intent = 'image';
+    } else if (video) {
+      intent = 'video';
     } else if (setu) {
       intent = 'setu';
     } else if (deep) {
       intent = 'deep_think';
     }
 
-    logger.info(`[SiddhiAgent] Intent: ${intent} (image=${image}, setu=${setu}, deep=${deep})`);
+    logger.info(`[SiddhiAgent] Intent: ${intent} (image=${image}, video=${video}, setu=${setu}, deep=${deep})`);
 
     try {
       switch (intent) {
@@ -121,7 +124,7 @@ Rules:
   private detectIntent(query: string): string {
     const lower = query.toLowerCase();
     if (/generate image|create image|draw|paint|render|make an image/.test(lower)) return 'image';
-    if (/generate video|create video|animate|make video|render video/.test(lower)) return 'video';
+    if (/generate video|create video|animate|make video|render video|video of|video about/.test(lower)) return 'video';
     if (/lead|prospect|find customers|generate leads|sales|b2b|find contacts/.test(lower)) return 'setu';
     return 'deep_think';
   }
@@ -177,11 +180,21 @@ Rules:
   }
 
   private async handleVideo(query: string, stream?: boolean) {
+    logger.info('[SiddhiAgent] Generating video with progress...');
+    const progressEvents: any[] = [];
+    const onProgress = stream ? (ev: any) => progressEvents.push(ev) : undefined;
+
     const result = await this.videoGen.generate({
       prompt: query,
       quality: 'balanced',
       cache: true,
-    });
-    return { videoUrl: result.url, provider: result.provider, taskId: result.taskId };
+    }, onProgress);
+
+    return {
+      videoUrl: result.url,
+      provider: result.provider,
+      taskId: result.taskId,
+      progress: stream ? progressEvents : undefined,
+    };
   }
 }

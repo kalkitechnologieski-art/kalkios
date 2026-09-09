@@ -1,3 +1,4 @@
+// lib/providers/agnes/client.ts
 import { RateLimiter } from '../../orchestration/rate-limiter';
 import { CircuitBreaker } from '../../orchestration/circuit-breaker';
 
@@ -11,7 +12,7 @@ export class AgnesClient {
   private maxRetries = 3;
   private baseDelay = 1000;
 
-  private async request(endpoint: string, body: any, timeout = 30000) {
+  private async request(endpoint: string, body: any, timeout = 60000) {
     console.log(`[Agnes] Request to ${endpoint}`);
     if (!AGNES_API_KEY) {
       console.error('[Agnes] No API key');
@@ -45,11 +46,10 @@ export class AgnesClient {
         if (!response.ok) {
           const text = await response.text();
           if (response.status === 429 || response.status >= 500) {
-            // Retryable error
             console.warn(`[Agnes] Retryable error ${response.status} (attempt ${attempt+1}/${this.maxRetries}): ${text}`);
             attempt++;
             await this.sleep(delay);
-            delay *= 2; // exponential backoff
+            delay *= 2;
             continue;
           }
           console.error(`[Agnes] HTTP ${response.status}: ${text}`);
@@ -80,7 +80,6 @@ export class AgnesClient {
   }
 
   async chatStream(body: any) {
-    // Streaming doesn't retry because we cannot retry a stream easily.
     if (!AGNES_API_KEY) throw new Error('AGNES_API_KEY not set');
     if (this.circuitBreaker.isOpen(this.provider)) {
       throw new Error(`Circuit breaker open for ${this.provider}`);
@@ -107,12 +106,14 @@ export class AgnesClient {
   }
 
   async image(body: any) {
-    // Image generation – use retry logic
     return this.request('images/generations', body);
   }
 
   async video(body: any) {
-    // Video generation – async, but request can retry
+    if (!body.model) body.model = 'agnes-video-2.5';
+    if (body.seconds && typeof body.seconds !== 'string') {
+      body.seconds = String(body.seconds);
+    }
     return this.request('videos', body);
   }
 
