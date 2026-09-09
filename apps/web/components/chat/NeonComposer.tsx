@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { ImageIcon, Video, Search, Brain, X, Loader2, Paperclip, Send } from 'lucide-react'
+import { ImageIcon, Video, Search, Brain, X, Loader2, Paperclip, Send, Sparkles } from 'lucide-react'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CosmicPromptBar } from '@/components/ui/CosmicPromptBar'
@@ -20,6 +20,7 @@ interface NeonComposerProps {
   setIsSearchMode: (val: boolean) => void
   onClear?: () => void
   className?: string
+  imageSettings?: any // optional, not used directly
 }
 
 export function NeonComposer({
@@ -35,6 +36,7 @@ export function NeonComposer({
   setIsSearchMode,
   onClear,
   className = '',
+  imageSettings,
 }: NeonComposerProps) {
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -62,6 +64,12 @@ export function NeonComposer({
     setPreviewUrl(null)
   }
 
+  const getPlaceholder = () => {
+    if (mode === 'image') return '🎨 Describe the image you want to generate...'
+    if (mode === 'video') return '🎬 Describe the video you want to create...'
+    return '>_ ask Siddhi anything...'
+  }
+
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
       <div className="flex flex-wrap items-center gap-3 px-1">
@@ -80,26 +88,41 @@ export function NeonComposer({
           colorScheme="red"
         />
         <div className="h-6 w-px bg-white/10 hidden sm:block" />
-        <button
-          onClick={() => setIsSearchMode(!isSearchMode)}
-          className={`p-1.5 rounded-lg transition ${isSearchMode ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'text-white/40 hover:text-white/70'}`}
-          title="Web Search"
-        >
-          <Search className="w-4 h-4" />
-        </button>
+
         <button
           onClick={() => onModeChange(mode === 'image' ? 'chat' : 'image')}
-          className={`p-1.5 rounded-lg transition ${mode === 'image' ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30' : 'text-white/40 hover:text-white/70'}`}
+          className={`p-1.5 rounded-lg transition flex items-center gap-1 ${
+            mode === 'image'
+              ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30'
+              : 'text-white/40 hover:text-white/70'
+          }`}
           title="Image Mode"
         >
           <ImageIcon className="w-4 h-4" />
+          <span className="text-[10px] font-mono hidden sm:inline">Image</span>
         </button>
         <button
           onClick={() => onModeChange(mode === 'video' ? 'chat' : 'video')}
-          className={`p-1.5 rounded-lg transition ${mode === 'video' ? 'bg-red-600/30 text-red-400 border border-red-500/30' : 'text-white/40 hover:text-white/70'}`}
+          className={`p-1.5 rounded-lg transition flex items-center gap-1 ${
+            mode === 'video'
+              ? 'bg-red-600/30 text-red-400 border border-red-500/30'
+              : 'text-white/40 hover:text-white/70'
+          }`}
           title="Video Mode"
         >
           <Video className="w-4 h-4" />
+          <span className="text-[10px] font-mono hidden sm:inline">Video</span>
+        </button>
+        <button
+          onClick={() => setIsSearchMode(!isSearchMode)}
+          className={`p-1.5 rounded-lg transition ${
+            isSearchMode
+              ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30'
+              : 'text-white/40 hover:text-white/70'
+          }`}
+          title="Web Search"
+        >
+          <Search className="w-4 h-4" />
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -150,7 +173,7 @@ export function NeonComposer({
       <CosmicPromptBar
         onSend={handleSend}
         isLoading={isLoading}
-        placeholder={mode === 'image' ? 'Describe the image...' : mode === 'video' ? 'Describe the video...' : 'Ask Siddhi anything...'}
+        placeholder={getPlaceholder()}
         mode={mode}
       />
     </div>

@@ -9,7 +9,7 @@ import { ThinkingTrace } from '@/components/chat/ThinkingTrace';
 import { SetuProgress } from '@/components/chat/SetuProgress';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
-import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TraceStep {
@@ -27,7 +27,6 @@ interface TraceStep {
 export default function ChatClient() {
   const { messages, setMessages, isLoading, error, queueStatus, sendMessage, clearError } = useStreamingChat();
   const { loadMemory, saveMemory } = useMemory();
-  const [deepThink, setDeepThink] = useState(true);
   const [setuMode, setSetuMode] = useState(false);
   const [searchMode, setSearchMode] = useState(true);
   const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat');
@@ -68,19 +67,19 @@ export default function ChatClient() {
 
       if (mode === 'image') {
         const enhancedPrompt = `Generate image: ${text} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
-        await sendMessage(enhancedPrompt, { deep: false, setu: false, image: true });
+        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false, image: true });
         return;
       }
 
       if (mode === 'video') {
         const enhancedPrompt = `Generate video: ${text}`;
-        await sendMessage(enhancedPrompt, { deep: false, setu: false });
+        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false });
         return;
       }
 
-      await sendMessage(text, { deep: true, setu: setuMode, search: true });
+      await sendMessage(text, { deep: true, setu: setuMode, search: searchMode });
     },
-    [sendMessage, isLoading, setuMode, mode, imageSettings]
+    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings]
   );
 
   const handleModeToggle = (newMode: 'chat' | 'image' | 'video') => {
@@ -176,6 +175,27 @@ export default function ChatClient() {
     );
   };
 
+  const DeepThinkIndicator = () => (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-1.5 px-2 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full"
+    >
+      <motion.div
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+      >
+        <Brain className="w-3.5 h-3.5 text-purple-400" />
+      </motion.div>
+      <span className="text-[9px] font-mono text-purple-400/80 tracking-wider">DEEPTHINK</span>
+      <motion.span
+        className="w-1.5 h-1.5 rounded-full bg-purple-400"
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1.2, repeat: Infinity }}
+      />
+    </motion.div>
+  );
+
   const ImageSettingsPanel = () => (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -255,8 +275,10 @@ export default function ChatClient() {
             Online
           </span>
         </div>
+
         <div className="flex items-center gap-1 flex-wrap">
           <QueueStatus />
+          <DeepThinkIndicator />
           <button
             onClick={() => handleModeToggle('image')}
             className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
@@ -280,18 +302,6 @@ export default function ChatClient() {
           >
             <Video className="w-4 h-4" />
             <span className="text-[10px] font-mono hidden sm:inline">Video</span>
-          </button>
-          <button
-            onClick={() => setDeepThink(!deepThink)}
-            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
-              deepThink
-                ? 'bg-purple-600/30 text-purple-400 border border-purple-500/30 shadow-glow'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-            title="DeepThink"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="text-[10px] font-mono hidden sm:inline">Deep</span>
           </button>
           <button
             onClick={() => setSetuMode(!setuMode)}
@@ -409,14 +419,13 @@ export default function ChatClient() {
           isLoading={isLoading}
           mode={mode}
           onModeChange={setMode}
-          isDeepThink={deepThink}
-          setIsDeepThink={setDeepThink}
+          isDeepThink={true}
+          setIsDeepThink={() => {}}
           isSetuMode={setuMode}
           setIsSetuMode={setSetuMode}
           isSearchMode={searchMode}
           setIsSearchMode={setSearchMode}
           onClear={() => {}}
-          imageSettings={imageSettings}
         />
       </div>
     </div>
