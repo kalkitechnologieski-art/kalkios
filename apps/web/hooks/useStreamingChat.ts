@@ -1,36 +1,54 @@
-import { useState, useCallback, useRef } from "react";
+// hooks/useStreamingChat.ts
+import { useState, useCallback, useRef } from 'react';
 
-// ─── Safe content extractor ──────────────────────────────────────────────
-function safeContent(data: unknown): string {
-  if (typeof data === 'string') return data;
-  if (data && typeof data === 'object') {
-    const obj = data as any;
-    if (obj.props?.dangerouslySetInnerHTML?.__html) {
-      return String(obj.props.dangerouslySetInnerHTML.__html);
-    }
-    if (obj.props?.children) {
-      return String(obj.props.children);
-    }
-    try {
-      return JSON.stringify(data);
-    } catch {
-      return '[object Object]';
-    }
-  }
-  return String(data);
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  reasoning?: string;
+  isStreaming?: boolean;
+  tokens?: number;
+  provider?: string;
+  traces?: any[];
+  leads?: any[];
+  csv?: string;
+  questions?: string[];
+  progress?: number;
+  progressMessage?: string;
+}
+
+interface QueueStatus {
+  pending: number;
+  active: number;
+  completed: number;
+  failed: number;
 }
 
 export function useStreamingChat() {
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus>({ pending: 0, active: 0, completed: 0, failed: 0 });
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const sendMessage = useCallback(async (content: string, options: { deep?: boolean; setu?: boolean; search?: boolean; image?: string } = {}) => {
+  const sendMessage = useCallback(async (
+    content: string,
+    options: { deep?: boolean; setu?: boolean; search?: boolean; image?: boolean } = {}
+  ) => {
     setError(null);
-    const userMsg = { id: crypto.randomUUID(), role: 'user', content, isStreaming: false };
+    const userMsg = { id: crypto.randomUUID(), role: 'user' as const, content, isStreaming: false };
     setMessages(prev => [...prev, userMsg]);
-    const assistantMsg = { id: crypto.randomUUID(), role: 'assistant', content: '', reasoning: '', isStreaming: true, traces: [] };
+
+    const assistantMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+      reasoning: '',
+      isStreaming: true,
+      traces: [],
+      progress: 0,
+      progressMessage: 'Initializing...',
+    };
     setMessages(prev => [...prev, assistantMsg]);
 
     setIsLoading(true);
@@ -42,25 +60,22 @@ export function useStreamingChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, userMsg],
-          deep: options.deep || false,
+          deep: options.deep ?? true,
           setu: options.setu || false,
-          search: options.search || false,
-          image: options.image,
+          search: options.search ?? true,
+          image: options.image || false,
         }),
         signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error:', response.status, errorText);
-        setError('Something went wrong. Please try again.');
-        return;
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let fullContent = '', fullReasoning = '';
       let buffer = '';
+      let fullContent = '', fullReasoning = '';
       let currentTraces: any[] = [];
 
       while (reader) {
@@ -76,11 +91,22 @@ export function useStreamingChat() {
             if (data === '[DONE]') continue;
             try {
               const parsed = JSON.parse(data);
+
               if (parsed.type === 'error') {
                 setError(parsed.message);
                 continue;
               }
-              // ─── Trace events ──────────────────────────────────────────
+
+              if (parsed.type === 'queue_status') {
+                setQueueStatus({
+                  pending: parsed.pending || 0,
+                  active: parsed.active || 0,
+                  completed: parsed.completed || 0,
+                  failed: parsed.failed || 0,
+                });
+                continue;
+              }
+
               if (parsed.type === 'trace' && parsed.step) {
                 currentTraces.push(parsed.step);
                 setMessages(prev => prev.map(m =>
@@ -88,53 +114,51 @@ export function useStreamingChat() {
                 ));
                 continue;
               }
-              // ─── Content events ──────────────────────────────────────
+
               if (parsed.type === 'content' && parsed.content) {
-                fullContent += safeContent(parsed.content);
+                fullContent += String(parsed.content);
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, content: fullContent } : m
                 ));
               }
-              // ─── Reasoning events ──────────────────────────────────
+
               if (parsed.type === 'reasoning' && parsed.content) {
-                fullReasoning += safeContent(parsed.content);
+                fullReasoning += String(parsed.content);
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, reasoning: fullReasoning } : m
                 ));
               }
-              // ─── Leads events ──────────────────────────────────────
+
               if (parsed.type === 'leads') {
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, leads: parsed.leads, csv: parsed.csv } : m
                 ));
               }
-              // ─── Questions events ──────────────────────────────────
+
               if (parsed.type === 'questions') {
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, questions: parsed.questions } : m
                 ));
               }
-              // ─── Image events ──────────────────────────────────────
+
               if (parsed.type === 'image') {
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, content: `![Generated Image](${parsed.url})` } : m
                 ));
               }
-              // ─── Video events ──────────────────────────────────────
+
               if (parsed.type === 'video') {
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, content: `<video src="${parsed.url}" controls style="max-width:100%;border-radius:12px;" />` } : m
                 ));
               }
-              // ─── Complete event ────────────────────────────────────
+
               if (parsed.type === 'complete') {
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsg.id ? { ...m, isStreaming: false } : m
                 ));
               }
-            } catch (e) {
-              console.warn('Failed to parse SSE data:', data, e);
-            }
+            } catch (_) {}
           }
         }
       }
@@ -158,5 +182,5 @@ export function useStreamingChat() {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { messages, isLoading, error, sendMessage, abort, clearError };
+  return { messages, setMessages, isLoading, error, queueStatus, sendMessage, abort, clearError };
 }

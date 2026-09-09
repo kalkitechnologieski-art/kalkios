@@ -6,25 +6,12 @@ import { GroqClient } from '@/lib/providers/groq/client';
 import { imageQueue } from '@/lib/ai/queue';
 import { logger } from '@/lib/utils/logger';
 
-interface AnalyzedPrompt {
-  original: string;
-  enhanced: string;
-  style: string;
-  mood: string;
-  subject: string;
-  negative_prompt?: string;
-  size: '1K' | '2K' | '3K' | '4K';
-  ratio: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '21:9';
-  quality: 'low' | 'standard' | 'high' | 'ultra';
-  steps: number;
+export interface ImageProgressEvent {
+  type: 'queued' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  message?: string;
+  taskId?: string;
 }
-
-const QUALITY_CONFIGS = {
-  low: { size: '1K' as const, steps: 10, model: 'agnes-image-2.1-flash' },
-  standard: { size: '2K' as const, steps: 25, model: 'agnes-image-2.1-flash' },
-  high: { size: '3K' as const, steps: 40, model: 'agnes-image-2.1-flash' },
-  ultra: { size: '4K' as const, steps: 60, model: 'agnes-image-2.1-flash' },
-};
 
 export class EnhancedImageGenerator {
   private agnes: AgnesClient;
@@ -37,132 +24,105 @@ export class EnhancedImageGenerator {
     this.isServer = typeof window === 'undefined';
   }
 
-  /**
-   * Analyze and enhance the prompt using Groq
-   */
-  private async analyzePrompt(prompt: string): Promise<AnalyzedPrompt> {
-    const analysisPrompt = `Analyze this image generation prompt and extract structured data.
-Return ONLY valid JSON with keys: style, mood, subject, negative_prompt (or null), enhanced_prompt (a detailed, expanded version of the prompt).
-
-Original prompt: "${prompt}"`;
-
+  private async analyzePrompt(prompt: string): Promise<string> {
     try {
       const response = await this.groq.chat({
-        messages: [{ role: 'user', content: analysisPrompt }],
+        messages: [{
+          role: 'user',
+          content: `Expand this short image prompt into a detailed, high-quality description. Include lighting, composition, colors, and mood. Return only the expanded prompt:\n\n"${prompt}"`
+        }],
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.3,
-        max_tokens: 300,
+        temperature: 0.5,
+        max_tokens: 200,
         stream: false,
       });
-
-      const content = response?.choices?.[0]?.message?.content || '{}';
-      const clean = content.replace(/```json/g, '').replace(/```/g, '').trim();
-      const analyzed = JSON.parse(clean);
-
-      return {
-        original: prompt,
-        enhanced: analyzed.enhanced_prompt || prompt,
-        style: analyzed.style || 'photorealistic',
-        mood: analyzed.mood || 'neutral',
-        subject: analyzed.subject || 'scene',
-        negative_prompt: analyzed.negative_prompt || undefined,
-        size: '2K',
-        ratio: '16:9',
-        quality: 'standard',
-        steps: 25,
-      };
-    } catch (error) {
-      logger.warn('[Image] Prompt analysis failed, using fallback:', error);
-      return {
-        original: prompt,
-        enhanced: prompt,
-        style: 'photorealistic',
-        mood: 'neutral',
-        subject: 'scene',
-        negative_prompt: undefined,
-        size: '2K',
-        ratio: '16:9',
-        quality: 'standard',
-        steps: 25,
-      };
+      return response?.choices?.[0]?.message?.content?.trim() || prompt;
+    } catch {
+      return prompt;
     }
   }
 
-  /**
-   * Generate image with queue and caching
-   */
-  async generate(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
+  async generate(
+    options: ImageGenerationOptions,
+    onProgress?: (event: ImageProgressEvent) => void
+  ): Promise<ImageGenerationResult> {
     const start = Date.now();
-
-    // 1. Analyze prompt (unless already enhanced)
-    const analyzed = await this.analyzePrompt(options.prompt);
-
-    const quality = options.quality || analyzed.quality || 'standard';
-    const config = QUALITY_CONFIGS[quality];
-    const size = options.size || config.size;
-    const steps = options.steps || config.steps;
+    const size = options.size || '2K';
     const ratio = options.ratio || '16:9';
+    const quality = options.quality || 'standard';
+
+    // 1. Analyze prompt
+    const enhancedPrompt = options._analyzed ? options.prompt : await this.analyzePrompt(options.prompt);
+    onProgress?.({ type: 'processing', progress: 20, message: 'Enhancing prompt...' });
 
     // 2. Check cache
     const cacheKey = this.getCacheKey(options.prompt, size, ratio);
     if (!this.isServer && options.cache !== false) {
       const cached = imageCache.get(cacheKey);
       if (cached) {
+        onProgress?.({ type: 'completed', progress: 100, message: 'From cache!' });
         return {
           url: cached,
           provider: 'cache',
           size,
           ratio,
           quality,
-          steps,
+          steps: options.steps || 25,
           cache_hit: true,
           time_ms: Date.now() - start,
         };
       }
     }
 
-    // 3. Queue the generation
-    const finalPrompt = analyzed.enhanced;
-    const negativePrompt = options.negative_prompt || analyzed.negative_prompt;
+    onProgress?.({ type: 'processing', progress: 30, message: 'Queuing generation...' });
 
+    // 3. Queue the generation
     const result = await imageQueue.enqueue({
       type: 'image',
       priority: options.priority || 'normal',
       maxRetries: 3,
       retries: 0,
       execute: async () => {
+        onProgress?.({ type: 'processing', progress: 50, message: 'Generating image...' });
         const body: any = {
-          model: config.model,
-          prompt: finalPrompt,
+          model: 'agnes-image-2.1-flash',
+          prompt: enhancedPrompt,
           size: size,
           ratio: ratio,
-          extra_body: {
-            response_format: 'url',
-          },
+          extra_body: { response_format: 'url' },
         };
-
-        if (negativePrompt) {
-          body.extra_body.negative_prompt = negativePrompt;
-        }
-        if (steps) {
-          body.extra_body.steps = steps;
-        }
-
-        // Image-to-image: provide input image under extra_body.image
-        // According to Agnes API docs: "image | string[] | For image-to-image | Input image array"[reference:4]
+        if (options.negative_prompt) body.extra_body.negative_prompt = options.negative_prompt;
+        if (options.steps) body.extra_body.steps = options.steps;
         if (options.image) {
-          const imageData = typeof options.image === 'string'
-            ? options.image
-            : await this.fileToBase64(options.image);
+          const imageData = typeof options.image === 'string' ? options.image : await this.fileToBase64(options.image);
           body.extra_body.image = [imageData];
         }
 
-        const response = await this.agnes.image(body);
-        const url = response.data?.[0]?.url;
-        if (!url) throw new Error('No image URL returned');
-        return url;
+        // Simulate progress (Agnes doesn't have progress endpoint for images)
+        let progress = 60;
+        const interval = setInterval(() => {
+          progress += 5;
+          if (progress < 95) {
+            onProgress?.({ type: 'processing', progress, message: `Generating... ${progress}%` });
+            imageQueue.updateProgress('image', progress);
+          }
+        }, 500);
+
+        try {
+          const response = await this.agnes.image(body);
+          clearInterval(interval);
+          const url = response.data?.[0]?.url;
+          if (!url) throw new Error('No image URL returned');
+          onProgress?.({ type: 'processing', progress: 95, message: 'Refining...' });
+          return url;
+        } catch (error) {
+          clearInterval(interval);
+          throw error;
+        }
       },
     });
+
+    onProgress?.({ type: 'completed', progress: 100, message: 'Done!' });
 
     // 4. Cache the result
     if (!this.isServer && options.cache !== false) {
@@ -175,7 +135,7 @@ Original prompt: "${prompt}"`;
       size,
       ratio,
       quality,
-      steps,
+      steps: options.steps || 25,
       cache_hit: false,
       time_ms: Date.now() - start,
     };

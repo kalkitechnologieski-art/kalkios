@@ -7,10 +7,9 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { NeonComposer } from '@/components/chat/NeonComposer';
 import { ThinkingTrace } from '@/components/chat/ThinkingTrace';
 import { SetuProgress } from '@/components/chat/SetuProgress';
-import { MediaSettings } from '@/components/chat/MediaSettings';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
-import { Bot } from 'lucide-react';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TraceStep {
@@ -26,39 +25,38 @@ interface TraceStep {
 }
 
 export default function ChatClient() {
-  const { messages, isLoading, error, sendMessage, clearError } = useStreamingChat();
+  const { messages, setMessages, isLoading, error, queueStatus, sendMessage, clearError } = useStreamingChat();
   const { loadMemory, saveMemory } = useMemory();
-  const [deepThink, setDeepThink] = useState(false);
+  const [deepThink, setDeepThink] = useState(true);
   const [setuMode, setSetuMode] = useState(false);
-  const [searchMode, setSearchMode] = useState(false);
+  const [searchMode, setSearchMode] = useState(true);
   const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat');
-  const [mediaSettings, setMediaSettings] = useState<any>(null);
+  const [imageSettings, setImageSettings] = useState({
+    size: '2K',
+    ratio: '16:9',
+    quality: 'standard',
+    style: 'photorealistic',
+  });
   const [mounted, setMounted] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Load saved messages from IndexedDB
   useEffect(() => {
     const load = async () => {
       const saved = await loadMemory();
-      // We assume the parent component manages messages; we'll just log.
-      // In practice, we would set messages via a setter if available.
-      // For now, we keep it as a placeholder.
-      console.log('Loaded memory:', saved?.length || 0, 'messages');
+      if (saved && saved.length > 0) {
+        setMessages(saved);
+      }
+      setMounted(true);
     };
     load();
-  }, [loadMemory]);
+  }, [loadMemory, setMessages]);
 
-  // Save messages whenever they change
   useEffect(() => {
-    if (messages.length > 0) {
+    if (mounted && messages.length > 0) {
       saveMemory(messages);
     }
-  }, [messages, saveMemory]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  }, [messages, mounted, saveMemory]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -67,19 +65,27 @@ export default function ChatClient() {
   const handleSend = useCallback(
     async (text: string, file?: File) => {
       if (!text.trim() || isLoading) return;
-      const useSearch = deepThink || searchMode;
-      await sendMessage(text, { deep: deepThink, setu: setuMode, search: useSearch });
+
+      if (mode === 'image') {
+        const enhancedPrompt = `Generate image: ${text} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
+        await sendMessage(enhancedPrompt, { deep: false, setu: false, image: true });
+        return;
+      }
+
+      if (mode === 'video') {
+        const enhancedPrompt = `Generate video: ${text}`;
+        await sendMessage(enhancedPrompt, { deep: false, setu: false });
+        return;
+      }
+
+      await sendMessage(text, { deep: true, setu: setuMode, search: true });
     },
-    [sendMessage, isLoading, deepThink, setuMode, searchMode]
+    [sendMessage, isLoading, setuMode, mode, imageSettings]
   );
 
-  const handleMediaGenerate = useCallback(
-    async (settings: any) => {
-      const prompt = `Generate ${mode} with settings: ${JSON.stringify(settings)}`;
-      await sendMessage(prompt, { deep: false, setu: false });
-    },
-    [sendMessage, mode]
-  );
+  const handleModeToggle = (newMode: 'chat' | 'image' | 'video') => {
+    setMode(mode === newMode ? 'chat' : newMode);
+  };
 
   if (!mounted) {
     return (
@@ -131,11 +137,112 @@ export default function ChatClient() {
     );
   };
 
+  const QueueStatus = () => {
+    const total = queueStatus.pending + queueStatus.active + queueStatus.completed + queueStatus.failed;
+    if (total === 0) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-cyan-500/10 rounded-full text-[10px] font-mono"
+      >
+        <span className="flex items-center gap-1 text-white/40">
+          <Clock className="w-3 h-3" />
+          Queue
+        </span>
+        {queueStatus.pending > 0 && (
+          <span className="text-yellow-400">{queueStatus.pending} pending</span>
+        )}
+        {queueStatus.active > 0 && (
+          <span className="text-cyan-400 flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {queueStatus.active} active
+          </span>
+        )}
+        {queueStatus.completed > 0 && (
+          <span className="text-green-400 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            {queueStatus.completed}
+          </span>
+        )}
+        {queueStatus.failed > 0 && (
+          <span className="text-red-400 flex items-center gap-1">
+            <XCircle className="w-3 h-3" />
+            {queueStatus.failed}
+          </span>
+        )}
+      </motion.div>
+    );
+  };
+
+  const ImageSettingsPanel = () => (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className="bg-white/5 border border-cyan-500/10 rounded-xl p-3 mb-2 overflow-hidden"
+    >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Size</label>
+          <select
+            value={imageSettings.size}
+            onChange={(e) => setImageSettings(prev => ({ ...prev, size: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="1K">1K</option>
+            <option value="2K">2K</option>
+            <option value="3K">3K</option>
+            <option value="4K">4K</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Ratio</label>
+          <select
+            value={imageSettings.ratio}
+            onChange={(e) => setImageSettings(prev => ({ ...prev, ratio: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="1:1">1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="21:9">21:9</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Quality</label>
+          <select
+            value={imageSettings.quality}
+            onChange={(e) => setImageSettings(prev => ({ ...prev, quality: e.target.value }))}
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+          >
+            <option value="low">Low</option>
+            <option value="standard">Standard</option>
+            <option value="high">High</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-white/40 font-mono block mb-1">Style</label>
+          <input
+            type="text"
+            value={imageSettings.style}
+            onChange={(e) => setImageSettings(prev => ({ ...prev, style: e.target.value }))}
+            placeholder="e.g. cinematic"
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none placeholder-white/20"
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+
   return (
     <div className="chat-fullscreen relative">
       <GradientGlowBackground isThinking={isLoading} />
 
-      {/* Top Bar */}
       <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-wrap gap-2 sticky top-0 bg-black/80 backdrop-blur-sm z-10 py-1">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -148,51 +255,62 @@ export default function ChatClient() {
             Online
           </span>
         </div>
-        <div className="flex gap-1 flex-wrap">
-          <CyberToggle
-            active={deepThink}
+        <div className="flex items-center gap-1 flex-wrap">
+          <QueueStatus />
+          <button
+            onClick={() => handleModeToggle('image')}
+            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
+              mode === 'image'
+                ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30 shadow-glow'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+            title="Image Mode"
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span className="text-[10px] font-mono hidden sm:inline">Image</span>
+          </button>
+          <button
+            onClick={() => handleModeToggle('video')}
+            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
+              mode === 'video'
+                ? 'bg-red-600/30 text-red-400 border border-red-500/30 shadow-glow'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+            title="Video Mode"
+          >
+            <Video className="w-4 h-4" />
+            <span className="text-[10px] font-mono hidden sm:inline">Video</span>
+          </button>
+          <button
             onClick={() => setDeepThink(!deepThink)}
-            label="Deep"
-            color="purple"
-          />
-          <CyberToggle
-            active={setuMode}
+            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
+              deepThink
+                ? 'bg-purple-600/30 text-purple-400 border border-purple-500/30 shadow-glow'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+            title="DeepThink"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="text-[10px] font-mono hidden sm:inline">Deep</span>
+          </button>
+          <button
             onClick={() => setSetuMode(!setuMode)}
-            label="SETU"
-            color="amber"
-          />
-          <CyberToggle
-            active={searchMode}
-            onClick={() => setSearchMode(!searchMode)}
-            label="Search"
-            color="blue"
-          />
-          <CyberToggle
-            active={mode === 'image'}
-            onClick={() => setMode(mode === 'image' ? 'chat' : 'image')}
-            label="Image"
-            color="pink"
-          />
-          <CyberToggle
-            active={mode === 'video'}
-            onClick={() => setMode(mode === 'video' ? 'chat' : 'video')}
-            label="Video"
-            color="red"
-          />
+            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
+              setuMode
+                ? 'bg-amber-600/30 text-amber-400 border border-amber-500/30 shadow-glow'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+            title="SETU Mode"
+          >
+            <span className="text-xs font-bold">SETU</span>
+          </button>
         </div>
       </div>
 
-      {/* Media Settings */}
-      {(mode === 'image' || mode === 'video') && (
-        <MediaSettings
-          mode={mode}
-          onSettingsChange={setMediaSettings}
-          onGenerate={handleMediaGenerate}
-          isLoading={isLoading}
-        />
-      )}
+      <AnimatePresence>
+        {mode === 'image' && <ImageSettingsPanel />}
+      </AnimatePresence>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
@@ -221,7 +339,6 @@ export default function ChatClient() {
                   />
                 )}
 
-                {/* Reasoning trace */}
                 {msg.role === 'assistant' && msg.reasoning && (
                   <div className="ml-12 mt-1">
                     <ThinkingTrace
@@ -234,23 +351,20 @@ export default function ChatClient() {
                   </div>
                 )}
 
-                {/* DeepThink traces */}
                 {msg.role === 'assistant' && msg.traces && msg.traces.length > 0 && (
                   <div className="ml-12 mt-2">{renderTraces(msg.traces)}</div>
                 )}
 
-                {/* SETU leads */}
                 {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
                   <div className="ml-12 mt-2">
                     <SetuProgress
                       leads={msg.leads}
-                      csv={msg.csv}
+                      csv={msg.csv || ''}
                       isLoading={false}
                     />
                   </div>
                 )}
 
-                {/* Clarifying questions */}
                 {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
                   <div className="ml-12 mt-2 bg-white/5 border border-cyan-500/10 rounded-xl p-3">
                     <p className="text-white/60 text-sm font-mono">Please answer:</p>
@@ -289,7 +403,6 @@ export default function ChatClient() {
         <div ref={endRef} />
       </div>
 
-      {/* Input */}
       <div className="chat-input-floating">
         <NeonComposer
           onSend={handleSend}
@@ -303,39 +416,9 @@ export default function ChatClient() {
           isSearchMode={searchMode}
           setIsSearchMode={setSearchMode}
           onClear={() => {}}
+          imageSettings={imageSettings}
         />
       </div>
     </div>
-  );
-}
-
-function CyberToggle({
-  active,
-  onClick,
-  label,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  color: 'purple' | 'amber' | 'blue' | 'pink' | 'red';
-}) {
-  const colors: Record<string, string> = {
-    purple: 'active:bg-purple-600/30 active:text-purple-400 active:border-purple-500/30',
-    amber: 'active:bg-amber-600/30 active:text-amber-400 active:border-amber-500/30',
-    blue: 'active:bg-blue-600/30 active:text-blue-400 active:border-blue-500/30',
-    pink: 'active:bg-pink-600/30 active:text-pink-400 active:border-pink-500/30',
-    red: 'active:bg-red-600/30 active:text-red-400 active:border-red-500/30',
-  };
-  return (
-    <button
-      onClick={onClick}
-      className={`p-1.5 rounded-lg transition-all duration-200 ${
-        active ? colors[color] + ' shadow-glow' : 'text-white/40 hover:text-white/70'
-      }`}
-      title={label}
-    >
-      <span className="text-xs font-mono">{label}</span>
-    </button>
   );
 }

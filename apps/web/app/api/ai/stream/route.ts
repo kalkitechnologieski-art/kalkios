@@ -1,6 +1,7 @@
 // app/api/ai/stream/route.ts
 import { NextRequest } from 'next/server';
 import { SiddhiAgent } from '@/lib/agents/siddhi-agent';
+import { imageQueue, videoQueue } from '@/lib/ai/queue';
 import { logger } from '@/lib/utils/logger';
 
 export const runtime = 'nodejs';
@@ -33,6 +34,16 @@ export async function POST(req: NextRequest) {
       const body = await req.json();
       const { messages, userId, deep = true, setu = false, search = false, image } = body;
 
+      // Send initial queue status
+      const queueStats = imageQueue.getStats();
+      await sendEvent({
+        type: 'queue_status',
+        pending: queueStats.pending,
+        active: queueStats.active,
+        completed: queueStats.completed,
+        failed: queueStats.failed,
+      });
+
       const agent = new SiddhiAgent();
 
       timeoutId = setTimeout(() => {
@@ -42,7 +53,6 @@ export async function POST(req: NextRequest) {
 
       const result = await agent.process({ messages, userId, stream: true, deep, setu, search, image });
 
-      // Emit events based on result structure
       if (result.reasoning) {
         await sendEvent({ type: 'reasoning', content: result.reasoning });
       }
@@ -85,6 +95,16 @@ export async function POST(req: NextRequest) {
           await sendEvent(ev);
         }
       }
+
+      // Send final queue status
+      const finalStats = imageQueue.getStats();
+      await sendEvent({
+        type: 'queue_status',
+        pending: finalStats.pending,
+        active: finalStats.active,
+        completed: finalStats.completed,
+        failed: finalStats.failed,
+      });
 
       await sendEvent({ type: 'complete' });
     } catch (error: any) {

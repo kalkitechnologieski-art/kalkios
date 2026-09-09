@@ -1,9 +1,4 @@
 // hooks/useMemory.ts
-// ──────────────────────────────────────────────────────────────────
-// EXPERT IMPLEMENTATION – Client‑side persistent storage using
-// IndexedDB with localStorage fallback.
-// ──────────────────────────────────────────────────────────────────
-
 import { useCallback } from 'react';
 
 const DB_NAME = 'SiddhiMemory';
@@ -36,7 +31,6 @@ export function useMemory() {
         get.onerror = () => reject(get.error);
       });
     } catch {
-      // Fallback to localStorage
       const raw = localStorage.getItem('siddhi_memory');
       return raw ? JSON.parse(raw) : [];
     }
