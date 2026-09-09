@@ -6,6 +6,8 @@ import { GroqClient } from '@/lib/providers/groq/client';
 import { imageQueue } from '@/lib/ai/queue';
 import { logger } from '@/lib/utils/logger';
 
+const GROQ_MODEL = 'llama-3.1-70b-versatile';
+
 export interface ImageProgressEvent {
   type: 'queued' | 'processing' | 'completed' | 'failed';
   progress: number;
@@ -31,7 +33,7 @@ export class EnhancedImageGenerator {
           role: 'user',
           content: `Expand this short image prompt into a detailed, high-quality description. Include lighting, composition, colors, and mood. Return only the expanded prompt:\n\n"${prompt}"`
         }],
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         temperature: 0.5,
         max_tokens: 200,
         stream: false,
@@ -51,16 +53,15 @@ export class EnhancedImageGenerator {
     const ratio = options.ratio || '16:9';
     const quality = options.quality || 'standard';
 
-    // 1. Analyze prompt
+    onProgress?.({ type: 'processing', progress: 10, message: 'Analyzing prompt...' });
     const enhancedPrompt = options._analyzed ? options.prompt : await this.analyzePrompt(options.prompt);
-    onProgress?.({ type: 'processing', progress: 20, message: 'Enhancing prompt...' });
+    onProgress?.({ type: 'processing', progress: 25, message: 'Prompt enhanced successfully' });
 
-    // 2. Check cache
     const cacheKey = this.getCacheKey(options.prompt, size, ratio);
     if (!this.isServer && options.cache !== false) {
       const cached = imageCache.get(cacheKey);
       if (cached) {
-        onProgress?.({ type: 'completed', progress: 100, message: 'From cache!' });
+        onProgress?.({ type: 'completed', progress: 100, message: '✅ From cache!' });
         return {
           url: cached,
           provider: 'cache',
@@ -76,7 +77,6 @@ export class EnhancedImageGenerator {
 
     onProgress?.({ type: 'processing', progress: 30, message: 'Queuing generation...' });
 
-    // 3. Queue the generation
     const result = await imageQueue.enqueue({
       type: 'image',
       priority: options.priority || 'normal',
@@ -113,7 +113,7 @@ export class EnhancedImageGenerator {
           clearInterval(interval);
           const url = response.data?.[0]?.url;
           if (!url) throw new Error('No image URL returned');
-          onProgress?.({ type: 'processing', progress: 95, message: 'Refining...' });
+          onProgress?.({ type: 'processing', progress: 95, message: '✨ Refining...' });
           return url;
         } catch (error) {
           clearInterval(interval);
@@ -122,9 +122,8 @@ export class EnhancedImageGenerator {
       },
     });
 
-    onProgress?.({ type: 'completed', progress: 100, message: 'Done!' });
+    onProgress?.({ type: 'completed', progress: 100, message: '✅ Done!' });
 
-    // 4. Cache the result
     if (!this.isServer && options.cache !== false) {
       imageCache.set(cacheKey, result);
     }

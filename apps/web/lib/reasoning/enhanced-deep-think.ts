@@ -1,17 +1,13 @@
 // lib/reasoning/enhanced-deep-think.ts
-// ──────────────────────────────────────────────────────────────────
-// ULTIMATE FIX: Import provider CLASSES, not instances.
-// Instantiate them in the constructor.
-// ──────────────────────────────────────────────────────────────────
-
 import { ReasoningPath, ConsensusResult, generateUUID } from '@/lib/ai/enhanced/types';
 import { AgnesClient, GroqClient, ZhipuClient } from '@/lib/providers';
 import { deepThinkCache } from '@/lib/ai/enhanced/cache';
 import { searchWithContext } from '@/lib/search/orchestrator';
 import { logger } from '@/lib/utils/logger';
 
+const GROQ_MODEL = 'llama-3.1-70b-versatile';
+
 export class EnhancedDeepThink {
-  // ---- Provider clients ----
   private agnesClient: AgnesClient;
   private groqClient: GroqClient;
   private zhipuClient: ZhipuClient;
@@ -22,7 +18,6 @@ export class EnhancedDeepThink {
     this.zhipuClient = new ZhipuClient();
   }
 
-  // ---- Cache ----
   cacheGet(query: string): ConsensusResult | null {
     const key = this.getCacheKey(query);
     return deepThinkCache.get(key) || null;
@@ -47,7 +42,6 @@ export class EnhancedDeepThink {
     return Math.abs(hash).toString(36);
   }
 
-  // ---- Main reasoning method ----
   async reason(
     query: string,
     options: {
@@ -119,11 +113,10 @@ export class EnhancedDeepThink {
     return finalResult;
   }
 
-  // ---- Generate reasoning paths ----
   private async generatePaths(query: string, numPaths: number, webContext: string): Promise<ReasoningPath[]> {
     const providers = [
       { client: this.agnesClient, model: 'agnes-2.0-flash', temp: 0.3, name: 'agnes' },
-      { client: this.groqClient, model: 'llama-3.3-70b-versatile', temp: 0.5, name: 'groq' },
+      { client: this.groqClient, model: GROQ_MODEL, temp: 0.5, name: 'groq' },
       { client: this.zhipuClient, model: 'glm-4.7-flash', temp: 0.7, name: 'zhipu' },
     ].slice(0, numPaths);
 
@@ -152,7 +145,6 @@ ${webContext}`;
         if (p.name === 'zhipu') body.thinking = { type: 'enabled' };
 
         const response = await p.client.chat(body);
-        // Safe access with fallback
         const content = response?.choices?.[0]?.message?.content ?? '';
         const reasoning = response?.choices?.[0]?.message?.reasoning_content ?? '';
 
@@ -203,7 +195,7 @@ Return JSON with scores: { "0": { "relevance": 0.8, "coherence": 0.7, "completen
     try {
       const response = await this.groqClient.chat({
         messages: [{ role: 'user', content: judgePrompt }],
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         temperature: 0.1,
         max_tokens: 500,
       });
@@ -284,7 +276,7 @@ Provide a refined reasoning and final answer using the same format: ## Reasoning
     try {
       const response = await this.groqClient.chat({
         messages: [{ role: 'user', content: refinePrompt }],
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         temperature: 0.3,
         max_tokens: 2000,
       });

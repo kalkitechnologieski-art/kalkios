@@ -85,25 +85,29 @@ Rules:
     const lastUser = messages.filter((m: any) => m.role === 'user').pop();
     const query = lastUser?.content || '';
 
+    // ─── Intent Priority: image > video > setu > deep > detect ──
     let intent = this.detectIntent(query);
-    if (setu) intent = 'setu';
-    if (image) intent = 'image';
-    if (deep) intent = 'deep_think';
+    if (image) {
+      intent = 'image';
+    } else if (setu) {
+      intent = 'setu';
+    } else if (deep) {
+      intent = 'deep_think';
+    }
 
-    logger.info(`[SiddhiAgent] Intent: ${intent}`);
+    logger.info(`[SiddhiAgent] Intent: ${intent} (image=${image}, setu=${setu}, deep=${deep})`);
 
     try {
       switch (intent) {
-        case 'deep_think':
-          return this.handleDeepThink(query, messages, stream, userId, search);
-        case 'setu':
-          return this.handleSETU(query, stream);
         case 'image':
           return this.handleImage(query, stream);
         case 'video':
           return this.handleVideo(query, stream);
+        case 'setu':
+          return this.handleSETU(query, stream);
+        case 'deep_think':
         default:
-          return this.handleChat(messages, stream, userId, search);
+          return this.handleDeepThink(query, messages, stream, userId, search);
       }
     } catch (error: any) {
       logger.error('[SiddhiAgent] Handler error:', error);
@@ -155,12 +159,21 @@ Rules:
   }
 
   private async handleImage(query: string, stream?: boolean) {
+    logger.info('[SiddhiAgent] Generating image with progress...');
+    const progressEvents: any[] = [];
+    const onProgress = stream ? (ev: any) => progressEvents.push(ev) : undefined;
+
     const result = await this.imageGen.generate({
       prompt: query,
       quality: 'standard',
       cache: true,
-    });
-    return { imageUrl: result.url, provider: result.provider };
+    }, onProgress);
+
+    return {
+      imageUrl: result.url,
+      provider: result.provider,
+      progress: stream ? progressEvents : undefined,
+    };
   }
 
   private async handleVideo(query: string, stream?: boolean) {
@@ -170,11 +183,5 @@ Rules:
       cache: true,
     });
     return { videoUrl: result.url, provider: result.provider, taskId: result.taskId };
-  }
-
-  private async handleChat(messages: any[], stream: boolean, userId?: string, search?: boolean) {
-    const lastUser = messages.filter((m: any) => m.role === 'user').pop();
-    const query = lastUser?.content || '';
-    return this.handleDeepThink(query, messages, stream, userId, search);
   }
 }
