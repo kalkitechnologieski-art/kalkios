@@ -30,6 +30,7 @@
     "sharp": true
   },
   "dependencies": {
+    "@agntk/search": "^1.2.7",
     "@ai-sdk/openai": "^4.0.52",
     "@ai-sdk/react": "^4.0.88",
     "@clerk/nextjs": "^7.9.1",
