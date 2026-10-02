@@ -118,7 +118,7 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold text-white">Ready to Work Together?</h2>
           <p className="text-cyan-400/40 mt-2">Let's build the future together.</p>
           <Link href="/contact">
-            <LuxuryButton variant="primary" size="lg" label="Get in Touch" className="mt-6" />
+            <LuxuryButton variant="cyber" size="lg" label="Get in Touch" className="mt-6" />
           </Link>
         </div>
       </ScrollReveal>

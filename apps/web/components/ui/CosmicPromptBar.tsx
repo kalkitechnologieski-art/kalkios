@@ -8,7 +8,7 @@ interface CosmicPromptBarProps {
   isLoading: boolean
   placeholder?: string
   className?: string
-  mode?: 'chat' | 'image' | 'video'
+  mode?: 'chat' | 'image' | 'video' | 'leads'
 }
 
 export function CosmicPromptBar({
@@ -56,6 +56,12 @@ export function CosmicPromptBar({
       bg: '#8b5cf6',
       layerA: '#8b5cf6',
       layerB: '#00ccff',
+    },
+    leads: {
+      label: 'Leads',
+      bg: '#22c55e',
+      layerA: '#22c55e',
+      layerB: '#14b8a6',
     },
   }
 

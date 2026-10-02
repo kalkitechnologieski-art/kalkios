@@ -22,3 +22,18 @@ CREATE POLICY "Only admins can view audit logs" ON audit_logs
 
 CREATE POLICY "System can insert audit logs" ON audit_logs
   FOR INSERT WITH CHECK (true);
+
+-- === SIDDHI v4.0 BATCH 3 - LAYER HEALTH VIEW ===
+
+CREATE OR REPLACE VIEW siddhi_layer_health AS
+SELECT
+  layer,
+  COUNT(*)::INT AS total_requests,
+  COALESCE(AVG(duration_ms), 0)::INT AS avg_latency_ms,
+  COALESCE(SUM(CASE WHEN success THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0), 1) AS success_rate,
+  MAX(created_at) AS last_seen
+FROM siddhi_telemetry
+WHERE created_at > NOW() - INTERVAL '1 hour'
+GROUP BY layer;
+
+GRANT SELECT ON siddhi_layer_health TO authenticated;

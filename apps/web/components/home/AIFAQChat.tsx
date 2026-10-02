@@ -127,7 +127,7 @@ export function AIFAQChat() {
         />
         <LuxuryButton
           type="submit"
-          variant="primary"
+          variant="cyber"
           size="sm"
           disabled={!input.trim() || loading}
           className="min-w-[60px]"

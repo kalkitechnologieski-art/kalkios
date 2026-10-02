@@ -19,7 +19,7 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
 
   useEffect(() => {
     if (!loading && user) {
-      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+      const name = ((user.user_metadata?.full_name as string | undefined) || user.email?.split('@')[0] || 'User');
       setDisplayName(name);
     } else if (!loading) {
       setDisplayName('Guest');

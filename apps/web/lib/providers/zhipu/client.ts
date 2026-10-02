@@ -1,172 +1,227 @@
-import { RateLimiter } from '../../orchestration/rate-limiter';
-import { CircuitBreaker } from '../../orchestration/circuit-breaker';
+// == KALKI B6 HARDENING ==
+// Z.AI (Zhipu) hardened client: single-flight serialization for Zhipu's
+// concurrency=1 limit, plus retries, jitter, and header-driven rate learning.
+// -----------------------------------------------------------------------------
+
+import { globalBreaker } from '@/lib/orchestration/circuit-breaker';
+import { globalRateLimiter } from '@/lib/orchestration/rate-limiter';
+import { CONCURRENCY } from '@/lib/orchestration/concurrency';
+import { withRetry } from '@/lib/orchestration/retry';
+import { logger } from '@/lib/utils/logger';
+import type { Provider, ProviderRequest, ProviderResult } from '../index';
 
 const ZHIPU_BASE = 'https://api.z.ai/api/paas/v4';
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || '';
 
-const ERROR_CODES = {
-  RATE_LIMIT: 1302,
-  MODEL_OVERLOADED: 1305,
-  USAGE_LIMIT: 1308,
-  FAIR_USE: 1313,
-};
+export interface ZhipuChatBody {
+  messages: Array<{ role: string; content: string }>;
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
+  max_completion_tokens?: number;
+  thinking?: { type: string; clear_thinking?: boolean };
+  reasoning_effort?: string;
+  stream?: boolean;
+  [key: string]: unknown;
+}
 
-export class ZhipuClient {
-  private rateLimiter = new RateLimiter();
-  private circuitBreaker = new CircuitBreaker();
-  private provider = 'zhipu';
-  private maxRetries = 4;
-  private baseDelay = 500;
-  private requestQueue: Promise<any> = Promise.resolve();
+export interface ZhipuChatResponse {
+  choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
+  usage?: { total_tokens?: number; prompt_tokens?: number; completion_tokens?: number };
+  model?: string;
+}
 
-  private isRateLimitError(error: any): boolean {
-    const code = error?.code || 0;
-    return (
-      code === ERROR_CODES.RATE_LIMIT ||
-      code === ERROR_CODES.MODEL_OVERLOADED ||
-      code === ERROR_CODES.USAGE_LIMIT ||
-      code === ERROR_CODES.FAIR_USE ||
-      error?.status === 429
-    );
+export interface ZhipuSearchResponse {
+  search_result?: Array<{ title?: string; link?: string; content?: string; media?: string; publish_date?: string }>;
+}
+
+export interface ZhipuReaderResponse {
+  reader_result?: { content?: string };
+}
+
+export class ZhipuClient implements Provider {
+  name = 'zhipu';
+
+  async isHealthy(): Promise<boolean> {
+    if (!ZHIPU_API_KEY) return false;
+    return globalBreaker.canAttempt('zhipu');
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private async rawRequest(
+    endpoint: string,
+    body: unknown,
+    signal: AbortSignal,
+    method = 'POST'
+  ): Promise<{ data: unknown; headers: Headers; status: number }> {
+    const response = await fetch(`${ZHIPU_BASE}/${endpoint}`, {
+      method,
+      headers: { 'Authorization': `Bearer ${ZHIPU_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    globalRateLimiter.learn('zhipu', response.headers);
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      const err = new Error(`Zhipu HTTP ${response.status}: ${text.slice(0, 200)}`);
+      (err as Error & { status?: number }).status = response.status;
+      throw err;
+    }
+
+    const data: unknown = await response.json();
+    if (data && typeof data === 'object' && 'code' in data) {
+      const code = (data as { code?: number }).code;
+      if (code && code !== 0) {
+        const err = new Error(`Zhipu error ${code}: ${(data as { message?: string }).message ?? ''}`);
+        (err as Error & { code?: number }).code = code;
+        throw err;
+      }
+    }
+    return { data, headers: response.headers, status: response.status };
   }
 
-  private async _makeRequest(endpoint: string, body: any, timeout = 30000, method = 'POST') {
-    const startTime = Date.now();
-    console.log(`[Zhipu] 📤 Request to ${endpoint}`);
-
-    if (!ZHIPU_API_KEY) throw new Error('ZHIPU_API_KEY not set');
-    if (this.circuitBreaker.isOpen(this.provider)) {
-      throw new Error(`Circuit breaker open for ${this.provider}`);
-    }
-    if (!(await this.rateLimiter.check(this.provider))) {
-      throw new Error(`Rate limit exceeded for ${this.provider}`);
-    }
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-      const response = await fetch(`${ZHIPU_BASE}/${endpoint}`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-
-      const latency = Date.now() - startTime;
-      const responseClone = response.clone();
-
-      if (!response.ok) {
-        const text = await response.text();
-        const error = new Error(`Zhipu HTTP ${response.status}: ${text}`);
-        (error as any).status = response.status;
-        (error as any).headers = response.headers;
-        throw error;
+  async chat(body: ZhipuChatBody): Promise<ZhipuChatResponse> {
+    return CONCURRENCY.zhipu.run(async () => {
+      const requestBody: ZhipuChatBody = { ...body, stream: false };
+      if (requestBody.max_tokens) {
+        requestBody.max_completion_tokens = requestBody.max_tokens;
+        delete requestBody.max_tokens;
       }
-
-      let data: any;
-      try {
-        data = await responseClone.json();
-      } catch (jsonError) {
-        const text = await response.text();
-        throw new Error(`Zhipu invalid JSON: ${text}`);
-      }
-
-      if (data?.code && data.code !== 0) {
-        const error = new Error(`Zhipu error ${data.code}: ${data.message}`);
-        (error as any).code = data.code;
-        (error as any).status = response.status;
-        throw error;
-      }
-
-      this.circuitBreaker.recordSuccess(this.provider);
-      console.log(`[Zhipu] ✅ Success (${latency}ms)`);
-      return data;
-    } catch (error) {
-      console.error(`[Zhipu] ❌ Request failed:`, error);
-      this.circuitBreaker.recordFailure(this.provider);
-      throw error;
-    } finally {
-      clearTimeout(id);
-    }
-  }
-
-  async request(endpoint: string, body: any, timeout = 30000, method = 'POST') {
-    return new Promise((resolve, reject) => {
-      this.requestQueue = this.requestQueue
-        .then(() => this._makeRequest(endpoint, body, timeout, method))
-        .then(resolve)
-        .catch(reject);
+      const result = await withRetry(
+        async (signal) => this.rawRequest('chat/completions', requestBody, signal),
+        {
+          maxAttempts: 3,
+          timeoutMs: 60_000,
+          isRetryable: (e: unknown) => {
+            const err = e as { status?: number; code?: number; name?: string };
+            if (err.status === 429) return true;
+            if (err.code === 1302 || err.code === 1305) return true;
+            if (typeof err.status === 'number' && err.status >= 500) return true;
+            if (err.name === 'AbortError' || err.name === 'TypeError') return true;
+            return false;
+          },
+        }
+      );
+      globalBreaker.recordSuccess('zhipu');
+      globalRateLimiter.record('zhipu');
+      return result.data as ZhipuChatResponse;
     });
   }
 
-  async chat(body: any) {
-    const requestBody = { ...body };
-    if (requestBody.max_tokens) {
-      requestBody.max_completion_tokens = requestBody.max_tokens;
-      delete requestBody.max_tokens;
-    }
-    requestBody.stream = false;
-    return this.request('chat/completions', requestBody);
-  }
-
-  async chatStream(body: any) {
-    console.log('[Zhipu] 📡 Streaming request');
+  async chatStream(body: ZhipuChatBody): Promise<ReadableStream<Uint8Array>> {
     if (!ZHIPU_API_KEY) throw new Error('ZHIPU_API_KEY not set');
-    if (this.circuitBreaker.isOpen(this.provider)) {
-      throw new Error(`Circuit breaker open for ${this.provider}`);
-    }
-    if (!(await this.rateLimiter.check(this.provider))) {
-      throw new Error(`Rate limit exceeded for ${this.provider}`);
-    }
-
-    const requestBody = { ...body };
-    if (requestBody.max_tokens) {
-      requestBody.max_completion_tokens = requestBody.max_tokens;
-      delete requestBody.max_tokens;
-    }
-    requestBody.stream = true;
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 30000);
-    try {
+    return CONCURRENCY.zhipu.run(async () => {
+      const requestBody: ZhipuChatBody = { ...body, stream: true };
+      if (requestBody.max_tokens) {
+        requestBody.max_completion_tokens = requestBody.max_tokens;
+        delete requestBody.max_tokens;
+      }
       const response = await fetch(`${ZHIPU_BASE}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${ZHIPU_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        signal: controller.signal,
       });
-      clearTimeout(id);
+      globalRateLimiter.learn('zhipu', response.headers);
       if (!response.ok) {
-        const text = await response.text();
-        console.error(`[Zhipu] ❌ Stream error ${response.status}: ${text}`);
-        throw new Error(`Zhipu stream error ${response.status}: ${text}`);
+        globalBreaker.recordFailure('zhipu');
+        throw new Error(`Zhipu stream HTTP ${response.status}`);
       }
-      this.circuitBreaker.recordSuccess(this.provider);
-      console.log('[Zhipu] ✅ Stream obtained');
+      globalBreaker.recordSuccess('zhipu');
+      globalRateLimiter.record('zhipu');
+      if (!response.body) throw new Error('No response body');
       return response.body;
-    } catch (error) {
-      clearTimeout(id);
-      this.circuitBreaker.recordFailure(this.provider);
-      throw error;
+    });
+  }
+
+  async webSearch(body: {
+    search_query: string; count?: number; search_engine?: string;
+    search_recency_filter?: string; content_size?: string;
+  }): Promise<ZhipuSearchResponse> {
+    return CONCURRENCY.zhipu.run(async () => {
+      const result = await withRetry(
+        async (signal) => this.rawRequest('web_search', body, signal),
+        { maxAttempts: 2, timeoutMs: 25_000, isRetryable: () => true }
+      );
+      globalRateLimiter.record('zhipu');
+      return result.data as ZhipuSearchResponse;
+    });
+  }
+
+  async webReader(body: {
+    url: string; return_format?: string; retain_images?: boolean;
+  }): Promise<ZhipuReaderResponse> {
+    return CONCURRENCY.zhipu.run(async () => {
+      const result = await withRetry(
+        async (signal) => this.rawRequest('reader', body, signal),
+        { maxAttempts: 2, timeoutMs: 25_000, isRetryable: () => true }
+      );
+      globalRateLimiter.record('zhipu');
+      return result.data as ZhipuReaderResponse;
+    });
+  }
+
+  async invoke(req: ProviderRequest): Promise<ProviderResult> {
+    const start = Date.now();
+    const response = await this.chat({
+      messages: req.messages,
+      model: req.model ?? 'glm-4.7-flash',
+      temperature: req.temperature ?? 0.7,
+      max_tokens: req.maxTokens ?? 4096,
+    });
+    return {
+      content: response.choices?.[0]?.message?.content ?? '',
+      reasoning: response.choices?.[0]?.message?.reasoning_content,
+      tokens: {
+        input: response.usage?.prompt_tokens ?? 0,
+        output: response.usage?.completion_tokens ?? 0,
+        total: response.usage?.total_tokens ?? 0,
+      },
+      model: response.model ?? req.model ?? 'glm-4.7-flash',
+      provider: this.name,
+      finishReason: 'stop',
+      latencyMs: Date.now() - start,
+      cached: false,
+    };
+  }
+
+  async *invokeStream(req: ProviderRequest): AsyncGenerator<string> {
+    const stream = await this.chatStream({
+      messages: req.messages,
+      model: req.model ?? 'glm-4.7-flash',
+      temperature: req.temperature ?? 0.7,
+      max_tokens: req.maxTokens ?? 4096,
+    });
+    yield* this.parseSSE(stream);
+  }
+
+  private async *parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') return;
+          try {
+            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) yield delta;
+          } catch { /* ignore */ }
+        }
+      }
+    } finally {
+      try { await reader.cancel(); } catch { /* ignore */ }
     }
   }
-
-  async webSearch(body: any) {
-    return this.request('web_search', body);
-  }
-
-  async webReader(body: any) {
-    return this.request('reader', body);
-  }
 }
+
+export const zhipuClient = new ZhipuClient();
+void logger;

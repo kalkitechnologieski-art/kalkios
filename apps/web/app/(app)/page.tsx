@@ -67,7 +67,7 @@ export default async function Homepage() {
           </div>
         </Suspense>
         <div className="text-center mt-6 md:mt-8">
-          <SparkleButton href="/marketplace" size="md">View All Services</SparkleButton>
+          <SparkleButton href="/marketplace" size="lg">View All Services</SparkleButton>
         </div>
       </section>
 

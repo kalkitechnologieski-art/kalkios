@@ -102,7 +102,7 @@ export function VideoSlideshowHero() {
                 </p>
                 <div className="mt-8">
                   <LuxuryButton
-                    variant="primary"
+                    variant="cyber"
                     size="lg"
                     label={slide.cta}
                     onClick={() => (window.location.href = slide.link)}

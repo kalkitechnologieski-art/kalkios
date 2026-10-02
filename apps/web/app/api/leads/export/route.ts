@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifySession, isResponse, requireStaff } from '@/lib/security/api-guards'
 
 interface LeadRow {
   name: string | null
@@ -15,9 +16,20 @@ interface LeadRow {
   score: number
 }
 
+// Neutralize spreadsheet formula injection (=,+,-,@,tab,CR prefixes).
+function safeCell(value: string | number): string {
+  const s = String(value)
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+}
+
 export async function POST(req: NextRequest) {
+  const user = await verifySession(req)
+  if (isResponse(user)) return user
+  const forbidden = requireStaff(user)
+  if (forbidden) return forbidden
+
   const { leads } = await req.json()
-  if (!leads || leads.length === 0) {
+  if (!Array.isArray(leads) || leads.length === 0 || leads.length > 5000) {
     return NextResponse.json({ error: 'No leads to export' }, { status: 400 })
   }
 
@@ -45,7 +57,7 @@ export async function POST(req: NextRequest) {
   const csvContent = [
     headers.join(','),
     ...rows.map((row: (string | number)[]) =>
-      row.map((v: string | number) => `"${String(v).replace(/"/g, '""')}"`).join(',')
+      row.map((v: string | number) => `"${safeCell(v).replace(/"/g, '""')}"`).join(',')
     )
   ].join('\n')
 

@@ -1,4 +1,5 @@
 'use client'
+// == KALKI B3 COMMAND ==
 
 import { useRealtime } from '@/lib/hooks/useRealtime'
 import { DataTable } from '@/components/ui/DataTable'
@@ -38,7 +39,7 @@ export default function AdminUsersPage() {
   const columns = [
     { key: 'full_name', header: 'Name', searchable: true },
     { key: 'email', header: 'Email', searchable: true },
-    { key: 'role', header: 'Role', render: (val: string) => <Badge variant="secondary">{val || 'client'}</Badge> },
+    { key: 'role', header: 'Role', render: (val: string) => <Badge variant="outline">{val || 'client'}</Badge> },
     { key: 'status', header: 'Status', render: (val: string) => <Badge variant={val === 'blocked' ? 'destructive' : 'default'}>{val || 'active'}</Badge> },
     { key: 'created_at', header: 'Joined', render: (val: string) => new Date(val).toLocaleDateString() },
   ]

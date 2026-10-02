@@ -96,7 +96,7 @@ async function JobDetailContent({ id }: { id: string }) {
         )}
         <div className="text-center">
           <Link href={`/careers/apply?job=${job.id}`}>
-            <LuxuryButton variant="primary" size="lg" label="Apply Now" />
+            <LuxuryButton variant="cyber" size="lg" label="Apply Now" />
           </Link>
         </div>
       </div>

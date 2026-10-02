@@ -13,7 +13,7 @@ export default function NotFound() {
         The page you are looking for does not exist. Our AI is on it.
       </p>
       <Link href="/" className="mt-6">
-        <LuxuryButton variant="primary" size="md" label="Return Home" />
+        <LuxuryButton variant="cyber" size="default" label="Return Home" />
       </Link>
     </div>
   )

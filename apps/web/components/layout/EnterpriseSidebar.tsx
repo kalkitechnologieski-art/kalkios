@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/hooks/useAuth';
 
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
@@ -48,6 +49,12 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
   const [isExpanded, setIsExpanded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
+  const { user, loading } = useUser();
+  
+  // Check if user has admin or employee role
+  const isAdmin = user?.user_metadata?.role === 'admin';
+  const isEmployee = user?.user_metadata?.role === 'employee';
+  const isAuthenticated = !loading && !!user;
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -68,9 +75,10 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
 
-  const renderLink = (item: typeof NAV_ITEMS[0]) => {
+  const renderLink = (item: typeof NAV_ITEMS[0], isMobile = false) => {
     const active = isActive(item.href);
     const Icon = item.icon;
+    const showText = isMobile || isExpanded;
 
     return (
       <Link
@@ -82,14 +90,14 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
           active
             ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20'
             : 'text-white/60 hover:bg-white/5 hover:text-white',
-          !isExpanded && 'justify-center px-0'
+          !showText && 'justify-center px-0'
         )}
-        title={!isExpanded ? item.label : undefined}
+        title={!showText ? item.label : undefined}
         aria-current={active ? 'page' : undefined}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
         <AnimatePresence mode="wait">
-          {isExpanded && (
+          {showText && (
             <motion.span
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 'auto' }}
@@ -101,12 +109,15 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
             </motion.span>
           )}
         </AnimatePresence>
-        {active && isExpanded && (
+        {active && showText && (
           <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400" />
         )}
       </Link>
     );
   };
+
+  // Filter admin/employee items based on role
+  const visibleAdminItems = (isAdmin || isEmployee) ? ADMIN_ITEMS : [];
 
   return (
     <>
@@ -134,14 +145,20 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
 
         {/* Navigation */}
         <nav className="flex-1 py-3 space-y-1 overflow-y-auto scrollbar-hide px-2">
-          {NAV_ITEMS.map(renderLink)}
-          <div className="h-px bg-cyan-500/10 my-2" />
-          {ADMIN_ITEMS.map(renderLink)}
+          {NAV_ITEMS.map((item) => renderLink(item))}
+          
+          {/* Admin section - only show if user has permission */}
+          {visibleAdminItems.length > 0 && (
+            <>
+              <div className="h-px bg-cyan-500/10 my-2" />
+              {visibleAdminItems.map((item) => renderLink(item))}
+            </>
+          )}
         </nav>
 
         {/* Bottom items */}
         <div className="border-t border-cyan-500/10 p-2 space-y-1">
-          {BOTTOM_ITEMS.map(renderLink)}
+          {BOTTOM_ITEMS.map((item) => renderLink(item))}
         </div>
       </motion.aside>
 
@@ -174,14 +191,24 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto space-y-1">
-                {NAV_ITEMS.map(renderLink)}
+                {NAV_ITEMS.map((item) => renderLink(item, true))}
+                
+                {/* Admin section - only show if user has permission */}
+                {visibleAdminItems.length > 0 && (
+                  <>
+                    <div className="h-px bg-cyan-500/10 my-2" />
+                    <div className="text-[10px] text-white/30 font-mono uppercase tracking-wider mb-1 px-3">
+                      Administration
+                    </div>
+                    {visibleAdminItems.map((item) => renderLink(item, true))}
+                  </>
+                )}
+                
                 <div className="h-px bg-cyan-500/10 my-2" />
-                {ADMIN_ITEMS.map(renderLink)}
-                <div className="h-px bg-cyan-500/10 my-2" />
-                {BOTTOM_ITEMS.map(renderLink)}
+                {BOTTOM_ITEMS.map((item) => renderLink(item, true))}
               </nav>
               <div className="border-t border-cyan-500/10 pt-4 text-center text-[10px] text-cyan-400/20 font-mono tracking-widest">
-                KALKI OS v3.0
+                KALKI OS v4.0
               </div>
             </motion.aside>
           </>

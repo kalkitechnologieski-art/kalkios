@@ -1,71 +1,72 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
 import { CyberpunkForm, CyberpunkInput, CyberpunkButton } from '@/components/ui/CyberpunkForm'
+import { ROLE_ROUTES } from '@/lib/auth/role-routes'
 import { Eye, EyeOff, Sparkles } from 'lucide-react'
 
-export default function LoginPage() {
+function safeRedirectTarget(param: string | null): string | null {
+  if (!param) return null
+  if (!param.startsWith('/') || param.startsWith('//')) return null
+  return param
+}
+
+function LoginForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const supabase = useMemo(() => createClient(), [])
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient() as any
-  const router = useRouter()
+
+  const roleRoute = useMemo(() => {
+    const route = safeRedirectTarget(searchParams.get('redirect'))
+    return async (userId: string) => {
+      if (route) return route
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
+      const role = (profile as { role?: string } | null)?.role ?? 'client'
+      return ROLE_ROUTES[role] ?? '/client'
+    }
+  }, [supabase, searchParams])
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    void (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (session) {
-        const { data: profile } = await supabase
-// @ts-ignore
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id as any as any)
-// @ts-ignore
-          .single() as any
-
-        const role = profile?.role || 'client'
-        const routes: Record<string, string> = {
-          ceo: '/admin', admin: '/admin', manager: '/admin',
-          developer: '/employee', support: '/employee', hr: '/employee',
-          employee: '/employee', client: '/dashboard',
-        }
-        router.push(routes[role] || '/')
+        router.replace(await roleRoute(session.user.id))
       }
-    }
-    checkSession()
-  }, [supabase, router])
+    })()
+  }, [supabase, router, roleRoute])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (signInError) throw signInError
       if (data.user) {
-        const { data: profile } = await supabase
-// @ts-ignore
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id as any as any)
-// @ts-ignore
-          .single() as any
-
-        const role = profile?.role || 'client'
-        const routes: Record<string, string> = {
-          ceo: '/admin', admin: '/admin', manager: '/admin',
-          developer: '/employee', support: '/employee', hr: '/employee',
-          employee: '/employee', client: '/dashboard',
-        }
-        router.push(routes[role] || '/')
+        router.replace(await roleRoute(data.user.id))
+        router.refresh()
       }
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -85,13 +86,20 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <div className="relative w-24 h-24">
             <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-2xl animate-pulse" />
-            <Image src="/images/logo.svg" alt="KALKI OS" width={96} height={96} className="object-contain relative z-10" priority />
+            <Image
+              src="/images/logo.svg"
+              alt="KALKI OS"
+              width={96}
+              height={96}
+              className="object-contain relative z-10"
+              priority
+            />
           </div>
         </div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-mono">
           KALKI OS
         </h1>
-        <p className="text-cyan-400/40 text-sm font-mono tracking-wider">● SECURE ACCESS ●</p>
+        <p className="text-cyan-400/40 text-sm font-mono tracking-wider">SECURE ACCESS</p>
 
         <CyberpunkForm onSubmit={handleEmailLogin}>
           <CyberpunkInput
@@ -99,6 +107,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
+            autoComplete="email"
             required
           />
           <div className="relative w-full">
@@ -107,12 +116,14 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
+              autoComplete="current-password"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 bottom-3 text-cyan-400/40 hover:text-cyan-400 transition"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -124,8 +135,12 @@ export default function LoginPage() {
         </CyberpunkForm>
 
         <div className="relative">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-cyan-500/10" /></div>
-          <div className="relative flex justify-center text-xs"><span className="px-2 bg-[#0A0A0F] text-cyan-400/30 font-mono">or</span></div>
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-cyan-500/10" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-2 bg-[#0A0A0F] text-cyan-400/30 font-mono">or</span>
+          </div>
         </div>
 
         <button
@@ -135,7 +150,22 @@ export default function LoginPage() {
           <Sparkles className="w-4 h-4 text-cyan-400" />
           Sign in with Google
         </button>
+
+        <p className="text-sm text-white/50">
+          New to KALKI OS?{' '}
+          <Link href="/register" className="text-cyan-400 hover:text-cyan-300 font-medium">
+            Create an account
+          </Link>
+        </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }

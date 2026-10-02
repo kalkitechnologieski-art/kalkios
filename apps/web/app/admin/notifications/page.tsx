@@ -87,7 +87,7 @@ export default function AdminNotificationsPage() {
   const columns = [
     { key: 'title', header: 'Title', searchable: true },
     { key: 'message', header: 'Message', searchable: true },
-    { key: 'type', header: 'Type', render: (val: string) => <Badge variant="secondary">{val}</Badge> },
+    { key: 'type', header: 'Type', render: (val: string) => <Badge variant="outline">{val}</Badge> },
     { key: 'priority', header: 'Priority', render: (val: string) => <Badge variant={val === 'critical' ? 'destructive' : val === 'high' ? 'default' : 'secondary'}>{val}</Badge> },
     { key: 'created_at', header: 'Sent', render: (val: string) => new Date(val).toLocaleString() },
   ]
@@ -148,8 +148,8 @@ export default function AdminNotificationsPage() {
           className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white outline-none focus:border-cyan-500/50 resize-none"
         />
         <LuxuryButton
-          variant="primary"
-          size="md"
+          variant="cyber"
+          size="default"
           label="Send Notification"
           icon={<Send className="w-4 h-4" />}
           onClick={handleSendNotification}

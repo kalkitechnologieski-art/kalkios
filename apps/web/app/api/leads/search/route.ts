@@ -4,9 +4,31 @@ import { searchWeb } from '@/lib/leads/search'
 import { scrapeWebsites, closeBrowser } from '@/lib/leads/scraper'
 import { extractContactData } from '@/lib/leads/extractor'
 import { validateLead } from '@/lib/leads/validator'
+import { verifySession, isResponse, requireStaff, rateLimit } from '@/lib/security/api-guards'
 
 export async function POST(req: NextRequest) {
-  const { sessionId, query, targetCount } = await req.json()
+  const user = await verifySession(req)
+  if (isResponse(user)) return user
+  const forbidden = requireStaff(user)
+  if (forbidden) return forbidden
+
+  const limit = rateLimit(`leads-search:${user.id}`, 3, 10 * 60_000)
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } }
+    )
+  }
+
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+  const { sessionId, query } = body as { sessionId?: string; query?: string }
+  const rawCount = Number(body.targetCount)
+  const targetCount = Number.isFinite(rawCount) && rawCount > 0 ? Math.min(Math.floor(rawCount), 100) : 25
   if (!sessionId || !query) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   const supabase = await createClient() as any
   processSearch(sessionId, query, targetCount, supabase).catch(console.error)

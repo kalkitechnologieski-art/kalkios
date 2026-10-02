@@ -1,0 +1,73 @@
+# SearXNG Configuration for Siddhi v4.0
+general:
+  debug: false
+  instance_name: "SiddhiSearch"
+  privacypolicy_url: ""
+  donation_url: ""
+  contact_url: ""
+  enable_metrics: false
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "siddhi-enterprise-search-key-2026"
+  base_url: "http://localhost:8080/"
+  image_proxy: false
+  http_protocol: "https"
+  http_port: null
+
+search:
+  safe_search: 1
+  autocomplete: "google"
+  default_lang: "en"
+  languages:
+    - en
+    - hi
+  categories_as_tabs:
+    general:
+    images:
+    videos:
+    news:
+    map:
+
+engines:
+  - name: google
+    engine: google
+    shortcut: g
+    disabled: false
+    
+  - name: bing
+    engine: bing
+    shortcut: b
+    disabled: false
+    
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+    
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: w
+    disabled: false
+    
+  - name: brave
+    engine: brave
+    shortcut: br
+    api_key: "${BRAVE_SEARCH_API_KEY}"
+    disabled: true
+
+outgoing:
+  request_timeout: 5
+  max_request_timeout: 10
+  pool_connections: 100
+  pool_maxsize: 20
+  useragent: "Siddhi-Bot/1.0 (Enterprise Search Engine)"
+
+ui:
+  static_use_hash: true
+  query_in_title: true
+  infinite_scroll: false
+  center_alignment: false
+  theme: "simple"
+  default_theme: "simple"

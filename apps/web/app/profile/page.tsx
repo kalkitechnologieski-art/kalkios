@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [projectCount, setProjectCount] = useState(0)
-  const { tokens, loading: tokenLoading } = useTokenUsage()
+  const { tokens, loading: tokenLoading } = useTokenUsage() as { tokens: number; loading: boolean; refetch: () => void }
   const supabase = createClient() as any
   const router = useRouter()
 
@@ -75,7 +75,7 @@ export default function ProfilePage() {
     )
   }
 
-  const displayName = profile?.full_name || user.email?.split('@')[0] || 'User'
+  const displayName = ((profile?.full_name as string | undefined) || user.email?.split('@')[0] || 'User')
   const email = user.email || 'No email'
   const role = profile?.role || 'client'
   const roleColors: Record<string, string> = {
@@ -108,7 +108,7 @@ export default function ProfilePage() {
               </span>
               <span className="text-xs text-white/30 font-mono flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                Joined {new Date(user.created_at).toLocaleDateString()}
+                Joined {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
               </span>
             </div>
           </div>

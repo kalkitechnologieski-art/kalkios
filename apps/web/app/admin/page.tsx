@@ -1,92 +1,322 @@
-'use client'
+'use client';
 
-import { useMemo } from 'react'
-import { useRealtime } from '@/lib/hooks/useRealtime'
-import { StatCard } from '@/components/ui/StatCard'
-import { ChartWrapper } from '@/components/dashboard/ChartWrapper'
-import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
-import { Users, ShoppingBag, FileText, Briefcase, TrendingUp, Activity } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Users, ShoppingBag, FileText, FolderKanban, TrendingUp, Tag, Gift, Package, UserCheck, Clock, AlertCircle, CheckCircle2, DollarSign, BarChart3, Bell } from 'lucide-react';
+import { TimelineFeed } from '@/components/timeline/TimelineFeed';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
-const QuickAction = ({ href, label, icon: Icon }: { href: string; label: string; icon: any }) => (
-  <Link href={href} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center hover:border-cyan-500/30 transition group">
-    <Icon className="w-8 h-8 text-cyan-400 mx-auto mb-2 group-hover:scale-110 transition" />
-    <span className="text-white font-mono text-sm">{label}</span>
-  </Link>
-)
+interface Order { id: string; amount: number; status: string; created_at: string }
+interface ServiceStat { id: string; name: string; category: string; paid_count: number; revenue: number }
+interface HiringStat { total_applicants: number; open_positions: number; pending_reviews: number }
+interface ProjectStat { active: number; completed: number; overdue: number }
 
 export default function AdminDashboard() {
-  const { data: users, loading: usersLoading } = useRealtime('profiles')
-  const { data: orders, loading: ordersLoading } = useRealtime('orders')
-  const { data: leads } = useRealtime('leads')
-  const { data: projects } = useRealtime('projects')
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [topServices, setTopServices] = useState<ServiceStat[]>([]);
+  const [hiringStats, setHiringStats] = useState<HiringStat | null>(null);
+  const [projectStats, setProjectStats] = useState<ProjectStat | null>(null);
+  const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as any;
 
-  const revenueData = useMemo(() => {
-    if (!orders) return []
-    const map = new Map<string, number>()
-    orders.forEach(o => {
-      const date = new Date(o.created_at).toLocaleDateString()
-      map.set(date, (map.get(date) || 0) + (o.amount || 0))
-    })
-// @ts-ignore
-    return Array.from(map.entries()).map(([date, amount]) => ({ date, amount }))
-  }, [orders])
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [ordersRes, topRes, hiringRes, projectsRes] = await Promise.all([
+          supabase.from('orders').select('id, amount, status, created_at').order('created_at', { ascending: false }).limit(500),
+          supabase.from('admin_top_services').select('*').limit(10),
+          supabase.rpc('admin_hiring_stats'),
+          supabase.rpc('admin_project_stats'),
+        ]);
+        setOrders((ordersRes?.data ?? []) as Order[]);
+        setTopServices((topRes?.data ?? []) as ServiceStat[]);
+        setHiringStats(hiringRes?.data || null);
+        setProjectStats(projectsRes?.data || null);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const totalRevenue = orders?.reduce((sum, o) => sum + (o.amount || 0), 0) ?? 0
+  const kpis = useMemo(() => {
+    const paid = orders.filter((o) => o.status === 'paid');
+    const recentPaid = paid.filter(o => {
+      const daysAgo = (Date.now() - new Date(o.created_at).getTime()) / (1000 * 60 * 60 * 24);
+      return daysAgo <= 7;
+    });
+    
+    return {
+      total: orders.length,
+      paid: paid.length,
+      pending: orders.filter((o) => o.status === 'pending').length,
+      revenue: paid.reduce((s, o) => s + (o.amount ?? 0), 0),
+      weeklyRevenue: recentPaid.reduce((s, o) => s + o.amount, 0),
+      aov: paid.length > 0 ? paid.reduce((s, o) => s + o.amount, 0) / paid.length : 0,
+    };
+  }, [orders]);
 
-  const stats = [
-    { title: 'Total Users', value: users?.length ?? 0, icon: Users },
-    { title: 'Orders', value: orders?.length ?? 0, icon: ShoppingBag },
-    { title: 'Leads', value: leads?.length ?? 0, icon: FileText },
-    { title: 'Projects', value: projects?.length ?? 0, icon: Briefcase },
-    { title: 'Revenue', value: `₹${totalRevenue.toLocaleString()}`, icon: TrendingUp },
-    { title: 'Active Sessions', value: 42, icon: Activity },
-  ]
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6">
+        <Skeleton variant="text" className="w-1/3 h-8" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="card" className="h-28" />
+          ))}
+        </div>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Skeleton variant="card" className="h-96 lg:col-span-2" />
+          <Skeleton variant="card" className="h-96" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white font-mono">Admin Dashboard</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.map((stat, i) => (
-          <StatCard
-            key={i}
-            title={stat.title}
-            value={stat.value}
-            icon={<stat.icon className="w-5 h-5" />}
-            loading={usersLoading || ordersLoading}
-          />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-white font-mono mb-4">Revenue (last 7 days)</h3>
-          <ChartWrapper loading={ordersLoading} empty={!revenueData.length}>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={revenueData.slice(-7)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="date" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #333' }} />
-                <Line type="monotone" dataKey="amount" stroke="#00ffff" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartWrapper>
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold cyber-text">Admin Command Center</h1>
+          <p className="text-white/60 text-sm mt-1">Real-time platform analytics & operations</p>
         </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-white font-mono mb-4">Recent Activity</h3>
-          <ActivityFeed events={[]} loading={false} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" icon={<Bell className="w-4 h-4" />} label="Notifications" />
         </div>
       </div>
 
+      {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <QuickAction href="/admin/users" label="Users" icon={Users} />
-        <QuickAction href="/admin/orders" label="Orders" icon={ShoppingBag} />
-        <QuickAction href="/admin/leads" label="Leads" icon={FileText} />
-        <QuickAction href="/admin/projects" label="Projects" icon={Briefcase} />
+        <KpiCard
+          icon={<DollarSign className="w-5 h-5 text-cyan-400" />}
+          title="Total Revenue"
+          value={`₹${kpis.revenue.toLocaleString('en-IN')}`}
+          subtitle={`₹${kpis.weeklyRevenue.toLocaleString('en-IN')} this week`}
+          accent="cyan"
+        />
+        <KpiCard
+          icon={<ShoppingBag className="w-5 h-5 text-green-400" />}
+          title="Paid Orders"
+          value={kpis.paid}
+          subtitle={`${kpis.pending} pending`}
+          accent="green"
+        />
+        <KpiCard
+          icon={<TrendingUp className="w-5 h-5 text-purple-400" />}
+          title="Avg Order Value"
+          value={`₹${Math.round(kpis.aov).toLocaleString('en-IN')}`}
+          subtitle="Per transaction"
+          accent="purple"
+        />
+        <KpiCard
+          icon={<Users className="w-5 h-5 text-yellow-400" />}
+          title="Total Orders"
+          value={kpis.total}
+          subtitle="All time"
+          accent="yellow"
+        />
       </div>
+
+      {/* Operational Stats */}
+      {(hiringStats || projectStats) && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {hiringStats && (
+            <div className="glass rounded-xl p-6 border border-cyan-500/10">
+              <div className="flex items-center gap-2 mb-4">
+                <UserCheck className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-bold text-white">Hiring Pipeline</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Open Positions</p>
+                  <p className="text-2xl font-bold text-cyan-400 font-mono">{hiringStats.open_positions}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Total Applicants</p>
+                  <p className="text-2xl font-bold text-purple-400 font-mono">{hiringStats.total_applicants}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Pending Review</p>
+                  <p className="text-2xl font-bold text-yellow-400 font-mono">{hiringStats.pending_reviews}</p>
+                </div>
+              </div>
+              <Link href="/admin/hiring" className="mt-4 block">
+                <Button variant="outline" size="sm" label="Manage Hiring" className="w-full" />
+              </Link>
+            </div>
+          )}
+          
+          {projectStats && (
+            <div className="glass rounded-xl p-6 border border-purple-500/10">
+              <div className="flex items-center gap-2 mb-4">
+                <FolderKanban className="w-5 h-5 text-purple-400" />
+                <h3 className="text-lg font-bold text-white">Project Overview</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Active</p>
+                  <p className="text-2xl font-bold text-cyan-400 font-mono">{projectStats.active}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Completed</p>
+                  <p className="text-2xl font-bold text-green-400 font-mono">{projectStats.completed}</p>
+                </div>
+                <div>
+                  <p className="text-white/40 text-xs font-mono">Overdue</p>
+                  <p className="text-2xl font-bold text-red-400 font-mono">{projectStats.overdue}</p>
+                </div>
+              </div>
+              <Link href="/admin/projects" className="mt-4 block">
+                <Button variant="outline" size="sm" label="View Projects" className="w-full" />
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Top Services */}
+        <section className="lg:col-span-2 glass rounded-xl p-6 border border-cyan-500/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-lg font-bold text-white">Top Performing Services</h2>
+            </div>
+            <Link href="/admin/services">
+              <Button variant="ghost" size="sm" label="View All" />
+            </Link>
+          </div>
+          
+          {topServices.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 text-cyan-400/40 mx-auto mb-3" />
+              <p className="text-white/40 text-sm font-mono">No paid orders yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {topServices.map((s, index) => (
+                <motion.div
+                  key={s.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="text-white/20 font-mono text-sm w-6">#{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white font-medium truncate">{s.name}</p>
+                      <p className="text-white/40 text-xs">{s.category}</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <p className="text-cyan-400 font-mono font-bold">₹{s.revenue.toLocaleString('en-IN')}</p>
+                    <p className="text-white/30 text-xs">{s.paid_count} sales</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Recent Activity */}
+        <section className="glass rounded-xl p-6 border border-purple-500/10">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-purple-400" />
+            <h2 className="text-lg font-bold text-white">Live Activity</h2>
+          </div>
+          <TimelineFeed visibility="client" emptyMessage="No activity yet" />
+        </section>
+      </div>
+
+      {/* Quick Actions */}
+      <section>
+        <h2 className="text-lg font-bold text-white mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <QuickAction href="/admin/services" label="Services" icon={Package} color="cyan" />
+          <QuickAction href="/admin/orders" label="Orders" icon={ShoppingBag} color="green" />
+          <QuickAction href="/admin/codes" label="Promo Codes" icon={Tag} color="purple" />
+          <QuickAction href="/admin/referrals" label="Referrals" icon={Gift} color="yellow" />
+          <QuickAction href="/admin/hiring" label="Hiring" icon={UserCheck} color="cyan" />
+          <QuickAction href="/admin/projects" label="Projects" icon={FolderKanban} color="purple" />
+          <QuickAction href="/admin/users" label="Users" icon={Users} color="green" />
+          <QuickAction href="/admin/reports" label="Reports" icon={BarChart3} color="yellow" />
+        </div>
+      </section>
     </div>
-  )
+  );
+}
+
+function KpiCard({
+  icon,
+  title,
+  value,
+  subtitle,
+  accent,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  accent: 'cyan' | 'green' | 'purple' | 'yellow';
+}) {
+  const accentColors = {
+    cyan: 'hover:border-cyan-500/30',
+    green: 'hover:border-green-500/30',
+    purple: 'hover:border-purple-500/30',
+    yellow: 'hover:border-yellow-500/30',
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn('glass rounded-xl p-5 transition', accentColors[accent])}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-white/60 text-sm">{title}</span>
+        {icon}
+      </div>
+      <div className="text-3xl font-bold text-white font-mono">{value}</div>
+      {subtitle && <p className="text-white/40 text-xs mt-1">{subtitle}</p>}
+    </motion.div>
+  );
+}
+
+function QuickAction({ 
+  href, 
+  label, 
+  icon: Icon, 
+  color 
+}: { 
+  href: string; 
+  label: string; 
+  icon: typeof Package;
+  color: 'cyan' | 'green' | 'purple' | 'yellow';
+}) {
+  const colors = {
+    cyan: 'hover:border-cyan-500/30 group-hover:text-cyan-400',
+    green: 'hover:border-green-500/30 group-hover:text-green-400',
+    purple: 'hover:border-purple-500/30 group-hover:text-purple-400',
+    yellow: 'hover:border-yellow-500/30 group-hover:text-yellow-400',
+  };
+
+  return (
+    <Link 
+      href={href} 
+      className={cn('glass rounded-xl p-5 text-center transition group', colors[color])}
+    >
+      <Icon className="w-8 h-8 text-white/40 mx-auto mb-2 group-hover:scale-110 transition" />
+      <span className="text-white/80 text-sm font-medium">{label}</span>
+    </Link>
+  );
 }

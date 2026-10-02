@@ -25,7 +25,7 @@ export default function SupportPage() {
             <h2 className="text-white font-mono text-lg">💬 Chat</h2>
             <p className="text-cyan-400/60 text-sm mt-2">Talk to Siddhi AI</p>
             <Link href="/chat">
-              <LuxuryButton variant="secondary" size="sm" label="Open Chat" className="mt-3" />
+              <LuxuryButton variant="outline" size="sm" label="Open Chat" className="mt-3" />
             </Link>
           </div>
           <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-6 md:col-span-2">

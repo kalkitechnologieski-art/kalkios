@@ -19,10 +19,10 @@ export function StaticHero() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Link href="/chat">
-            <LuxuryButton variant="primary" size="lg" label="Chat with Siddhi" />
+            <LuxuryButton variant="cyber" size="lg" label="Chat with Siddhi" />
           </Link>
           <Link href="/marketplace">
-            <LuxuryButton variant="secondary" size="lg" label="Explore Services" />
+            <LuxuryButton variant="outline" size="lg" label="Explore Services" />
           </Link>
         </div>
       </div>

@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { AgnesClient } from "@/lib/providers/agnes/client";
 import { z } from "zod";
+import { verifySession, isResponse, rateLimit } from "@/lib/security/api-guards";
 
 export const maxDuration = 60;
 
@@ -15,6 +16,16 @@ const ImageRequestSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const user = await verifySession(req);
+  if (isResponse(user)) return user;
+  const limit = rateLimit(`ai-image:${user.id}`, 10, 60_000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = ImageRequestSchema.safeParse(body);

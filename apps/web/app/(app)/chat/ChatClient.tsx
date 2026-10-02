@@ -1,3 +1,4 @@
+// SIDDHI-B1-FIX-CLIENT — casts for useStreamingChat compat
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -9,8 +10,18 @@ import { ThinkingTrace } from '@/components/chat/ThinkingTrace';
 import { SetuProgress } from '@/components/chat/SetuProgress';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
-import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+// == SIDDHI F1 WIRE - IMPORTS ==
+import { ChatTopBar } from '@/components/chat/ChatTopBar';
+import { ChatHistorySidebar } from '@/components/chat/ChatHistorySidebar';
+import { useConversations } from '@/hooks/useConversations';
+import type { ConversationMessage } from '@/lib/conversations/types';
+import type { ChatMessage as SiddhiChatMessage } from '@/hooks/useStreamingChat';
+import { LeadViewer } from '@/components/siddhi/LeadViewer';
+import { EnterpriseLeadViewer } from '@/components/siddhi/EnterpriseLeadViewer';
+import { leadGenerator, type LeadGenerationResult } from '@/lib/ai/lead-generator';
 
 interface TraceStep {
   id: string;
@@ -26,10 +37,47 @@ interface TraceStep {
 
 export default function ChatClient() {
   const { messages, setMessages, isLoading, error, queueStatus, sendMessage, clearError } = useStreamingChat();
+
+  // == SIDDHI F1 WIRE - HOOK ==
+  const conv = useConversations();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const loadedConvIdRef = useRef<string | null>(null);
+  const skipPersistRef = useRef(false);
+  const prevLoadingRef = useRef(false);
+
+  // Load active conversation -> messages
+  useEffect(() => {
+    if (!conv.ready) return;
+    const id = conv.active?.id ?? null;
+    if (!id) return;
+    if (loadedConvIdRef.current === id) return;
+    loadedConvIdRef.current = id;
+    skipPersistRef.current = true;
+    setMessages((conv.active?.messages ?? []) as unknown as SiddhiChatMessage[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conv.ready, conv.active?.id, setMessages]);
+
+  // Persist messages -> active conversation
+  useEffect(() => {
+    if (!conv.ready) return;
+    if (skipPersistRef.current) { skipPersistRef.current = false; return; }
+    if (loadedConvIdRef.current === null) return;
+    conv.replaceMessages(messages as unknown as ConversationMessage[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, conv.ready]);
+
+  // Trigger auto-title when a response completes
+  useEffect(() => {
+    const was = prevLoadingRef.current;
+    prevLoadingRef.current = isLoading;
+    if (was && !isLoading) void conv.maybeAutoTitle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
+
   const { loadMemory, saveMemory } = useMemory();
   const [setuMode, setSetuMode] = useState(false);
   const [searchMode, setSearchMode] = useState(true);
-  const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat');
+  const [mode, setMode] = useState<'chat' | 'image' | 'video' | 'leads'>('chat');
   const [imageSettings, setImageSettings] = useState({
     size: '2K',
     ratio: '16:9',
@@ -44,6 +92,8 @@ export default function ChatClient() {
   });
   const [mounted, setMounted] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
+  const [leadResult, setLeadResult] = useState<LeadGenerationResult | null>(null);
+  const [isGeneratingLeads, setIsGeneratingLeads] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,6 +121,32 @@ export default function ChatClient() {
     async (text: string, file?: File) => {
       if (!text.trim() || isLoading) return;
 
+      if (mode === 'leads') {
+        setIsGeneratingLeads(true);
+        try {
+          const result = await leadGenerator.generateLeads({
+            query: text,
+            location: undefined,
+            maxResults: 20,
+            maxPagesPerSite: 2,
+          });
+          setLeadResult(result);
+          
+          // Add system message about lead generation
+          const systemMsg: SiddhiChatMessage = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: `Found ${result.leads.length} leads from ${result.totalSearched} websites. Ready to download CSV with ${result.totalScraped} contacts.`,
+          };
+          setMessages(prev => [...prev, systemMsg]);
+        } catch (error) {
+          console.error('Lead generation failed:', error);
+        } finally {
+          setIsGeneratingLeads(false);
+        }
+        return;
+      }
+
       if (mode === 'image') {
         const enhancedPrompt = `Generate image: ${text} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
         await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false, image: true });
@@ -85,7 +161,7 @@ export default function ChatClient() {
 
       await sendMessage(text, { deep: true, setu: setuMode, search: searchMode });
     },
-    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings, videoSettings]
+    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings, videoSettings, setMessages]
   );
 
   // ─── Handle Image/Video Edit: regenerate with new prompt ────────
@@ -113,7 +189,7 @@ export default function ChatClient() {
     [sendMessage, messages, imageSettings, videoSettings]
   );
 
-  const handleModeToggle = (newMode: 'chat' | 'image' | 'video') => {
+  const handleModeToggle = (newMode: 'chat' | 'image' | 'video' | 'leads') => {
     setMode(mode === newMode ? 'chat' : newMode);
   };
 
@@ -361,6 +437,36 @@ export default function ChatClient() {
     <div className="chat-fullscreen relative">
       <GradientGlowBackground isThinking={isLoading} />
 
+      {/* == SIDDHI F1 WIRE - JSX == */}
+      <ChatTopBar
+        title={conv.active?.title ?? 'New chat'}
+        messageCount={messages.length}
+        autoTitled={conv.active?.autoTitled ?? false}
+        modeLabel={setuMode ? 'SETU' : mode === 'image' ? 'Image' : mode === 'video' ? 'Video' : 'Siddhi'}
+        onNew={() => { conv.createNew(); setMessages([]); }}
+        onOpenHistory={() => setHistoryOpen((v) => !v)}
+        onRename={(t) => conv.renameActive(t)}
+        onDelete={() => { conv.deleteActive(); setMessages([]); }}
+        onAutoTitle={() => void conv.maybeAutoTitle()}
+        historyOpen={historyOpen}
+      />
+
+      <ChatHistorySidebar
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        list={conv.list}
+        activeId={conv.active?.id ?? null}
+        onSelect={(id) => {
+          const c = conv.selectConversation(id);
+          if (c) setMessages(c.messages as unknown as SiddhiChatMessage[]);
+        }}
+        onNew={() => { conv.createNew(); setMessages([]); }}
+        onDelete={(id) => conv.deleteById(id)}
+        onRename={(id, t) => {
+          if (id === conv.active?.id) conv.renameActive(t);
+        }}
+      />
+
       <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-wrap gap-2 sticky top-0 bg-black/80 backdrop-blur-sm z-10 py-1">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -402,6 +508,18 @@ export default function ChatClient() {
             <span className="text-[10px] font-mono hidden sm:inline">Video</span>
           </button>
           <button
+            onClick={() => handleModeToggle('leads')}
+            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
+              mode === 'leads'
+                ? 'bg-green-600/30 text-green-400 border border-green-500/30 shadow-glow'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+            title="Lead Generation Mode"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="text-[10px] font-mono hidden sm:inline">Leads</span>
+          </button>
+          <button
             onClick={() => setSetuMode(!setuMode)}
             className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
               setuMode
@@ -418,6 +536,28 @@ export default function ChatClient() {
       <AnimatePresence>
         {mode === 'image' && <ImageSettingsPanel />}
         {mode === 'video' && <VideoSettingsPanel />}
+        {mode === 'leads' && leadResult && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white/5 border border-green-500/10 rounded-xl p-4 mb-4"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                <Download className="w-4 h-4 text-green-400" />
+                Lead Generation Results
+              </h3>
+              <Badge variant="secondary" className="text-xs">
+                {leadResult.leads.length} leads found
+              </Badge>
+            </div>
+            <EnterpriseLeadViewer 
+              leads={leadResult.leads} 
+              onExport={(format) => console.log(`Exported as ${format}`)}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
@@ -465,13 +605,13 @@ export default function ChatClient() {
                 )}
 
                 {msg.role === 'assistant' && msg.traces && msg.traces.length > 0 && (
-                  <div className="ml-12 mt-2">{renderTraces(msg.traces)}</div>
+                  <div className="ml-12 mt-2">{renderTraces(msg.traces as TraceStep[])}</div>
                 )}
 
                 {msg.role === 'assistant' && msg.leads && msg.leads.length > 0 && (
                   <div className="ml-12 mt-2">
                     <SetuProgress
-                      leads={msg.leads}
+                      leads={msg.leads as unknown as Array<{ name: string; email: string; company: string; confidence: number }>}
                       csv={msg.csv || ''}
                       isLoading={false}
                     />

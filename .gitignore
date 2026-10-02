@@ -12,3 +12,12 @@ build
 supabase/.temp
 .vscode
 .idea
+backup-*/
+.backups/
+apps/apps/
+apps/web/.siddhi-*/
+apps/web/**/*.bak*
+apps/web/next.config.ts.broken
+apps/web/tsconfig.tsbuildinfo
+kalki_repo_dump.txt
+logs/

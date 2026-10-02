@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { landingRouteForRole } from '@/lib/auth/role-routes'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -27,8 +28,18 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/login?error=auth_failed', baseUrl))
     }
 
-    // Redirect to dashboard after successful login
-    return NextResponse.redirect(new URL('/dashboard', baseUrl))
+    // Land the user on their role's home panel.
+    const { data: authData } = await supabase.auth.getUser()
+    let dest = '/client'
+    if (authData?.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single()
+      dest = landingRouteForRole((profile as { role?: string } | null)?.role)
+    }
+    return NextResponse.redirect(new URL(dest, baseUrl))
   } catch (err) {
     console.error('Auth callback exception:', err)
     return NextResponse.redirect(new URL('/login?error=auth_failed', baseUrl))

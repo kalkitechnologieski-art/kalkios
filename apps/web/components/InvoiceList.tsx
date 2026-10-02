@@ -1,4 +1,5 @@
 'use client'
+// == KALKI B1 SPINE ==
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/types'

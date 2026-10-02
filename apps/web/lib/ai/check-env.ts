@@ -1,14 +1,14 @@
 /**
  * Validates required environment variables for AI services.
- * Returns a list of missing keys.
+ * Throws when NO provider is configured — callers run in try/catch and
+ * surface a 500 rather than silently invoking clients with missing keys.
  */
 export function validateAIEnv(): string[] {
-  const required = ['AGNES_API_KEY', 'ZHIPU_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY']
-  const missing = required.filter(key => !process.env[key])
-  if (missing.length > 0) {
-    console.warn(`⚠️ Missing AI API keys: ${missing.join(', ')}`)
+  const providers = getAvailableProviders()
+  if (providers.length === 0) {
+    throw new Error('No AI provider configured (set at least one of AGNES_API_KEY, ZHIPU_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY)')
   }
-  return missing
+  return providers
 }
 
 /**

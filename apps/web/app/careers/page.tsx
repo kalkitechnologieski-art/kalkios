@@ -99,7 +99,7 @@ export default async function CareersPage() {
           <h2 className="text-2xl font-bold text-white">Don't see the right role?</h2>
           <p className="text-cyan-400/40 mt-2">Send us your resume anyway.</p>
           <Link href="/careers/apply">
-            <LuxuryButton variant="primary" size="lg" label="Submit General Application" className="mt-6" />
+            <LuxuryButton variant="cyber" size="lg" label="Submit General Application" className="mt-6" />
           </Link>
         </div>
       </ScrollReveal>

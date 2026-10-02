@@ -326,8 +326,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-3 pt-2">
                   <LuxuryButton
-                    variant="primary"
-                    size="md"
+                    variant="cyber"
+                    size="default"
                     label={saving ? 'Saving...' : 'Save Changes'}
                     icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     iconPosition="left"
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                     </p>
                     <p className="text-cyan-400/30 text-xs font-mono">Change your password</p>
                   </div>
-                  <LuxuryButton variant="secondary" size="sm" label="Change" onClick={handleChangePassword} />
+                  <LuxuryButton variant="outline" size="sm" label="Change" onClick={handleChangePassword} />
                 </div>
                 <div className="bg-white/5 border border-cyan-500/10 rounded-lg p-4 flex items-center justify-between">
                   <div>
@@ -422,7 +422,7 @@ export default function SettingsPage() {
                   </p>
                   <p className="text-cyan-400/30 text-xs font-mono">View your billing history</p>
                 </div>
-                <LuxuryButton variant="secondary" size="sm" label="View All" />
+                <LuxuryButton variant="outline" size="sm" label="View All" />
               </div>
             </div>
           )}

@@ -1,50 +1,62 @@
-import { ChatMessage } from './types'
+// ═══ SIDDHI v4.0 BATCH 1 ═══
+// Hierarchical memory with token-budget-aware context building.
+// ─────────────────────────────────────────────────────────────────────────────
 
-const MAX_CONTEXT_TOKENS = 4000
-const SUMMARY_TRIGGER_LENGTH = 20 // messages count
+import type { ChatMessage } from './types';
 
-// Simple token estimator (rough: 1 token ~ 4 chars)
-function estimateTokens(messages: ChatMessage[]): number {
-  const text = messages.map(m => m.content).join(' ')
-  return Math.ceil(text.length / 4)
+export interface HierarchicalMemory {
+  shortTerm: ChatMessage[];
+  mediumTerm: ChatMessage[];
+  longTerm: Array<{ summary: string; timestamp: number; topics: string[] }>;
 }
 
-// Summarize conversation history
+const estimateTokens = (msgs: ChatMessage[]): number =>
+  msgs.reduce((sum, m) => sum + Math.ceil((m.content?.length ?? 0) / 4), 0);
+
 export async function summarizeConversation(messages: ChatMessage[]): Promise<string> {
-  if (messages.length === 0) return ''
-  // Take the first system message and the last few messages
-  const system = messages.find(m => m.role === 'system')
-  const recent = messages.slice(-6) // last 6 messages
-  const text = recent.map(m => `${m.role}: ${m.content}`).join('\n')
-  return `Previous conversation summary: ${text.slice(0, 500)}...` // truncate
+  if (messages.length === 0) return '';
+  const text = messages.map((m) => `${m.role}: ${m.content.slice(0, 300)}`).join('\n');
+  try {
+    const { chat } = await import('./index');
+    const result = await chat(
+      [
+        { role: 'system', content: 'Summarize this conversation in 3-5 bullets. Preserve key facts, decisions, and user preferences.' },
+        { role: 'user', content: text },
+      ],
+      { max_tokens: 300 }
+    );
+    return result.content;
+  } catch {
+    return messages.slice(0, 5).map((m) => `${m.role}: ${m.content.slice(0, 100)}`).join('\n');
+  }
 }
 
-// Build memory context for the next request
+export async function buildHierarchicalContext(
+  messages: ChatMessage[],
+  systemPrompt: string,
+  maxTokens = 8000
+): Promise<ChatMessage[]> {
+  const result: ChatMessage[] = [{ role: 'system', content: systemPrompt }];
+  let remaining = maxTokens - estimateTokens(result);
+
+  for (const m of messages.slice(-10)) {
+    const t = Math.ceil((m.content?.length ?? 0) / 4);
+    if (t < remaining) { result.push(m); remaining -= t; }
+  }
+
+  if (messages.length > 10 && remaining > 500) {
+    const summary = await summarizeConversation(messages.slice(0, -10));
+    const msg: ChatMessage = { role: 'system', content: `[Earlier context]\n${summary}` };
+    const t = Math.ceil(msg.content.length / 4);
+    if (t < remaining) { result.push(msg); remaining -= t; }
+  }
+
+  return result;
+}
+
 export async function buildMemoryContext(
   messages: ChatMessage[],
   systemPrompt: string
 ): Promise<ChatMessage[]> {
-  const totalTokens = estimateTokens(messages)
-  const result: ChatMessage[] = []
-
-  // Always include system prompt
-  result.push({ role: 'system', content: systemPrompt })
-
-  // If conversation is long, include a summary and recent messages
-  if (totalTokens > MAX_CONTEXT_TOKENS) {
-    const summary = await summarizeConversation(messages)
-    result.push({ role: 'system', content: `Context summary: ${summary}` })
-    // Include last 10 messages
-    const lastTen = messages.slice(-10)
-    result.push(...lastTen)
-  } else {
-    // Include all messages except system (already added)
-    const nonSystem = messages.filter(m => m.role !== 'system')
-    result.push(...nonSystem)
-  }
-
-  return result
+  return buildHierarchicalContext(messages, systemPrompt);
 }
-
-// Store conversation in IndexedDB (already in useMemory hook)
-// We'll enhance the hook to also store metadata (tokens, etc.)

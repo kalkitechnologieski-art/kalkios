@@ -1,197 +1,179 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createHmac } from 'crypto'
+// Payment webhook — signature-verified (fail-closed), batch-fulfilled via the
+// fulfill_paid_orders() RPC (row locks + status guard make it idempotent).
+// The old unauthenticated GET handler (payment-forgery vector) is removed;
+// buyers land on /checkout/success via the gateway redirect_url instead.
 
-const INSTAMOJO_PRIVATE_SALT = process.env.INSTAMOJO_PRIVATE_SALT
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { createHmac, timingSafeEqual } from 'crypto';
+import { logger } from '@/lib/utils/logger';
 
-export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams
-  const orderId = searchParams.get('order_id')
-  const paymentId = searchParams.get('payment_id')
-  const paymentStatus = searchParams.get('payment_status')
+const INSTAMOJO_PRIVATE_SALT = process.env.INSTAMOJO_PRIVATE_SALT;
 
-  if (!orderId) {
-    console.warn('Webhook GET: No order_id provided')
-    return NextResponse.redirect(new URL('/payment-failed', req.url))
-  }
+interface FulfillmentRow {
+  order_id: string;
+  status: 'paid' | 'already_paid';
+  project_id?: string;
+  invoice_number?: string;
+  amount?: number;
+  gst?: number;
+  total?: number;
+  service_name?: string;
+  buyer_name?: string | null;
+  buyer_email?: string | null;
+}
 
-  const supabase = await createClient() as any
+function signatureMatches(rawBody: string, signature: string): boolean {
+  if (!INSTAMOJO_PRIVATE_SALT || !signature) return false;
+  const sigBuf = Buffer.from(signature, 'utf8');
+  // Instamojo signs the raw body; some integrations append the salt first.
+  return [rawBody, rawBody + INSTAMOJO_PRIVATE_SALT].some((base) => {
+    const expected = createHmac('sha256', INSTAMOJO_PRIVATE_SALT).update(base).digest('hex');
+    const expBuf = Buffer.from(expected, 'utf8');
+    return sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+  });
+}
 
+function parsePayload(contentType: string, rawBody: string): Record<string, unknown> | null {
   try {
-    const { data: order, error } = await supabase
-// @ts-ignore
-      .from('orders')
-      .select('id, status')
-      .eq('id', orderId as any as any)
-// @ts-ignore
-      .single()
-
-    if (error || !order) {
-      console.warn(`Order ${orderId} not found`)
-      return NextResponse.redirect(new URL('/payment-failed', req.url))
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      return Object.fromEntries(new URLSearchParams(rawBody).entries());
     }
-
-    if (paymentStatus === 'Credit' || paymentStatus === 'Paid') {
-      await handleSuccessfulPayment(orderId, paymentId || '', supabase)
-      return NextResponse.redirect(new URL('/client?payment=success', req.url))
-    } else {
-      await supabase
-// @ts-ignore
-        .from('orders')
-// @ts-ignore
-        .update({  status: 'failed' } as any)
-        .eq('id', orderId as any as any)
-      return NextResponse.redirect(new URL('/payment-failed', req.url))
-    }
-  } catch (error) {
-    console.error('Webhook GET error:', error)
-    return NextResponse.redirect(new URL('/payment-failed', req.url))
+    return JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
+    return null;
   }
+}
+
+function extractPaymentId(data: Record<string, unknown>): string {
+  const payments = data.payments;
+  if (typeof payments === 'string') {
+    try {
+      const parsed = JSON.parse(payments) as Array<{ payment_id?: string; id?: string }>;
+      const first = parsed[0];
+      if (first?.payment_id || first?.id) return String(first.payment_id ?? first.id);
+    } catch {
+      /* fall through */
+    }
+  } else if (Array.isArray(payments) && payments.length > 0) {
+    const first = payments[0] as { payment_id?: string; id?: string };
+    if (first?.payment_id || first?.id) return String(first.payment_id ?? first.id);
+  }
+  return String(data.payment_id ?? '');
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const rawBody = await req.text()
-    const signature = req.headers.get('X-Instamojo-Signature') || ''
-
-    if (INSTAMOJO_PRIVATE_SALT) {
-      const expectedSignature = createHmac('sha256', INSTAMOJO_PRIVATE_SALT)
-// @ts-ignore
-        .update(rawBody)
-        .digest('hex')
-      if (signature !== expectedSignature) {
-        console.warn('Invalid webhook signature')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      }
-    }
-
-    const data = JSON.parse(rawBody)
-    const paymentId = data.payment_id || data.id
-    const orderId = data.custom_field_order_id || data.purpose?.match(/order_([a-f0-9-]+)/)?.[1]
-
-    if (!orderId) {
-      console.warn('No order ID found in webhook payload')
-      return NextResponse.json({ error: 'Order ID missing' }, { status: 400 })
-    }
-
-    const supabase = await createClient() as any
-
-    const { data: order, error } = await supabase
-// @ts-ignore
-      .from('orders')
-      .select('id, status')
-      .eq('id', orderId as any as any)
-// @ts-ignore
-      .single()
-
-    if (error || !order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    }
-
-    if (order?.status === 'paid') {
-      return NextResponse.json({ message: 'Order already paid' })
-    }
-
-    const paymentStatus = data.payment_status || data.status
-    if (paymentStatus === 'Credit' || paymentStatus === 'Paid') {
-      await handleSuccessfulPayment(orderId, paymentId, supabase)
-      return NextResponse.json({ success: true })
-    } else {
-      await supabase
-// @ts-ignore
-        .from('orders')
-// @ts-ignore
-        .update({  status: 'failed' } as any)
-        .eq('id', orderId as any as any)
-      return NextResponse.json({ success: false, status: 'failed' })
-    }
-  } catch (error: any) {
-    console.error('Webhook error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!INSTAMOJO_PRIVATE_SALT) {
+    logger.error('[Webhook] INSTAMOJO_PRIVATE_SALT is not configured — refusing to process payment');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
   }
+
+  const rawBody = await req.text();
+  const signature = req.headers.get('x-instamojo-signature') || '';
+  if (!signatureMatches(rawBody, signature)) {
+    logger.warn('[Webhook] Invalid signature');
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const data = parsePayload(req.headers.get('content-type') ?? '', rawBody);
+  if (!data) {
+    return NextResponse.json({ error: 'Unparseable payload' }, { status: 400 });
+  }
+
+  const paymentRequestId = data.id ? String(data.id) : null;
+  const orderId =
+    (data.custom_field_order_id as string | undefined) ||
+    (typeof data.purpose === 'string'
+      ? data.purpose.match(/order[_\s]([a-f0-9-]+)/i)?.[1] ?? ''
+      : '');
+
+  if (!paymentRequestId && !orderId) {
+    await logWebhookFailure('order_id_missing', data, 'No payment request id or order id in payload');
+    return NextResponse.json({ error: 'Order ID missing' }, { status: 400 });
+  }
+
+  // Supabase cast to `any` — generated Database types predate the
+  // fulfill_paid_orders RPC; regenerate types after applying the migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createAdminClient()) as any;
+  const paymentStatus = String(data.payment_status ?? data.status ?? '');
+
+  if (paymentStatus !== 'Credit' && paymentStatus !== 'Paid') {
+    const filter = paymentRequestId
+      ? orderId
+        ? `payment_request_id.eq.${paymentRequestId},id.eq.${orderId}`
+        : `payment_request_id.eq.${paymentRequestId}`
+      : `id.eq.${orderId}`;
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'failed' })
+      .neq('status', 'paid')
+      .or(filter);
+    if (error) logger.error('[Webhook] Failed to mark orders failed', error);
+    return NextResponse.json({ success: false, status: 'failed' });
+  }
+
+  const paymentId = extractPaymentId(data);
+  const { data: result, error } = await supabase.rpc('fulfill_paid_orders', {
+    p_payment_request_id: paymentRequestId,
+    p_payment_id: paymentId,
+    p_order_id: orderId || null,
+  });
+
+  if (error) {
+    await logWebhookFailure('handler_error', data, error.message);
+    logger.error('[Webhook] Fulfillment failed', error);
+    return NextResponse.json({ error: 'Handler failed' }, { status: 500 });
+  }
+
+  const fulfilled = ((result as { fulfilled?: FulfillmentRow[] })?.fulfilled ?? []).filter(
+    (r) => r.status === 'paid'
+  );
+
+  for (const row of fulfilled) {
+    if (!row.buyer_email || !row.invoice_number) continue;
+    try {
+      const { sendOrderConfirmation } = await import('@/lib/email/send');
+      await sendOrderConfirmation({
+        to: row.buyer_email,
+        orderId: row.order_id,
+        projectId: row.project_id ?? '',
+        amount: row.total ?? 0,
+        invoiceNumber: row.invoice_number,
+        buyerName: row.buyer_name ?? 'Client',
+        serviceName: row.service_name ?? 'Project',
+      });
+    } catch (emailError) {
+      logger.warn('[Webhook] Email failed', emailError);
+    }
+  }
+
+  logger.info('[Webhook] Payment handled', {
+    paymentRequestId,
+    orderId,
+    newlyPaid: fulfilled.length,
+  });
+  return NextResponse.json({ success: true, fulfilled: result });
 }
 
-async function handleSuccessfulPayment(orderId: string, paymentId: string, supabase: any) {
-  await supabase
-// @ts-ignore
-    .from('orders')
-// @ts-ignore
-    .update({ 
-      status: 'paid',
-      payment_id: paymentId,
-    } as any)
-    .eq('id', orderId as any as any)
-
-  const { data: order } = await supabase
-// @ts-ignore
-    .from('orders')
-    .select('service_id, buyer_name, buyer_email, amount')
-    .eq('id', orderId as any as any)
-// @ts-ignore
-    .single()
-
-  if (!order) return
-
-  const { data: service } = await supabase
-// @ts-ignore
-    .from('services')
-    .select('name, category')
-    .eq('id', order.service_id as any as any)
-// @ts-ignore
-    .single()
-
-  const projectName = service?.name || `Project #${orderId.slice(0, 8)}`
-  const { data: project } = await supabase
-// @ts-ignore
-    .from('projects')
-// @ts-ignore
-    // @ts-ignore
-.insert({  
-      order_id: orderId,
-      name: projectName,
-      description: `Project for ${order.buyer_name}`,
-      status: 'not_started',
-      client_id: null,
-      estimated_delivery: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    } as any)
-    .select()
-// @ts-ignore
-    .single()
-
-  if (project) {
-    const milestones = [
-      { title: 'Project Kickoff', description: 'Initial meeting and requirements gathering', status: 'pending' },
-      { title: 'Design Phase', description: 'UI/UX design and prototyping', status: 'pending' },
-      { title: 'Development', description: 'Full development and implementation', status: 'pending' },
-      { title: 'Testing & QA', description: 'Quality assurance and bug fixing', status: 'pending' },
-      { title: 'Launch', description: 'Final delivery and deployment', status: 'pending' },
-    ]
-    for (const m of milestones) {
-      await supabase
-// @ts-ignore
-        .from('milestones')
-// @ts-ignore
-        .insert({  
-          project_id: project.id,
-          title: m.title,
-          description: m.description,
-          status: m.status,
-          order_index: milestones.indexOf(m),
-        } as any)
-    }
-
-    const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
-    await supabase
-// @ts-ignore
-      .from('invoices')
-// @ts-ignore
-      .insert({  
-        order_id: orderId,
-        invoice_number: invoiceNumber,
-        total: order.amount,
-        gst: order.amount * 0.18,
-        status: 'paid',
-        generated_at: new Date().toISOString(),
-      } as any)
+async function logWebhookFailure(
+  source: string,
+  payload: unknown,
+  error: string
+): Promise<void> {
+  try {
+    // Supabase cast to `any` — generated Database types predate the
+    // fulfill_paid_orders RPC; regenerate types after applying the migration.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createAdminClient()) as any;
+    await supabase.from('webhook_failures').insert({
+      source,
+      payload,
+      error,
+      attempts: 0,
+      next_retry_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+  } catch (e) {
+    logger.warn('[Webhook] Failed to log failure', e);
   }
 }

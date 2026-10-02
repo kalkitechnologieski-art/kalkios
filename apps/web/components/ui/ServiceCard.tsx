@@ -1,19 +1,27 @@
-'use client'
+// == KALKI B4 EXPERIENCE ==
+'use client';
 
-import Link from 'next/link'
-import { Star } from 'lucide-react'
-import type { Database } from '@/lib/supabase/types'
+import Link from 'next/link';
+import { Star } from 'lucide-react';
+import type { Database } from '@/lib/supabase/types';
 
 type Service = Database['public']['Tables']['services']['Row'] & {
-  target_industries?: string[]
-  long_description?: string | null
+  target_industries?: string[];
+  long_description?: string | null;
+};
+
+interface Props {
+  service: Service;
+  variantMinPrice?: number | null;
+  variantMaxPrice?: number | null;
 }
 
-interface ServiceCardProps {
-  service: Service
-}
+export default function ServiceCard({ service, variantMinPrice, variantMaxPrice }: Props) {
+  const hasVariantRange = variantMinPrice != null && variantMaxPrice != null && variantMinPrice !== variantMaxPrice;
+  const displayPrice = hasVariantRange
+    ? `₹${(variantMinPrice ?? 0).toLocaleString('en-IN')}+`
+    : `₹${(service.price ?? 0).toLocaleString('en-IN')}`;
 
-export default function ServiceCard({ service }: ServiceCardProps) {
   return (
     <Link
       href={`/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`}
@@ -35,12 +43,12 @@ export default function ServiceCard({ service }: ServiceCardProps) {
             {service.price < 1000 ? 'Starter' : service.price < 100000 ? 'Pro' : 'Enterprise'}
           </span>
         )}
-        {service.rating && (
+        {service.rating ? (
           <span className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full flex items-center gap-1 border border-white/10">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
             {service.rating}
           </span>
-        )}
+        ) : null}
       </div>
       <div className="p-4 flex-1 flex flex-col">
         <p className="text-xs text-cyan-400/60 uppercase tracking-wider">{service.category}</p>
@@ -49,16 +57,19 @@ export default function ServiceCard({ service }: ServiceCardProps) {
         </h3>
         <div className="flex flex-wrap gap-1 mt-1">
           {(service.target_industries || []).slice(0, 2).map((ind: string) => (
-            <span key={ind} className="text-[8px] bg-cyan-600/20 text-cyan-400 px-1.5 py-0.5 rounded-full">{ind}</span>
+            <span key={ind} className="text-[8px] bg-cyan-600/20 text-cyan-400 px-1.5 py-0.5 rounded-full">
+              {ind}
+            </span>
           ))}
-          {(service.target_industries || []).length > 2 && <span className="text-[8px] text-cyan-400/30">+{(service.target_industries || []).length-2}</span>}
         </div>
         <p className="text-cyan-400/40 text-xs mt-1 line-clamp-2 flex-1">{service.description}</p>
         <div className="flex items-center justify-between mt-3 pt-2 border-t border-cyan-500/10">
-          <span className="text-white font-bold">₹{(service.price ?? 0).toLocaleString()}</span>
-          <span className="text-xs text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">View</span>
+          <span className="text-white font-bold">{displayPrice}</span>
+          <span className="text-xs text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full">
+            {hasVariantRange ? 'View tiers' : 'View'}
+          </span>
         </div>
       </div>
     </Link>
-  )
+  );
 }

@@ -1,254 +1,334 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/useAuth'
-import { LuxuryButton } from '@/components/ui/LuxuryButton'
-import Link from 'next/link'
-import { 
-  User, Sparkles, ShoppingBag, Clock, Award, 
-  TrendingUp, ChevronRight, FolderKanban,
-  Calendar, CheckCircle, Circle
-} from 'lucide-react'
-import type { Database } from '@/lib/supabase/types'
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useUser } from '@/hooks/useAuth';
+import Link from 'next/link';
+import { FolderKanban, Wallet, Gift, Bell, ChevronRight, Plus, TrendingUp, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
-type Project = Database['public']['Tables']['projects']['Row'] & {
-  milestones?: Database['public']['Tables']['milestones']['Row'][]
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+  estimated_delivery: string | null;
 }
 
-type Order = Database['public']['Tables']['orders']['Row']
-
-// ─── Not Logged In State ───
-function NotLoggedIn() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-600/20 to-purple-600/20 flex items-center justify-center mb-6">
-        <User className="w-10 h-10 text-cyan-400/50" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Welcome to Your Client Panel</h2>
-      <p className="text-cyan-400/40 text-sm max-w-md mb-8">
-        Sign in to track your projects, view invoices, and manage your services.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <LuxuryButton
-          variant="primary"
-          size="lg"
-          label="Sign In"
-          icon={<User className="w-4 h-4" />}
-          onClick={() => { window.location.href = '/login' }}
-        />
-        <Link href="/marketplace">
-          <LuxuryButton variant="secondary" size="lg" label="Browse Marketplace" />
-        </Link>
-      </div>
-    </div>
-  )
+interface TimelinePost {
+  id: string;
+  project_id: string | null;
+  order_id: string | null;
+  post_type: string;
+  content: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
 }
 
-// ─── Project Card ───
-function ProjectCard({ project }: { project: Project }) {
-  const total = project.milestones?.length || 0
-  const completed = project.milestones?.filter(m => m.status === 'completed').length || 0
-  const progress = total > 0 ? Math.round((completed / total) * 100) : 0
-
-  return (
-    <div className="bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl p-6 transition hover:bg-white/10">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-white font-medium">{project.name}</h3>
-          <p className="text-cyan-400/40 text-sm mt-1">{project.description || 'No description'}</p>
-        </div>
-        <span className={`text-xs px-3 py-1 rounded-full ${
-          project.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-          project.status === 'in_progress' ? 'bg-yellow-500/20 text-yellow-400' :
-          'bg-white/10 text-cyan-400/40'
-        }`}>
-          {project.status || 'Pending'}
-        </span>
-      </div>
-      <div className="mt-4">
-        <div className="flex justify-between text-xs text-cyan-400/30 mb-1">
-          <span>Progress</span>
-          <span>{progress}%</span>
-        </div>
-        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-      {project.milestones && project.milestones.length > 0 && (
-        <div className="mt-4 flex items-center gap-3 text-xs text-cyan-400/30">
-          {project.milestones.slice(0, 3).map((m, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {m.status === 'completed' ? (
-                <CheckCircle className="w-3 h-3 text-green-400" />
-              ) : m.status === 'in_progress' ? (
-                <Circle className="w-3 h-3 text-yellow-400 animate-pulse" />
-              ) : (
-                <Circle className="w-3 h-3 text-white/20" />
-              )}
-              {m.title}
-            </span>
-          ))}
-          {project.milestones.length > 3 && (
-            <span className="text-white/20">+{project.milestones.length - 3} more</span>
-          )}
-        </div>
-      )}
-      <div className="mt-4 flex items-center justify-between text-xs">
-        {project.estimated_delivery && (
-          <span className="text-cyan-400/30 flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            Due: {new Date(project.estimated_delivery).toLocaleDateString()}
-          </span>
-        )}
-        <span className="text-cyan-400/50 hover:text-cyan-400 transition flex items-center gap-1">
-          View Details <ChevronRight className="w-3 h-3" />
-        </span>
-      </div>
-    </div>
-  )
+interface ProfileRow {
+  wallet_balance: number | null;
+  total_referrals: number | null;
+  total_referral_earnings: number | null;
+  referral_code: string | null;
 }
 
-// ─── Main Client Panel ───
-export default function ClientPage() {
-  const { user, loading: authLoading } = useUser()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient() as any
+export default function ClientDashboard() {
+  const { user, loading: authLoading } = useUser();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [timelinePosts, setTimelinePosts] = useState<TimelinePost[]>([]);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    if (!user) { setLoading(false); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
 
-    const fetchProjects = async () => {
+    void (async () => {
       try {
-        // Try to get projects for this user
-        let { data, error } = await supabase
-// @ts-ignore
-          .from('projects')
-          .select('*, milestones(*)')
-          .eq('client_id', user.id as any as any)
-          .order('created_at', { ascending: false })
-
-        // If no projects, try using email from orders
-        if (!data || data.length === 0) {
-          const { data: orders } = await supabase
-// @ts-ignore
-            .from('orders')
-            .select('id')
-            .eq('buyer_email', user.email as any as any)
-
-          if (orders && orders.length > 0) {
-            // Get orders that have a project_id (could be null)
-            const { data: ordersWithProjects } = await supabase
-// @ts-ignore
-              .from('orders')
-              .select('project_id')
-              .eq('buyer_email', user.email as any as any)
-
-            const projectIds = ordersWithProjects
-              ?.map((o: any) => o.project_id)
-              .filter((id: string | null): id is string => id !== null) || []
-
-            if (projectIds.length > 0) {
-              const { data: projectsData } = await supabase
-// @ts-ignore
-                .from('projects')
-                .select('*, milestones(*)')
-                .in('id', projectIds)
-                .order('created_at', { ascending: false })
-              data = projectsData
-            }
-          }
-        }
-        setProjects((data || []) as Project[])
-      } catch (e) {
-        console.warn('Could not fetch projects:', e)
+        const [{ data: p }, { data: prof }, { data: posts }] = await Promise.all([
+          supabase
+            .from('projects')
+            .select('id, name, status, estimated_delivery')
+            .eq('client_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+          supabase
+            .from('profiles')
+            .select('wallet_balance, total_referrals, total_referral_earnings, referral_code')
+            .eq('id', user.id)
+            .single(),
+          supabase
+            .from('timeline_posts')
+            .select('id, project_id, order_id, post_type, content, created_at, metadata')
+            .eq('visibility', 'client')
+            .in('project_id', projects.map(p => p.id))
+            .order('created_at', { ascending: false })
+            .limit(5),
+        ]);
+        setProjects((p ?? []) as Project[]);
+        setProfile(prof as ProfileRow | null);
+        setTimelinePosts((posts ?? []) as TimelinePost[]);
+      } catch {
+        // silent
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchProjects()
-  }, [user, supabase])
+    })();
+  }, [user]);
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        <Skeleton variant="text" className="w-1/3 h-8 mb-6" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="card" className="h-28" />
+          ))}
+        </div>
+        <Skeleton variant="card" className="h-64" />
       </div>
-    )
+    );
   }
 
   if (!user) {
-    return <NotLoggedIn />
-  }
-
-  if (projects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-600/20 to-purple-600/20 flex items-center justify-center mb-6">
-          <FolderKanban className="w-10 h-10 text-cyan-400/50" />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-2">No Active Projects</h2>
-        <p className="text-cyan-400/40 text-sm max-w-md mb-8">
-          You don't have any active projects yet. Start your journey with our premium services.
-        </p>
-        <Link href="/marketplace">
-          <LuxuryButton variant="primary" size="lg" label="Explore Marketplace" />
+      <div className="max-w-md mx-auto py-20 text-center">
+        <h2 className="text-2xl font-bold text-white mb-3">Sign in to view your dashboard</h2>
+        <Link href="/login">
+          <Button variant="cyber" size="lg" label="Sign in" />
         </Link>
       </div>
-    )
+    );
   }
 
-  const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
+  const wallet = profile?.wallet_balance ?? 0;
+  const referrals = profile?.total_referrals ?? 0;
+  const earnings = profile?.total_referral_earnings ?? 0;
+  const code = profile?.referral_code ?? 'KALKI-XXXX';
+
+  const activeProjects = projects.filter(p => !['completed', 'cancelled'].includes(p.status));
+  const completedProjects = projects.filter(p => p.status === 'completed');
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="flex items-start justify-between mb-8">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2 font-mono">
-            <FolderKanban className="w-6 h-6 text-cyan-400" />
-            <span className="text-cyan-400">//</span> Client Panel
-          </h1>
-          <p className="text-cyan-400/40 text-sm mt-1">
-            Welcome back, {userName} • {projects.length} active {projects.length === 1 ? 'project' : 'projects'}
+          <h1 className="text-3xl md:text-4xl font-bold cyber-text">Client Dashboard</h1>
+          <p className="text-white/60 text-sm mt-1">
+            Welcome back, <span className="text-white font-medium">{user.email?.split('@')[0] ?? 'there'}</span>
           </p>
         </div>
         <Link href="/marketplace">
-          <LuxuryButton
-            variant="secondary"
-            size="sm"
-            label="New Project"
-            icon={<Sparkles className="w-4 h-4" />}
-          />
+          <Button variant="cyber" size="lg" label="New project" icon={<Plus className="w-4 h-4" />} />
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={<FolderKanban className="w-5 h-5 text-cyan-400" />}
+          label="Active Projects"
+          value={activeProjects.length}
+          href="/client/orders"
+          accent="cyan"
+        />
+        <StatCard
+          icon={<CheckCircle2 className="w-5 h-5 text-green-400" />}
+          label="Completed"
+          value={completedProjects.length}
+          href="/client/orders?status=completed"
+          accent="green"
+        />
+        <StatCard
+          icon={<Wallet className="w-5 h-5 text-purple-400" />}
+          label="Wallet"
+          value={`₹${wallet.toLocaleString('en-IN')}`}
+          href="/client/wallet"
+          accent="purple"
+        />
+        <StatCard
+          icon={<TrendingUp className="w-5 h-5 text-yellow-400" />}
+          label="Referral Earnings"
+          value={`₹${earnings.toLocaleString('en-IN')}`}
+          href="/client/referrals"
+          accent="yellow"
+        />
       </div>
 
-      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Active Projects', value: projects.filter(p => p.status === 'in_progress').length, icon: FolderKanban },
-          { label: 'Completed', value: projects.filter(p => p.status === 'completed').length, icon: CheckCircle },
-          { label: 'Total Milestones', value: projects.reduce((acc, p) => acc + (p.milestones?.length || 0), 0), icon: Calendar },
-          { label: 'On Track', value: projects.filter(p => p.status !== 'completed').length, icon: TrendingUp },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white/5 border border-cyan-500/10 rounded-xl p-4 text-center">
-            <stat.icon className="w-5 h-5 text-cyan-400 mx-auto mb-1" />
-            <div className="text-2xl font-bold text-white">{stat.value}</div>
-            <div className="text-xs text-cyan-400/30">{stat.label}</div>
+      {/* Referral CTA */}
+      <div className="glass-strong rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 neon-cyan">
+        <div className="flex-1">
+          <p className="text-white/60 text-xs font-mono uppercase tracking-wider">Your referral code</p>
+          <p className="text-3xl font-bold cyber-text-glow font-mono mt-2">{code}</p>
+          <p className="text-white/40 text-sm mt-1">Earn ₹500 for each friend who buys</p>
+        </div>
+        <Link href="/client/referrals">
+          <Button variant="cyber" size="lg" label="Share & Earn" />
+        </Link>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Projects List */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Recent Projects</h2>
+            <Link href="/client/orders" className="text-cyan-400 hover:text-cyan-300 text-sm">
+              View all →
+            </Link>
           </div>
-        ))}
+
+          {projects.length === 0 ? (
+            <div className="glass rounded-xl p-8 text-center border border-cyan-500/10">
+              <FolderKanban className="w-12 h-12 text-cyan-400/40 mx-auto mb-4" />
+              <p className="text-white/60 text-sm mb-4">No active projects yet.</p>
+              <Link href="/marketplace">
+                <Button variant="outline" size="sm" label="Browse services" />
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {projects.slice(0, 5).map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/client/order/${p.id}`}
+                  className="glass hover:border-cyan-500/30 rounded-xl p-4 transition group block"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{p.name}</p>
+                      <p className="text-white/40 text-xs mt-1">
+                        <StatusBadge status={p.status} /> · {p.estimated_delivery ? `Due ${new Date(p.estimated_delivery).toLocaleDateString()}` : 'In progress'}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition flex-shrink-0" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Real-time Timeline Feed */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Live Updates</h2>
+            <Bell className="w-5 h-5 text-cyan-400" />
+          </div>
+
+          {timelinePosts.length === 0 ? (
+            <div className="glass rounded-xl p-6 text-center border border-cyan-500/10">
+              <Clock className="w-10 h-10 text-cyan-400/40 mx-auto mb-3" />
+              <p className="text-white/60 text-sm">No recent updates</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto scrollbar-hide">
+              {timelinePosts.map((post) => (
+                <div key={post.id} className="glass rounded-xl p-4 border border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TimelineTypeIcon type={post.post_type} />
+                    <span className="text-white/40 text-xs font-mono uppercase">{post.post_type}</span>
+                  </div>
+                  <p className="text-white/90 text-sm line-clamp-3">{post.content}</p>
+                  <p className="text-white/30 text-xs mt-2">{timeAgo(post.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Notifications strip */}
+      <div className="glass rounded-xl p-4 flex items-center gap-3 border border-cyan-500/10">
+        <Bell className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+        <p className="text-white/60 text-sm flex-1">Get notified when milestones complete or new updates arrive</p>
+        <Link href="/settings/notifications" className="text-cyan-400 text-xs hover:text-cyan-300 whitespace-nowrap">
+          Settings →
+        </Link>
       </div>
     </div>
-  )
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  href,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  href: string;
+  accent: 'cyan' | 'green' | 'purple' | 'yellow';
+}) {
+  const accentColors = {
+    cyan: 'hover:border-cyan-500/30',
+    green: 'hover:border-green-500/30',
+    purple: 'hover:border-purple-500/30',
+    yellow: 'hover:border-yellow-500/30',
+  };
+
+  return (
+    <Link
+      href={href}
+      className={cn('glass rounded-xl p-4 transition block', accentColors[accent])}
+    >
+      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-white/40 text-xs font-mono">{label}</span></div>
+      <div className="text-2xl font-bold text-white font-mono">{value}</div>
+    </Link>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    pending: 'bg-yellow-500/20 text-yellow-400',
+    in_progress: 'bg-cyan-500/20 text-cyan-400',
+    review: 'bg-purple-500/20 text-purple-400',
+    completed: 'bg-green-500/20 text-green-400',
+    cancelled: 'bg-red-500/20 text-red-400',
+  };
+
+  const labels: Record<string, string> = {
+    pending: 'Pending',
+    in_progress: 'In Progress',
+    review: 'Under Review',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+
+  return (
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', colors[status] || 'bg-white/10 text-white/60')}>
+      {status === 'in_progress' && <Clock className="w-3 h-3" />}
+      {status === 'completed' && <CheckCircle2 className="w-3 h-3" />}
+      {status === 'pending' && <AlertCircle className="w-3 h-3" />}
+      {labels[status] || status.replace('_', ' ')}
+    </span>
+  );
+}
+
+function TimelineTypeIcon({ type }: { type: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    milestone: <CheckCircle2 className="w-4 h-4 text-green-400" />,
+    deliverable: <FolderKanban className="w-4 h-4 text-cyan-400" />,
+    update: <Bell className="w-4 h-4 text-purple-400" />,
+    question: <AlertCircle className="w-4 h-4 text-yellow-400" />,
+    system: <Clock className="w-4 h-4 text-white/40" />,
+  };
+
+  return icons[type] || <Clock className="w-4 h-4 text-white/40" />;
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 }

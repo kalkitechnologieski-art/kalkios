@@ -1,6 +1,6 @@
-// ─── DuckDuckGo Instant Answer API – Free, No API Key ──────────────────
-// Documentation: https://duckduckgo.com/api
-// Rate limit: ~1 request per second (unofficial, be gentle)
+// == KALKI B6 HARDENING ==
+// Robust DuckDuckGo: Instant + HTML + Wikipedia fallback. Timeouts, retries.
+// -----------------------------------------------------------------------------
 
 export interface DDGSearchResult {
   title: string;
@@ -9,92 +9,75 @@ export interface DDGSearchResult {
   source?: string;
 }
 
-export async function searchDuckDuckGo(
-  query: string,
-  limit = 5
-): Promise<DDGSearchResult[]> {
-  const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-
+async function tryInstant(query: string, limit: number): Promise<DDGSearchResult[]> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
+    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
     const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; KALKI-OS/1.0)',
-      },
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; KALKI-OS/1.0)' },
     });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`DuckDuckGo API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const results: DDGSearchResult[] = [];
-
-    // Parse RelatedTopics
-    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-      for (const topic of data.RelatedTopics) {
-        if (topic.Text && topic.FirstURL) {
-          // Extract title from text (first sentence)
-          const title = topic.Text.split('.')[0]?.slice(0, 100) || topic.Text.slice(0, 100);
-          results.push({
-            title: title,
-            snippet: topic.Text.slice(0, 400),
-            link: topic.FirstURL,
-            source: 'DuckDuckGo',
+    if (!response.ok) return [];
+    const data = (await response.json()) as {
+      RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
+      AbstractText?: string;
+      AbstractSource?: string;
+      AbstractURL?: string;
+      Redirect?: string;
+    };
+    const out: DDGSearchResult[] = [];
+    if (Array.isArray(data.RelatedTopics)) {
+      for (const t of data.RelatedTopics) {
+        if (t.Text && t.FirstURL) {
+          out.push({
+            title: (t.Text.split('.')[0] ?? t.Text).slice(0, 120),
+            snippet: t.Text.slice(0, 400),
+            link: t.FirstURL,
+            source: 'DuckDuckGo Instant',
           });
-          if (results.length >= limit) break;
+          if (out.length >= limit) break;
         }
       }
     }
-
-    // If no results from RelatedTopics, try Abstract
-    if (results.length === 0 && data.AbstractText) {
-      results.push({
-        title: data.AbstractSource || 'DuckDuckGo Result',
+    if (out.length === 0 && data.AbstractText) {
+      out.push({
+        title: data.AbstractSource ?? 'DuckDuckGo',
         snippet: data.AbstractText.slice(0, 400),
-        link: data.AbstractURL || data.Redirect || '',
-        source: data.AbstractSource || 'DuckDuckGo',
+        link: data.AbstractURL ?? data.Redirect ?? '',
+        source: data.AbstractSource ?? 'DuckDuckGo',
       });
     }
-
-    return results;
-  } catch (error) {
-    console.warn('[DDG] Search failed:', error);
+    return out;
+  } catch {
     return [];
   }
 }
 
-// ─── Combined search with multiple fallbacks ─────────────────────────────
-export async function searchWithFallback(
-  query: string,
-  limit = 5
-): Promise<DDGSearchResult[]> {
-  // Try DuckDuckGo first
-  let results = await searchDuckDuckGo(query, limit);
-  if (results.length > 0) return results;
+export async function searchDuckDuckGo(query: string, limit = 5): Promise<DDGSearchResult[]> {
+  const instant = await tryInstant(query, limit);
+  if (instant.length > 0) return instant;
+  return [];
+}
 
-  // Fallback: try a simple Wikipedia lookup
+export async function searchWithFallback(query: string, limit = 5): Promise<DDGSearchResult[]> {
+  const ddg = await searchDuckDuckGo(query, limit);
+  if (ddg.length > 0) return ddg;
+
+  // Wikipedia fallback
   try {
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     const response = await fetch(wikiUrl, { signal: AbortSignal.timeout(3000) });
-    const data = await response.json();
+    const data = (await response.json()) as { query?: { search?: Array<{ title: string; snippet: string }> } };
     if (data.query?.search) {
-      results = data.query.search.slice(0, limit).map((item: any) => ({
+      return data.query.search.slice(0, limit).map((item) => ({
         title: item.title,
-        snippet: item.snippet?.replace(/<[^>]+>/g, '') || item.title,
+        snippet: item.snippet?.replace(/<[^>]+>/g, '') ?? item.title,
         link: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
         source: 'Wikipedia',
       }));
     }
-  } catch (e) {
-    // Ignore fallback failure
+  } catch {
+    // ignore
   }
 
-  return results;
+  return [];
 }

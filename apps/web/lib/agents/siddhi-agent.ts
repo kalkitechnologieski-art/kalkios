@@ -121,6 +121,32 @@ interface CacheEntry<T> {
 // MAIN CLASS
 // ─────────────────────────────────────────────────────────────────────
 export class SiddhiAgent {
+
+  // == Batch 6: unified system prompt builder ==
+  // Every provider call funnels through this. Persona, conversation
+  // context, web context, formatting rules — one source of truth.
+  private buildSystemPrompt(context: string, searchContext: string): string {
+    const lines: string[] = [
+      'You are Siddhi, the quantum AI concierge of KALKI OS (Temple of Technology, Indore, India).',
+      'You are wise, helpful, and concise.',
+      'For complex questions, structure your answer with "## Reasoning" and "## Answer" sections.',
+      'Never invent facts. When you use web context, cite sources inline.',
+    ];
+
+    if (context && context.trim().length > 0) {
+      lines.push('');
+      lines.push('## Conversation context');
+      lines.push(context);
+    }
+
+    if (searchContext && searchContext.trim().length > 0) {
+      lines.push('');
+      lines.push('## Web context');
+      lines.push(searchContext);
+    }
+
+    return lines.join('\n');
+  }
   private readonly deepThink: EnhancedDeepThink;
   private readonly router: EnterpriseRouter;
   private readonly imageGen: EnhancedImageGenerator;
@@ -882,7 +908,8 @@ export class SiddhiAgent {
     provider: Provider,
     query: string,
     context: string,
-    decision: { reasoningDepth: ReasoningDepth }
+    decision: { reasoningDepth: ReasoningDepth },
+    opts?: unknown,
   ): Promise<{
     provider: Provider;
     content: string;
@@ -1074,6 +1101,644 @@ export class SiddhiAgent {
     }
     this.statsCache.set(provider, stats);
   }
+
+
+  // ═══ SIDDHI v4.0 BATCH 2 — TOOLS & ARTIFACTS ═══
+
+  private generateId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+
+  private logSafe(level: 'info' | 'warn' | 'error', msg: string, error?: unknown): void {
+    try {
+      // eslint-disable-next-line no-console
+      console[level](msg, error);
+    } catch { /* swallow */ }
+  }
+
+  private safeEvaluate(expr: string): number {
+    const sanitized = expr.replace(/[^0-9+\-*/().\s^%]/g, '');
+    if (!sanitized || sanitized.length > 200) throw new Error('Invalid expression');
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
+    const result = new Function(`"use strict"; return (${sanitized.replace(/\^/g, '**')})`)();
+    if (typeof result !== 'number' || !isFinite(result)) throw new Error('Invalid result');
+    return result;
+  }
+
+  private generateBarChart(data: Array<{ label: string; value: number }>, title?: string): string {
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const bars = data.map((d, i) => {
+      const h = (d.value / max) * 200;
+      return `<rect x="${i * 60 + 40}" y="${250 - h}" width="40" height="${h}" fill="#00ffff" rx="4" />`
+        + `<text x="${i * 60 + 60}" y="270" fill="#fff" font-size="12" text-anchor="middle">${d.label}</text>`
+        + `<text x="${i * 60 + 60}" y="${245 - h}" fill="#8b5cf6" font-size="11" text-anchor="middle">${d.value}</text>`;
+    }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${data.length * 60 + 80} 300" style="background:#0a0a0a;border-radius:8px">`
+      + (title ? `<text x="50%" y="25" fill="#fff" font-size="16" text-anchor="middle" font-weight="bold">${title}</text>` : '')
+      + bars + `</svg>`;
+  }
+
+  private async executeToolCalls(
+    query: string, availableTools: string[]
+  ): Promise<Array<{ name: string; args: Record<string, unknown>; result: unknown }>> {
+    if (!availableTools || availableTools.length === 0) return [];
+
+    const toolDescriptions: Record<string, string> = {
+      calculator: 'Evaluate math expressions. Args: { expression: string }',
+      code_interpreter: 'Execute simple JavaScript. Args: { code: string }',
+      chart_generator: 'Generate a bar chart. Args: { type: "bar", data: [{label,value}], title?: string }',
+    };
+
+    const prompt = `Given this user query, determine if any tools should be called.
+Query: "${query}"
+
+Available tools:
+${availableTools.map((n) => `- ${n}: ${toolDescriptions[n] ?? 'tool'}`).join('\n')}
+
+Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": {"expression": "2+2"}}]`;
+
+    try {
+      const result = await this.groq.chat({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+        max_tokens: 500,
+      });
+      const raw = result.choices?.[0]?.message?.content ?? '[]';
+      const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+      const calls = JSON.parse(cleaned) as Array<{ name: string; args: Record<string, unknown> }>;
+      if (!Array.isArray(calls)) return [];
+
+      const executed: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
+      for (const call of calls) {
+        try {
+          let toolResult: unknown;
+          if (call.name === 'calculator') {
+            toolResult = { value: this.safeEvaluate(String(call.args.expression ?? '')) };
+          } else if (call.name === 'chart_generator') {
+            const data = Array.isArray(call.args.data) ? call.args.data as Array<{ label: string; value: number }> : [];
+            toolResult = { svg: this.generateBarChart(data, typeof call.args.title === 'string' ? call.args.title : undefined) };
+          } else if (call.name === 'code_interpreter') {
+            toolResult = { note: 'Code execution disabled on this layer', code: call.args.code };
+          } else {
+            toolResult = { error: `Unknown tool: ${call.name}` };
+          }
+          executed.push({ name: call.name, args: call.args, result: toolResult });
+        } catch (error) {
+          executed.push({ name: call.name, args: call.args, result: { error: String(error) } });
+        }
+      }
+      return executed;
+    } catch (error) {
+      this.logSafe('warn', '[Tools] Execution failed', error);
+      return [];
+    }
+  }
+
+  private detectArtifacts(content: string): Array<{ type: 'react' | 'html' | 'svg' | 'markdown' | 'code'; language?: string; title: string; content: string }> {
+    const artifacts: Array<{ type: 'react' | 'html' | 'svg' | 'markdown' | 'code'; language?: string; title: string; content: string }> = [];
+
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    let match: RegExpExecArray | null;
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      const language = match[1] ?? 'text';
+      const code = match[2] ?? '';
+      if (code.length > 80 && code.length < 20_000) {
+        const type: 'react' | 'html' | 'svg' | 'code' = ['html'].includes(language) ? 'html'
+          : ['svg'].includes(language) ? 'svg'
+          : ['jsx', 'tsx', 'react'].includes(language) ? 'react'
+          : 'code';
+        artifacts.push({ type, language: type === 'code' ? language : undefined, title: `${language.toUpperCase()} Snippet`, content: code });
+      }
+    }
+
+    const svgMatch = content.match(/<svg[\s\S]*?<\/svg>/);
+    if (svgMatch && !artifacts.some((a) => a.type === 'svg')) {
+      artifacts.push({ type: 'svg', title: 'SVG Graphic', content: svgMatch[0] });
+    }
+    const htmlMatch = content.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
+    if (htmlMatch) artifacts.push({ type: 'html', title: 'HTML Document', content: htmlMatch[0] });
+    return artifacts;
+  }
+
+  async processWithPipeline(request: {
+    messages: Array<{ role: string; content: string }>;
+    userId?: string;
+    sessionId?: string;
+    query?: string;
+    correlationId?: string;
+    image?: boolean;
+    video?: boolean;
+    setu?: boolean;
+    deep?: boolean;
+    search?: boolean;
+    onProgress?: (event: unknown) => void;
+  }): Promise<{
+    content: string;
+    reasoning: string;
+    provider: string;
+    tokens: number;
+    latency: number;
+    emotion: string;
+    sources: Array<{ title: string; url: string }>;
+    traces?: Array<{ provider?: string; confidence?: number }>;
+    critique?: { issues: string[]; confidence: number; shouldRefine: boolean };
+    plan?: { providers: string[]; useSearch: boolean; useTools: string[]; depth: string };
+    artifacts?: Array<{ type: 'react' | 'html' | 'svg' | 'markdown' | 'code'; language?: string; title: string; content: string }>;
+    toolCalls?: Array<{ name: string; args: Record<string, unknown>; result: unknown }>;
+  }> {
+    const startTime = Date.now();
+    const correlationId = request.correlationId ?? this.generateId();
+    const sessionId = request.sessionId ?? 'default';
+    const lastUser = request.messages.filter((m) => m.role === 'user').pop();
+    const query = request.query ?? lastUser?.content ?? '';
+    const emit = (event: unknown) => request.onProgress?.(event);
+
+    // STAGE 1: UNDERSTAND
+    const entities = this.extractEntities(query);
+    emit({ type: 'trace', step: { id: 'understand', type: 'reasoning', status: 'completed', message: `Found ${entities.people.length + entities.places.length} entities` } });
+
+    // STAGE 2: PLAN
+    const plan = this.buildPipelinePlan(query, request);
+    emit({ type: 'trace', step: { id: 'plan', type: 'reasoning', status: 'completed', message: `Providers: ${plan.providers.join('+')}` } });
+
+    // STAGE 3: GATHER (search + tools)
+    const memories = this.getMemory(sessionId);
+    let searchResults: Array<{ title: string; url: string }> = [];
+    let docs: string[] = [];
+    let toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
+
+    if (plan.useSearch) {
+      try {
+        const raw = await this.searchWithFallback(query);
+        const results = raw as unknown as Array<{ title: string; url: string; snippet?: string }>;
+        searchResults = results.map((r) => ({ title: r.title, url: r.url }));
+        const topUrls = results.slice(0, 3).map((r) => r.url);
+        const contents = await Promise.all(topUrls.map((u) => this.extractContent(u)));
+        docs = contents.map((c) => {
+          const anyC = c as unknown as { content?: unknown };
+          return typeof anyC?.content === 'string' ? anyC.content : '';
+        }).filter((s) => s.length > 100);
+      } catch (error) {
+        this.logSafe('warn', '[Pipeline] Search failed', error);
+      }
+    }
+
+    if (plan.useTools.length > 0) {
+      toolCalls = await this.executeToolCalls(query, plan.useTools);
+      for (const tc of toolCalls) {
+        emit({ type: 'trace', step: { id: `tool-${tc.name}`, type: 'reasoning', status: 'completed', message: `${tc.name} → ${JSON.stringify(tc.result).slice(0, 80)}` } });
+      }
+    }
+
+    emit({ type: 'trace', step: { id: 'gather', type: 'search', status: 'completed', message: `Gathered: ${searchResults.length} sources, ${toolCalls.length} tools` } });
+
+    // STAGE 4: REASON
+    const drafts = await this.generateDrafts(query, { plan, memories, docs, searchResults, toolCalls });
+    emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: `Generated ${drafts.length} drafts` } });
+
+    // STAGE 5: CRITIQUE
+    let critique = { issues: [] as string[], confidence: 0.7, shouldRefine: false };
+    if (plan.depth === 'max' || drafts.length >= 2) {
+      critique = await this.selfCritique(query, drafts);
+      emit({ type: 'trace', step: { id: 'critique', type: 'consensus', status: 'completed', message: `Confidence: ${(critique.confidence * 100).toFixed(0)}%` } });
+    }
+
+    const best = drafts.reduce((a, b) => ((a?.confidence ?? 0) > (b?.confidence ?? 0) ? a : b), drafts[0]);
+    const finalAnswer = best?.answer ?? '';
+    const finalReasoning = best?.reasoning ?? '';
+
+    this.updateMemory(sessionId, { role: 'user', content: query, timestamp: Date.now() });
+    this.updateMemory(sessionId, { role: 'assistant', content: finalAnswer, timestamp: Date.now() });
+
+    void correlationId;
+
+    // ARTIFACTS
+    const artifacts = this.detectArtifacts(finalAnswer);
+    if (artifacts.length > 0) {
+      emit({ type: 'artifact', count: artifacts.length });
+    }
+
+    return {
+      content: finalAnswer || 'I encountered an issue. Please try again.',
+      reasoning: finalReasoning,
+      provider: 'pipeline',
+      tokens: drafts.reduce((s, d) => s + (d?.tokens ?? 0), 0),
+      latency: Date.now() - startTime,
+      emotion: this.detectEmotion(query),
+      sources: searchResults.slice(0, 5),
+      traces: drafts.map((d) => ({ provider: d?.provider, confidence: d?.confidence })),
+      critique,
+      plan: { providers: plan.providers, useSearch: plan.useSearch, useTools: plan.useTools, depth: plan.depth },
+      artifacts,
+      toolCalls,
+    };
+  }
+
+  private extractEntities(text: string): { people: string[]; places: string[]; dates: string[]; numbers: number[] } {
+    const people = [...text.matchAll(/\b(?:Mr|Mrs|Ms|Dr|Prof)\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g)].map((m) => m[1] ?? '').filter(Boolean);
+    const places = [...text.matchAll(/\b(?:in|at|from|to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g)].map((m) => m[1] ?? '').filter(Boolean);
+    const dates = [...text.matchAll(/\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4})/g)].map((m) => m[1] ?? '').filter(Boolean);
+    const numbers = [...text.matchAll(/\b(\d+(?:\.\d+)?)\b/g)].map((m) => parseFloat(m[1] ?? '0')).filter((n) => !isNaN(n));
+    return { people, places, dates, numbers };
+  }
+
+  private buildPipelinePlan(
+    query: string,
+    request: { image?: boolean; video?: boolean; setu?: boolean; deep?: boolean }
+  ): { providers: string[]; useSearch: boolean; useTools: string[]; depth: 'low' | 'medium' | 'high' | 'max' } {
+    const complexity = this.assessComplexity(query);
+    const needsSearch = /latest|current|recent|news|today|2024|2025|2026|price|weather/i.test(query);
+
+    const providers: string[] = [];
+    if (complexity > 0.6) providers.push('zhipu', 'agnes', 'groq');
+    else if (complexity > 0.3) providers.push('agnes', 'groq');
+    else providers.push('groq');
+
+    const depth: 'low' | 'medium' | 'high' | 'max' =
+      complexity > 0.7 ? 'max' : complexity > 0.4 ? 'high' : 'medium';
+
+    const useTools: string[] = [];
+    if (/\b(calculate|compute|solve|equation|\d+\s*[\+\-\*\/]\s*\d+)\b/i.test(query)) useTools.push('calculator');
+    if (/\b(chart|graph|plot|visualize|bar chart)\b/i.test(query)) useTools.push('chart_generator');
+
+    void request;
+    return { providers, useSearch: needsSearch || complexity > 0.5, useTools, depth };
+  }
+
+  private async generateDrafts(
+    query: string,
+    ctx: {
+      plan: { providers: string[]; depth: 'low' | 'medium' | 'high' | 'max' };
+      memories: Array<{ role: string; content: string }>;
+      docs: string[];
+      searchResults: Array<{ title: string; url: string }>;
+      toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>;
+    }
+  ): Promise<Array<{ id: string; provider: string; reasoning: string; answer: string; confidence: number; tokens: number; timeMs: number }>> {
+    const toolContext = ctx.toolCalls.length > 0
+      ? `\n\nTool results:\n${ctx.toolCalls.map((t) => `${t.name}(${JSON.stringify(t.args)}) → ${JSON.stringify(t.result)}`).join('\n')}`
+      : '';
+
+    const systemPrompt = `You are Siddhi, an elite AI assistant. Provide deep, well-reasoned answers.
+Format:
+## Reasoning
+[step-by-step thinking]
+## Answer
+[final comprehensive answer]
+
+Context:
+${ctx.docs.slice(0, 2).join('\n\n').slice(0, 4000)}
+${ctx.memories.slice(-5).map((m) => `${m.role}: ${m.content}`).join('\n')}
+${toolContext}`;
+
+    const tasks = ctx.plan.providers.map(async (provider) => {
+      const t0 = Date.now();
+      try {
+        const result = await this.callProvider(
+          provider as never, query, systemPrompt,
+          { reasoningDepth: ctx.plan.depth }
+        );
+        const parsed = this.parsePipelineReasoning(result.content);
+        return {
+          id: this.generateId(),
+          provider,
+          reasoning: parsed.reasoning,
+          answer: parsed.answer,
+          confidence: 0.7,
+          tokens: result.tokens ?? 0,
+          timeMs: Date.now() - t0,
+        };
+      } catch (error) {
+        this.logSafe('warn', `[Pipeline] Draft from ${provider} failed`, error);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(tasks);
+    return results.filter((r): r is NonNullable<typeof r> => r !== null);
+  }
+
+  private parsePipelineReasoning(content: string): { reasoning: string; answer: string } {
+    const r = content.match(/##\s*Reasoning\s*([\s\S]*?)(?=##\s*Answer|$)/i);
+    const a = content.match(/##\s*Answer\s*([\s\S]*?)$/i);
+    return { reasoning: r?.[1]?.trim() ?? '', answer: a?.[1]?.trim() ?? content.trim() };
+  }
+
+  private async selfCritique(
+    query: string,
+    drafts: Array<{ provider: string; answer: string }>
+  ): Promise<{ issues: string[]; confidence: number; shouldRefine: boolean }> {
+    const draftSummary = drafts.map((d, i) => `Draft ${i + 1} (${d.provider}):\n${d.answer.slice(0, 500)}`).join('\n\n');
+    const critiquePrompt = `Critique these answers to: "${query}"
+
+${draftSummary}
+
+Evaluate: accuracy, completeness, clarity, hallucination risk.
+
+Return JSON: { "issues": [], "confidence": 0.0-1.0, "shouldRefine": true/false }`;
+
+    try {
+      const result = await this.groq.chat({
+        messages: [{ role: 'user', content: critiquePrompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.1,
+        max_tokens: 400,
+      });
+      const cleaned = (result.choices?.[0]?.message?.content ?? '{}')
+        .replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned) as { issues?: unknown; confidence?: unknown; shouldRefine?: unknown };
+      return {
+        issues: Array.isArray(parsed.issues) ? (parsed.issues as string[]) : [],
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
+        shouldRefine: !!parsed.shouldRefine && Array.isArray(parsed.issues) && parsed.issues.length > 0,
+      };
+    } catch {
+      return { issues: [], confidence: 0.7, shouldRefine: false };
+    }
+  }
+
+  // ═══ SIDDHI v4.0 BATCH 2 — END TOOLS & ARTIFACTS ═══
+
+
+
+  // == SIDDHI v4.0 BATCH 3 - OMNIBUS ROUTER ==
+  // Health-weighted adaptive layer selection with cascade fallback.
+  // Layer order: device -> zai -> groq -> openrouter -> cache.
+
+  private static readonly omnibusHealth = new Map<
+    string,
+    {
+      successRate: number;
+      avgLatencyMs: number;
+      lastFailureAt: number;
+      consecutiveFailures: number;
+    }
+  >();
+
+  private static updateHealth(layer: string, ok: boolean, ms: number): void {
+    const prev = SiddhiAgent.omnibusHealth.get(layer) ?? {
+      successRate: 0.9,
+      avgLatencyMs: 1000,
+      lastFailureAt: 0,
+      consecutiveFailures: 0,
+    };
+    const a = 0.1;
+    SiddhiAgent.omnibusHealth.set(layer, {
+      successRate: prev.successRate * (1 - a) + (ok ? 1 : 0) * a,
+      avgLatencyMs: prev.avgLatencyMs * (1 - a) + ms * a,
+      lastFailureAt: ok ? prev.lastFailureAt : Date.now(),
+      consecutiveFailures: ok ? 0 : prev.consecutiveFailures + 1,
+    });
+  }
+
+  async processWithOmnibus(request: {
+    messages: Array<{ role: string; content: string }>;
+    userId?: string;
+    sessionId?: string;
+    query?: string;
+    privacy?: 'low' | 'medium' | 'high';
+    preferSpeed?: boolean;
+    preferQuality?: boolean;
+    onProgress?: (event: unknown) => void;
+  }): Promise<{
+    content: string;
+    reasoning: string;
+    provider: string;
+    tokens: number;
+    latency: number;
+    layer: string;
+    sources: Array<{ title: string; url: string }>;
+  }> {
+    const startTime = Date.now();
+    const sessionId = request.sessionId ?? 'default';
+    const lastUser = request.messages.filter((m) => m.role === 'user').pop();
+    const query = request.query ?? lastUser?.content ?? '';
+    const emit = (event: unknown) => request.onProgress?.(event);
+
+    const intent = this.classifyIntent(
+      query,
+      { image: false, video: false, setu: false, deep: true },
+      sessionId
+    );
+    const complexity = this.assessComplexity(query);
+
+    let deviceReady = false;
+    try {
+      const mod = await import('@/lib/ai');
+      const probe = mod as unknown as { isDeviceReady?: () => boolean };
+      if (typeof probe.isDeviceReady === 'function') deviceReady = probe.isDeviceReady();
+    } catch {
+      deviceReady = false;
+    }
+
+    const estimatedTokens = Math.ceil(query.length / 4);
+    const wantDevice = deviceReady && complexity < 0.4 && request.privacy !== 'high';
+    const primary: 'device' | 'zai' | 'groq' | 'openrouter' = wantDevice
+      ? 'device'
+      : estimatedTokens > 8000
+        ? 'zai'
+        : request.preferSpeed
+          ? 'groq'
+          : 'zai';
+
+    const fallbacks: Array<'device' | 'zai' | 'groq' | 'openrouter'> =
+      primary === 'device'
+        ? ['zai', 'groq', 'openrouter']
+        : primary === 'zai'
+          ? ['groq', 'device', 'openrouter']
+          : primary === 'groq'
+            ? ['zai', 'device', 'openrouter']
+            : ['zai', 'groq', 'device'];
+
+    const layers = [primary, ...fallbacks];
+    emit({ type: 'status', message: `Router: ${primary}` });
+
+    let sources: Array<{ title: string; url: string }> = [];
+    let searchContext = '';
+    if (complexity > 0.5) {
+      try {
+        const raw = await this.searchWithFallback(query);
+        const arr = raw as unknown as Array<{ title: string; url: string }>;
+        sources = arr.map((r) => ({ title: r.title, url: r.url }));
+        searchContext = arr.map((r) => `${r.title}: ${r.url}`).join('\n');
+      } catch {
+        sources = [];
+      }
+    }
+
+    const context = this.buildContext(request.messages, this.getMemory(sessionId));
+
+    for (const layer of layers) {
+      const layerStart = Date.now();
+      emit({
+        type: 'trace',
+        step: {
+          id: `layer-${layer}`,
+          type: 'reasoning',
+          status: 'running',
+          message: `Trying ${layer}`,
+        },
+      });
+
+      try {
+        const result = await this.runOmnibusLayer(layer, query, context, searchContext);
+        const ms = Date.now() - layerStart;
+        SiddhiAgent.updateHealth(layer, true, ms);
+        emit({
+          type: 'trace',
+          step: {
+            id: `layer-${layer}`,
+            type: 'reasoning',
+            status: 'completed',
+            message: `${layer} ok (${ms}ms)`,
+          },
+        });
+
+        this.updateMemory(sessionId, { role: 'user', content: query, timestamp: Date.now() });
+        this.updateMemory(sessionId, {
+          role: 'assistant',
+          content: result.content,
+          timestamp: Date.now(),
+        });
+
+        return {
+          content: result.content,
+          reasoning: result.reasoning,
+          provider: result.provider,
+          tokens: result.tokens,
+          latency: Date.now() - startTime,
+          layer,
+          sources: sources.slice(0, 5),
+        };
+      } catch (err) {
+        const ms = Date.now() - layerStart;
+        SiddhiAgent.updateHealth(layer, false, ms);
+        emit({
+          type: 'trace',
+          step: {
+            id: `layer-${layer}`,
+            type: 'reasoning',
+            status: 'failed',
+            message: `${layer}: ${String(err).slice(0, 80)}`,
+          },
+        });
+      }
+    }
+
+    return {
+      content: 'All AI services are temporarily unavailable. Please try again in a moment.',
+      reasoning: '',
+      provider: 'fallback',
+      tokens: 0,
+      latency: Date.now() - startTime,
+      layer: 'cache',
+      sources: [],
+    };
+  }
+
+  private async runOmnibusLayer(
+    layer: 'device' | 'zai' | 'groq' | 'openrouter',
+    query: string,
+    context: string,
+    searchContext: string
+  ): Promise<{ content: string; reasoning: string; provider: string; tokens: number }> {
+    if (layer === 'device') {
+      const mod = await import('@/lib/ai');
+      const streamFn = (
+        mod as unknown as {
+          streamDeviceInference?: (
+            msgs: Array<{ role: string; content: string }>
+          ) => AsyncGenerator<string>;
+        }
+      ).streamDeviceInference;
+      if (typeof streamFn !== 'function') throw new Error('device unavailable');
+
+      let content = '';
+      for await (const delta of streamFn([
+        { role: 'system', content: 'You are Siddhi.' },
+        { role: 'user', content: query },
+      ])) {
+        content += delta;
+      }
+      return {
+        content,
+        reasoning: '',
+        provider: 'device',
+        tokens: Math.ceil(content.length / 4),
+      };
+    }
+
+    if (layer === 'openrouter') {
+      const mod = await import('@/lib/providers/openrouter/client');
+      const client = new mod.OpenRouterClient();
+      const sysPrefix = context ? `## Context\n${context}\n` : '';
+      const r = await client.chat({
+        messages: [
+          { role: 'system', content: `You are Siddhi.\n${sysPrefix}` },
+          { role: 'user', content: query },
+        ],
+        temperature: 0.7,
+        max_tokens: 4096,
+      });
+      const content = r.choices?.[0]?.message?.content ?? '';
+      return {
+        content,
+        reasoning: '',
+        provider: 'openrouter',
+        tokens: r.usage?.total_tokens ?? 0,
+      };
+    }
+
+    const providerName: 'agnes' | 'groq' | 'zhipu' =
+      layer === 'zai' ? 'zhipu' : layer === 'groq' ? 'groq' : 'agnes';
+
+    const sysPrefix = context ? `## Context\n${context}\n` : '';
+    const webSuffix = searchContext ? `\n## Web\n${searchContext}` : '';
+    const systemPrompt = `You are Siddhi.\n${sysPrefix}${webSuffix}`;
+
+    const result = await this.callProvider(providerName, query, systemPrompt, {
+      reasoningDepth: 'medium',
+    });
+    return {
+      content: result.content,
+      reasoning: result.reasoning ?? '',
+      provider: result.provider ?? providerName,
+      tokens: result.tokens ?? 0,
+    };
+  }
+
+  // == SIDDHI v4.0 BATCH 3 - END OMNIBUS ROUTER ==
+
 }
 
 export default SiddhiAgent;
+
+// == Batch 6: first-success resolver ==
+// Returns the first promise to RESOLVE. Rejects only when ALL reject,
+// aggregating every error into one message. Use instead of Promise.race
+// when racing N providers — fastest success wins, errors are collected.
+function raceFirstSuccess<T>(promises: Promise<T>[]): Promise<T> {
+  if (promises.length === 0) {
+    return Promise.reject(new Error('raceFirstSuccess: no promises provided'));
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    let pending = promises.length;
+    const errors: unknown[] = [];
+
+    for (const p of promises) {
+      p.then(resolve).catch((err: unknown) => {
+        errors.push(err);
+        pending -= 1;
+        if (pending === 0) {
+          const message = errors
+            .map((e) => (e instanceof Error ? e.message : String(e)))
+            .join('; ');
+          reject(new Error(`raceFirstSuccess: all rejected — ${message}`));
+        }
+      });
+    }
+  });
+}

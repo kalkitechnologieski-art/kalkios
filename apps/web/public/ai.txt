@@ -1,0 +1,27 @@
+# AI agent policy
+
+KALKI OS welcomes AI crawlers, agents, and answer engines. This file
+documents our policy.
+
+## Allowed
+
+- Retrieval of all public content for indexing and citation
+- Attribution with a link back to the source URL
+- Use of structured data (JSON-LD) already embedded in HTML
+- Fetching /llms.txt, /llms-full.txt, and /robots.txt
+
+## Disallowed
+
+- Scraping logged-in areas (/client, /admin, /employee)
+- Automated purchase attempts without user intent
+- Rate limits: 1 request / second / IP (burst: 5 / second)
+- Caching with TTL shorter than 5 minutes
+
+## Preferred crawl
+
+Crawl-delay: 1
+Sitemap: https://kalkios.com/sitemap.xml
+
+## Contact
+
+For enterprise access, whitelisting, or API keys: team@kalki-intelligence.in

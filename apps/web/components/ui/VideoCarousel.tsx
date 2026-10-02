@@ -129,7 +129,7 @@ function CarouselContent() {
           className="mt-8"
         >
           <LuxuryButton
-            variant="primary"
+            variant="cyber"
             size="lg"
             label={currentSlide.cta}
             onClick={() => (window.location.href = currentSlide.link)}

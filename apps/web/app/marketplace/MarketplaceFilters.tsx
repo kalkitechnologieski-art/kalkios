@@ -1,38 +1,31 @@
-'use client'
+// == KALKI B4 EXPERIENCE ==
+'use client';
 
-import { useState, useCallback, useRef } from 'react'
-import { Search, X, SlidersHorizontal } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback, useRef } from 'react';
+import { Search, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-function useDebounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const debouncedFn = useCallback(
-    (...args: Parameters<T>) => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      timeoutRef.current = setTimeout(() => { fn(...args); timeoutRef.current = null }, delay)
-    },
+function useDebounce<T extends (...args: never[]) => void>(fn: T, delay: number): T {
+  const ref = useRef<NodeJS.Timeout | null>(null);
+  return useCallback(
+    ((...args: Parameters<T>) => {
+      if (ref.current) clearTimeout(ref.current);
+      ref.current = setTimeout(() => fn(...args), delay);
+    }) as T,
     [fn, delay]
-  ) as T
-  return debouncedFn
+  );
 }
 
 export default function MarketplaceFilters() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get('q') || '')
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
 
   const updateSearch = useDebounce((value: string) => {
-    const params = new URLSearchParams(searchParams)
-    if (value) params.set('q', value)
-    else params.delete('q')
-    router.push(`/marketplace?${params.toString()}`)
-  }, 300)
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value)
-    updateSearch(e.target.value)
-  }
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set('q', value); else params.delete('q');
+    router.push(`/marketplace?${params.toString()}`);
+  }, 300);
 
   return (
     <div className="flex items-center gap-3 w-full md:w-auto">
@@ -41,25 +34,20 @@ export default function MarketplaceFilters() {
         <input
           type="text"
           value={search}
-          onChange={handleSearchChange}
-          placeholder="AI‑powered search..."
+          onChange={(e) => { setSearch(e.target.value); updateSearch(e.target.value); }}
+          placeholder="Search services…"
           className="w-full bg-white/5 border border-cyan-500/10 rounded-xl px-10 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition text-sm"
         />
         {search && (
           <button
-            onClick={() => { setSearch(''); updateSearch('') }}
+            onClick={() => { setSearch(''); updateSearch(''); }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+            aria-label="Clear search"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
-      <button
-        onClick={() => setIsFilterOpen(!isFilterOpen)}
-        className="p-2.5 bg-white/5 border border-cyan-500/10 rounded-xl text-white/60 hover:text-white transition"
-      >
-        <SlidersHorizontal className="w-5 h-5" />
-      </button>
     </div>
-  )
+  );
 }
