@@ -17,6 +17,7 @@ export interface SearchResult {
   snippet: string;
   source: 'searxng' | 'duckduckgo' | 'brave' | 'custom';
   relevanceScore?: number;
+  entities?: string[];
 }
 
 export interface SearchOptions {

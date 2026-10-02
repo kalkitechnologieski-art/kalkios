@@ -813,7 +813,7 @@ export class SiddhiAgent {
       logger.warn('[SiddhiAgent] Quantized failed → Groq fallback', error);
       const result = await this.groq.chat({
         messages: [{ role: 'user', content: fullQuery }],
-        model: 'llama-3.3-70b-specdec',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.5,
         max_tokens: 512,
       });
@@ -922,7 +922,7 @@ export class SiddhiAgent {
 
     const modelMap: Record<Provider, { deep: string; fast: string }> = {
       zhipu: { deep: 'glm-5.3', fast: 'glm-4.7-flash' },
-      groq: { deep: 'llama-3.3-70b-specdec', fast: 'llama-3.3-70b-specdec' },
+      groq: { deep: 'llama-3.3-70b-versatile', fast: 'llama-3.1-8b-instant' },
       agnes: { deep: 'agnes-2.5-flash', fast: 'agnes-2.0-flash' },
     };
 
