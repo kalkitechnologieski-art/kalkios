@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SiddhiAgent } from '@/lib/agents/siddhi-agent';
 import { logger } from '@/lib/utils/logger';
 import { verifySession, isResponse, rateLimit } from '@/lib/security/api-guards';
+import { TokenLevelStreamer, splitIntoTokens } from '@/lib/streaming/sse-token-streamer';
+import { classifyError, retryWithBackoff } from '@/lib/error-handling/error-classifier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,9 @@ export async function POST(req: NextRequest) {
     closed = true;
     try { await writer.close(); } catch { /* already closed */ }
   };
+
+  // Create token-level streamer for fine-grained SSE
+  const streamer = new TokenLevelStreamer(writer);
 
   const sendEvent = async (event: { type: string; [key: string]: unknown }) => {
     if (closed) return;
@@ -89,52 +94,59 @@ export async function POST(req: NextRequest) {
       };
 
       if (useOmnibus) {
-        const result = await agent.processWithOmnibus({
-          messages, userId, sessionId,
-          query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
-          privacy, preferSpeed, preferQuality,
-          onProgress,
-        });
+        const result = await retryWithBackoff(
+          () => agent.processWithOmnibus({
+            messages, userId, sessionId,
+            query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
+            privacy, preferSpeed, preferQuality,
+            onProgress,
+          }),
+          2, // max retries
+          2000 // base delay
+        );
 
+        // Token-level streaming of response
         const fullContent = result.content ?? '';
         if (fullContent.length > 1) {
-          const chunks = fullContent.match(/[^.!?\n]+[.!?\n]?\s*/g) ?? [fullContent];
-          if (chunks.length > 1) {
-            for (const chunk of chunks) {
-              await sendEvent({ type: 'delta', stage: 'final', content: chunk });
-              await new Promise((r) => setTimeout(r, 0));
-            }
+          const tokens = splitIntoTokens(fullContent);
+          for (const token of tokens) {
+            if (!streamer.isOpen()) break;
+            await streamer.sendToken(token);
           }
         }
-        await sendEvent({ type: 'content', content: fullContent });
+
         await sendEvent({ type: 'provider', provider: result.provider });
         await sendEvent({ type: 'layer', layer: result.layer });
         if (result.sources?.length) await sendEvent({ type: 'sources', sources: result.sources });
-        await sendEvent({ type: 'complete' });
+        
+        const metrics = await streamer.close();
+        logger.info(`[Stream] Omnibus complete: ${metrics.totalTokens} tokens in ${metrics.totalLatencyMs}ms`);
         return;
       }
 
-      const result = await agent.processWithPipeline({
-        messages, userId, sessionId,
-        query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
-        deep, setu, search, image, video,
-        correlationId: crypto.randomUUID(),
-        onProgress,
-      });
+      const result = await retryWithBackoff(
+        () => agent.processWithPipeline({
+          messages, userId, sessionId,
+          query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
+          deep, setu, search, image, video,
+          correlationId: crypto.randomUUID(),
+          onProgress,
+        }),
+        2, // max retries
+        2000 // base delay
+      );
 
+      // Token-level streaming of response
       const fullContent = result.content ?? '';
       if (fullContent.length > 1) {
-        const chunks = fullContent.match(/[^.!?\n]+[.!?\n]?\s*/g) ?? [fullContent];
-        if (chunks.length > 1) {
-          for (const chunk of chunks) {
-            await sendEvent({ type: 'delta', stage: 'final', content: chunk });
-            await new Promise((r) => setTimeout(r, 0));
-          }
+        const tokens = splitIntoTokens(fullContent);
+        for (const token of tokens) {
+          if (!streamer.isOpen()) break;
+          await streamer.sendToken(token);
         }
       }
 
       if (result.reasoning) await sendEvent({ type: 'reasoning', content: result.reasoning });
-      await sendEvent({ type: 'content', content: fullContent });
       if (result.critique) await sendEvent({ type: 'critique', critique: result.critique });
       if (result.plan) await sendEvent({ type: 'plan', plan: result.plan });
       if (result.traces) await sendEvent({ type: 'traces', traces: result.traces });
@@ -149,13 +161,23 @@ export async function POST(req: NextRequest) {
         await sendEvent({ type: 'tool_calls', toolCalls: result.toolCalls });
       }
 
-      await sendEvent({ type: 'complete' });
+      const metrics = await streamer.close();
+      logger.info(`[Stream] Pipeline complete: ${metrics.totalTokens} tokens in ${metrics.totalLatencyMs}ms`);
     } catch (error) {
       logger.error('[Stream] Unhandled error', error);
-      await sendEvent({ type: 'error', message: 'An unexpected error occurred. Please try again.' });
+      
+      // Classify error and provide actionable message
+      const classified = classifyError(error);
+      await streamer.sendError(
+        classified.userMessage,
+        classified.classification,
+        classified.retryAfterMs ? classified.retryAfterMs / 1000 : undefined
+      );
+      
+      await streamer.close();
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
-      await close();
+      if (!closed) await close();
     }
   })();
 

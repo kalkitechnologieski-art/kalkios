@@ -92,10 +92,10 @@ export const CONCURRENCY = {
   device: new Semaphore({ maxConcurrency: 1, name: 'device' }),
   zhipu: new Semaphore({ maxConcurrency: 2, name: 'zhipu' }),
   groq: new Semaphore({ maxConcurrency: 6, name: 'groq' }),
-  agnes: new Semaphore({ maxConcurrency: 4, name: 'agnes' }),
+  agnes: new Semaphore({ maxConcurrency: 6, name: 'agnes' }), // Increased from 4 for better throughput
   openrouter: new Semaphore({ maxConcurrency: 3, name: 'openrouter' }),
-  image: new Semaphore({ maxConcurrency: 2, name: 'image' }),
-  video: new Semaphore({ maxConcurrency: 1, name: 'video' }),
+  image: new Semaphore({ maxConcurrency: 6, name: 'image' }), // Increased from 2 for concurrent image gen
+  video: new Semaphore({ maxConcurrency: 2, name: 'video' }), // Increased from 1 to allow 2 concurrent videos
   search: new Semaphore({ maxConcurrency: 12, name: 'search' }),
   extraction: new Semaphore({ maxConcurrency: 8, name: 'extraction' }),
 } as const;

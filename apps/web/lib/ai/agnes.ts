@@ -59,7 +59,8 @@ export async function generateVideo(options: VideoOptions): Promise<string> {
   return url;
 }
 
-// ─── Media Queue ────────────────────────────────────────────────────
+// ─── Media Queue (Legacy - kept for backward compatibility) ──────────
+// New code should use EnterpriseMediaQueue from lib/media/enterprise-media-queue.ts
 interface MediaJob {
   id: string;
   type: 'image' | 'video';
@@ -73,7 +74,7 @@ interface MediaJob {
 class MediaQueue {
   private jobs = new Map<string, MediaJob>();
   private videoActive = 0;
-  private readonly VIDEO_CONCURRENCY = 1;
+  private readonly VIDEO_CONCURRENCY = 2; // Increased from 1 to match new concurrency limits
 
   create(type: 'image' | 'video'): MediaJob {
     const job: MediaJob = {

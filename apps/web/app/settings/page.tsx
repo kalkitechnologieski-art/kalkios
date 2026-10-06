@@ -288,40 +288,73 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-cyan-400/60 text-xs font-mono block mb-1">Full Name</label>
+                  <label 
+                    htmlFor="fullName"
+                    className="text-cyan-400/60 text-xs font-mono block mb-1"
+                  >
+                    Full Name
+                  </label>
                   <input
+                    id="fullName"
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition font-mono text-sm"
+                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 focus-visible:ring-2 focus-visible:ring-cyan-500/30 transition font-mono text-sm"
+                    aria-describedby="fullName-help"
                   />
+                  <p id="fullName-help" className="text-cyan-400/20 text-xs font-mono mt-1">Your display name across the platform</p>
                 </div>
                 <div>
-                  <label className="text-cyan-400/60 text-xs font-mono block mb-1">Email</label>
+                  <label 
+                    htmlFor="email"
+                    className="text-cyan-400/60 text-xs font-mono block mb-1"
+                  >
+                    Email
+                  </label>
                   <input
+                    id="email"
                     type="email"
                     value={formData.email}
                     disabled
                     className="w-full bg-black/20 border border-cyan-500/10 rounded-lg px-4 py-2.5 text-white/40 outline-none font-mono text-sm cursor-not-allowed"
+                    aria-describedby="email-help"
                   />
-                  <p className="text-cyan-400/20 text-xs font-mono mt-1">Email cannot be changed</p>
+                  <p id="email-help" className="text-cyan-400/20 text-xs font-mono mt-1">Email cannot be changed</p>
                 </div>
                 <div>
-                  <label className="text-cyan-400/60 text-xs font-mono block mb-1">Phone</label>
+                  <label 
+                    htmlFor="phone"
+                    className="text-cyan-400/60 text-xs font-mono block mb-1"
+                  >
+                    Phone
+                  </label>
                   <input
+                    id="phone"
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition font-mono text-sm"
+                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 focus-visible:ring-2 focus-visible:ring-cyan-500/30 transition font-mono text-sm"
+                    placeholder="+91 98765 43210"
+                    aria-describedby="phone-error"
                   />
+                  {formData.phone && !/^[0-9+\-\s()]{7,15}$/.test(formData.phone) && (
+                    <p id="phone-error" className="text-red-400 text-xs font-mono mt-1">Invalid phone number format</p>
+                  )}
                 </div>
                 <div>
-                  <label className="text-cyan-400/60 text-xs font-mono block mb-1">Company</label>
+                  <label 
+                    htmlFor="company"
+                    className="text-cyan-400/60 text-xs font-mono block mb-1"
+                  >
+                    Company
+                  </label>
                   <input
+                    id="company"
                     type="text"
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 transition font-mono text-sm"
+                    className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-2.5 text-white placeholder-cyan-400/30 outline-none focus:border-cyan-500/50 focus-visible:ring-2 focus-visible:ring-cyan-500/30 transition font-mono text-sm"
+                    placeholder="Your organization name"
                   />
                 </div>
                 <div className="flex items-center gap-3 pt-2">

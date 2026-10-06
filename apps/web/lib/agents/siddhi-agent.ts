@@ -14,6 +14,7 @@ import { RateLimiter } from '@/lib/orchestration/rate-limiter';
 import { CircuitBreaker } from '@/lib/orchestration/circuit-breaker';
 import { ZhipuClient, GroqClient, AgnesClient } from '@/lib/providers';
 import { logger } from '@/lib/utils/logger';
+import { classifyError, retryWithBackoff, updateCircuitBreaker, CircuitBreakerState } from '@/lib/error-handling/error-classifier';
 
 // ─── Optional @agntk/search ──────────────────────────────────────────────
 let agntkSearch: ((query: string, options?: any) => Promise<any>) | null = null;
@@ -172,6 +173,9 @@ export class SiddhiAgent {
 
   private readonly statsCache = new Map<Provider, ProviderStats>();
 
+  // Health-weighted provider selection (EMA-based)
+  private readonly providerHealth = new Map<Provider, CircuitBreakerState>();
+
   private readonly PARALLEL_TIMEOUT = 8_000;
   private readonly QUANTIZED_TIMEOUT = 3_000;
   private readonly SEARCH_TIMEOUT = 3_000;
@@ -207,6 +211,12 @@ export class SiddhiAgent {
         failures: 0,
         totalLatency: 0,
         avgLatency: 0,
+      });
+      this.providerHealth.set(p, {
+        failures: 0,
+        lastFailureAt: 0,
+        state: 'closed',
+        successRate: 0.95, // Start with high confidence
       });
     }
   }
@@ -575,14 +585,25 @@ export class SiddhiAgent {
   }
 
   private getFastestProvider(): Provider {
+    // Health-weighted selection: prefer providers with high success rate AND low latency
     let best: Provider = 'groq';
-    let bestLatency = Infinity;
+    let bestScore = -Infinity;
+
     for (const [provider, stats] of this.statsCache) {
-      if (stats.success > 5 && stats.avgLatency < bestLatency) {
-        bestLatency = stats.avgLatency;
+      const health = this.providerHealth.get(provider);
+      if (!health || health.state === 'open') continue; // Skip unhealthy providers
+
+      // Composite score: success_rate * 0.7 + normalized_latency * 0.3
+      const healthScore = health.successRate;
+      const latencyScore = stats.avgLatency > 0 ? Math.max(0, 1 - stats.avgLatency / 5000) : 1;
+      const compositeScore = healthScore * 0.7 + latencyScore * 0.3;
+
+      if (compositeScore > bestScore) {
+        bestScore = compositeScore;
         best = provider;
       }
     }
+
     return best;
   }
 
@@ -918,7 +939,6 @@ export class SiddhiAgent {
     latency: number;
   }> {
     const start = Date.now();
-    let lastError: Error | null = null;
 
     const modelMap: Record<Provider, { deep: string; fast: string }> = {
       zhipu: { deep: 'glm-5.3', fast: 'glm-4.7-flash' },
@@ -940,12 +960,13 @@ export class SiddhiAgent {
         ]
       : [{ role: 'user', content: query }];
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        let result: any;
+    // Use retry with exponential backoff for resilience
+    const result = await retryWithBackoff(
+      async () => {
+        let apiResult: any;
         switch (provider) {
           case 'zhipu':
-            result = await this.zhipu.chat({
+            apiResult = await this.zhipu.chat({
               messages,
               model,
               reasoning_effort: decision.reasoningDepth === 'max' ? 'max' : 'high',
@@ -954,7 +975,7 @@ export class SiddhiAgent {
             });
             break;
           case 'groq':
-            result = await this.groq.chat({
+            apiResult = await this.groq.chat({
               messages,
               model,
               temperature: 0.5,
@@ -962,7 +983,7 @@ export class SiddhiAgent {
             });
             break;
           case 'agnes':
-            result = await this.agnes.chat({
+            apiResult = await this.agnes.chat({
               messages,
               model,
               temperature: 0.5,
@@ -973,26 +994,26 @@ export class SiddhiAgent {
             throw new Error(`Unknown provider: ${provider}`);
         }
 
-        const content = result?.choices?.[0]?.message?.content ?? '';
-        const reasoning = result?.choices?.[0]?.message?.reasoning_content ?? '';
-        const tokens = result?.usage?.total_tokens ?? 0;
+        const content = apiResult?.choices?.[0]?.message?.content ?? '';
+        const reasoning = apiResult?.choices?.[0]?.message?.reasoning_content ?? '';
+        const tokens = apiResult?.usage?.total_tokens ?? 0;
 
-        return { provider, content, reasoning, tokens, latency: Date.now() - start };
-      } catch (error) {
-        lastError = error as Error;
-        logger.warn(`[Provider] ${provider} attempt ${attempt} failed:`, error);
-        if (attempt < 3) {
-          await this.sleep(500 * Math.pow(2, attempt));
-        }
-      }
-    }
+        return { content, reasoning, tokens };
+      },
+      3, // max retries
+      1000 // base delay
+    );
 
-    this.updateStats(provider, Date.now() - start, false);
-    throw lastError ?? new Error(`${provider} failed after 3 attempts`);
-  }
+    const latency = Date.now() - start;
+    this.updateStats(provider, latency, true);
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return {
+      provider,
+      content: result.content,
+      reasoning: result.reasoning,
+      tokens: result.tokens,
+      latency,
+    };
   }
 
   private async firstSuccess<T>(promises: Promise<T>[]): Promise<T> {
@@ -1100,6 +1121,15 @@ export class SiddhiAgent {
       stats.lastFailure = Date.now();
     }
     this.statsCache.set(provider, stats);
+
+    // Update health-weighted circuit breaker state
+    const currentHealth = this.providerHealth.get(provider) ?? {
+      failures: 0,
+      lastFailureAt: 0,
+      state: 'closed',
+      successRate: 0.95,
+    };
+    this.providerHealth.set(provider, updateCircuitBreaker(currentHealth, success, latency));
   }
 
 
@@ -1254,6 +1284,112 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
     const lastUser = request.messages.filter((m) => m.role === 'user').pop();
     const query = request.query ?? lastUser?.content ?? '';
     const emit = (event: unknown) => request.onProgress?.(event);
+
+    // Handle image generation requests
+    if (request.image) {
+      try {
+        emit({ type: 'status', message: 'Generating image with Agnes...' });
+        const { generateImageWithRetry } = await import('@/lib/ai/agnes');
+        
+        // Parse settings from prompt
+        const styleMatch = query.match(/Style:\s*([^|]+)/);
+        const qualityMatch = query.match(/Quality:\s*([^|]+)/);
+        const sizeMatch = query.match(/Size:\s*([^|]+)/);
+        const ratioMatch = query.match(/Ratio:\s*([^|]+)/);
+        
+        const cleanPrompt = query.replace(/Generate image:\s*/, '').replace(/\|.*$/, '').trim();
+        
+        const result = await generateImageWithRetry({
+          prompt: cleanPrompt,
+          size: sizeMatch ? sizeMatch[1].trim() : '2K',
+          ratio: ratioMatch ? ratioMatch[1].trim() : '16:9',
+          onProgress: (progress, stage) => {
+            emit({ type: 'status', message: `Image: ${stage} (${progress}%)` });
+          },
+        });
+        
+        const markdownImage = `![Generated Image](${result.url})`;
+        
+        return {
+          content: markdownImage,
+          reasoning: 'Image generated via Agnes AI',
+          provider: 'agnes-image',
+          tokens: 0,
+          latency: Date.now() - startTime,
+          emotion: 'creative',
+          sources: [],
+          artifacts: [{
+            type: 'markdown' as const,
+            title: 'Generated Image',
+            content: markdownImage,
+          }],
+        };
+      } catch (error) {
+        this.logSafe('warn', '[Pipeline] Image generation failed', error);
+        return {
+          content: `I encountered an issue generating the image. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+          reasoning: '',
+          provider: 'error',
+          tokens: 0,
+          latency: Date.now() - startTime,
+          emotion: 'apologetic',
+          sources: [],
+        };
+      }
+    }
+
+    // Handle video generation requests
+    if (request.video) {
+      try {
+        emit({ type: 'status', message: 'Generating video with Agnes...' });
+        const { generateVideoWithPolling } = await import('@/lib/ai/agnes');
+        
+        // Parse settings from prompt
+        const resolutionMatch = query.match(/Resolution:\s*([^|]+)/);
+        const durationMatch = query.match(/Duration:\s*(\d+)/);
+        const aspectMatch = query.match(/Aspect:\s*([^|]+)/);
+        const qualityMatch = query.match(/Quality:\s*([^|]+)/);
+        
+        const cleanPrompt = query.replace(/Generate video:\s*/, '').replace(/\|.*$/, '').trim();
+        
+        const result = await generateVideoWithPolling({
+          prompt: cleanPrompt,
+          duration: durationMatch ? parseInt(durationMatch[1]) : 5,
+          resolution: resolutionMatch ? resolutionMatch[1].trim() : '720P',
+          onProgress: (progress, stage) => {
+            emit({ type: 'status', message: `Video: ${stage} (${progress}%)` });
+          },
+        });
+        
+        const videoMarkdown = `<video controls src="${result.url}" width="100%"></video>`;
+        
+        return {
+          content: videoMarkdown,
+          reasoning: 'Video generated via Agnes AI',
+          provider: 'agnes-video',
+          tokens: 0,
+          latency: Date.now() - startTime,
+          emotion: 'creative',
+          sources: [],
+          artifacts: [{
+            type: 'html' as const,
+            title: 'Generated Video',
+            content: videoMarkdown,
+          }],
+        };
+      } catch (error) {
+        this.logSafe('warn', '[Pipeline] Video generation failed', error);
+        return {
+          content: `I encountered an issue generating the video. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+          reasoning: '',
+          provider: 'error',
+          tokens: 0,
+          latency: Date.now() - startTime,
+          emotion: 'apologetic',
+          sources: [],
+        };
+      }
+    }
 
     // STAGE 1: UNDERSTAND
     const entities = this.extractEntities(query);

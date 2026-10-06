@@ -18,6 +18,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/useAuth';
 
@@ -37,8 +38,29 @@ const ADMIN_ITEMS = [
 
 const BOTTOM_ITEMS = [
   { label: 'Settings', icon: Settings, href: '/settings' },
-  { label: 'Logout', icon: LogOut, href: '/logout' },
 ];
+
+// Logout only shown to authenticated users
+interface BottomItemsWithLogoutProps {
+  isAuthenticated: boolean;
+}
+
+function BottomItemsWithLogout({ isAuthenticated }: BottomItemsWithLogoutProps) {
+  const pathname = usePathname();
+  
+  if (!isAuthenticated) return null;
+  
+  return (
+    <Link
+      href="/logout"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative text-white/60 hover:bg-white/5 hover:text-white"
+      title="Logout"
+    >
+      <LogOut className="w-5 h-5 flex-shrink-0" />
+      <span className="text-sm font-medium">Logout</span>
+    </Link>
+  );
+}
 
 interface EnterpriseSidebarProps {
   isMobileOpen: boolean;
@@ -50,6 +72,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const { user, loading } = useUser();
+  const mobileMenuRef = useFocusTrap(isMobileOpen);
   
   // Check if user has admin or employee role
   const isAdmin = user?.user_metadata?.role === 'admin';
@@ -159,6 +182,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
         {/* Bottom items */}
         <div className="border-t border-cyan-500/10 p-2 space-y-1">
           {BOTTOM_ITEMS.map((item) => renderLink(item))}
+          <BottomItemsWithLogout isAuthenticated={isAuthenticated} />
         </div>
       </motion.aside>
 
@@ -174,10 +198,14 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
+              ref={mobileMenuRef}
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
               className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 p-4 flex flex-col md:hidden h-screen"
             >
               <div className="flex items-center justify-between mb-6">
@@ -206,6 +234,7 @@ export function EnterpriseSidebar({ isMobileOpen, setMobileOpen }: EnterpriseSid
                 
                 <div className="h-px bg-cyan-500/10 my-2" />
                 {BOTTOM_ITEMS.map((item) => renderLink(item, true))}
+                <BottomItemsWithLogout isAuthenticated={isAuthenticated} />
               </nav>
               <div className="border-t border-cyan-500/10 pt-4 text-center text-[10px] text-cyan-400/20 font-mono tracking-widest">
                 KALKI OS v4.0

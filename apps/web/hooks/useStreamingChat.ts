@@ -84,7 +84,7 @@ export function useStreamingChat() {
 
   const sendMessage = useCallback(async (
     content: string,
-    options: { deep?: boolean; setu?: boolean; search?: boolean; image?: boolean; sessionId?: string } = {}
+    options: { deep?: boolean; setu?: boolean; search?: boolean; image?: boolean; video?: boolean; sessionId?: string } = {}
   ) => {
     setError(null);
     const userMsg: ChatMessage = { id: uid('u'), role: 'user', content, isStreaming: false };

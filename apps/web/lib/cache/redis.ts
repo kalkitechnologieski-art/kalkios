@@ -1,159 +1,159 @@
-import nopeRedis from 'nope-redis';
+// == KALKI B6 HARDENING ==
+// Production Redis client with Upstash (serverless-compatible)
+// Falls back to in-memory cache if Redis unavailable
+// -----------------------------------------------------------------------------
 
-// Configure nope-redis with supported options
-nopeRedis.config({
-  defaultTtl: 60,          // Default TTL in seconds
-  maxMemorySize: 100,      // Max memory in MB (optional)
-  evictionPolicy: 'lru',   // 'lru' or 'lfu'
-});
+import { Redis } from '@upstash/redis';
 
-// Export a simple client with fallback to in-memory Map
-const fallbackCache = new Map<string, { value: any; expiresAt: number }>();
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Helper to check if nope-redis is working
-let nopeWorking = true;
+// In-memory fallback
+const memoryCache = new Map<string, { value: any; expiresAt: number }>();
 
-try {
-  nopeRedis.setItem('__test__', 'ok', 1);
-  const test = nopeRedis.getItem('__test__');
-  if (test !== 'ok') nopeWorking = false;
-  nopeRedis.deleteItem('__test__');
-} catch {
-  nopeWorking = false;
-  console.warn('nope-redis failed, using fallback in-memory cache');
+// Check if Redis is available
+let redisClient: Redis | null = null;
+let redisAvailable = false;
+
+if (REDIS_URL && REDIS_TOKEN) {
+  try {
+    redisClient = new Redis({
+      url: REDIS_URL,
+      token: REDIS_TOKEN,
+    });
+    redisAvailable = true;
+  } catch (err) {
+    console.warn('[Redis] Failed to initialize:', err);
+    redisAvailable = false;
+  }
+} else {
+  console.warn('[Redis] UPSTASH_REDIS_REST_URL not configured, using in-memory cache');
 }
 
-export const redisClient = {
-  getItem: (key: string): any => {
-    if (nopeWorking) {
+export const cache = {
+  async get<T>(key: string): Promise<T | null> {
+    if (redisAvailable && redisClient) {
       try {
-        return nopeRedis.getItem(key);
-      } catch {
-        // fallback
+        const value = await redisClient.get(key);
+        return value ? JSON.parse(value as string) : null;
+      } catch (err) {
+        console.error('[Redis] GET failed:', err);
       }
     }
-    const entry = fallbackCache.get(key);
+    
+    // Fallback to in-memory
+    const entry = memoryCache.get(key);
     if (entry && entry.expiresAt > Date.now()) {
-      return entry.value;
+      return entry.value as T;
     }
-    fallbackCache.delete(key);
-    return undefined;
+    memoryCache.delete(key);
+    return null;
   },
 
-  setItem: (key: string, value: any, ttlSeconds?: number): void => {
-    if (nopeWorking) {
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    const ttl = ttlSeconds || 3600; // Default 1 hour
+    
+    if (redisAvailable && redisClient) {
       try {
-        nopeRedis.setItem(key, value, ttlSeconds);
+        await redisClient.setex(key, ttl, JSON.stringify(value));
         return;
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('[Redis] SET failed:', err);
       }
     }
-    const ttl = ttlSeconds || 60;
-    fallbackCache.set(key, {
+    
+    // Fallback to in-memory
+    memoryCache.set(key, {
       value,
       expiresAt: Date.now() + ttl * 1000,
     });
   },
 
-  get: (key: string): string | null => {
-    const val = redisClient.getItem(key);
-    return val !== undefined ? JSON.stringify(val) : null;
-  },
-
-  set: (key: string, value: string, ttlSeconds?: number): void => {
-    try {
-      redisClient.setItem(key, JSON.parse(value), ttlSeconds);
-    } catch {
-      redisClient.setItem(key, value, ttlSeconds);
-    }
-  },
-
-  setex: (key: string, ttl: number, value: string): void => {
-    redisClient.set(key, value, ttl);
-  },
-
-  incr: (key: string): number => {
-    if (nopeWorking) {
+  async del(key: string): Promise<void> {
+    if (redisAvailable && redisClient) {
       try {
-        const current = (nopeRedis.getItem(key) as number) || 0;
-        const newVal = current + 1;
-        nopeRedis.setItem(key, newVal);
-        return newVal;
-      } catch {
-        // fallback
-      }
-    }
-    const current = (fallbackCache.get(key)?.value as number) || 0;
-    const newVal = current + 1;
-    fallbackCache.set(key, { value: newVal, expiresAt: Date.now() + 60000 });
-    return newVal;
-  },
-
-  expire: (key: string, ttl: number): void => {
-    if (nopeWorking) {
-      try {
-        const value = nopeRedis.getItem(key);
-        if (value !== undefined) {
-          nopeRedis.setItem(key, value, ttl);
-        }
+        await redisClient.del(key);
         return;
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('[Redis] DEL failed:', err);
       }
     }
-    const entry = fallbackCache.get(key);
-    if (entry) {
-      entry.expiresAt = Date.now() + ttl * 1000;
-      fallbackCache.set(key, entry);
-    }
-  },
-
-  del: (key: string): void => {
-    if (nopeWorking) {
-      try {
-        nopeRedis.deleteItem(key);
-        return;
-      } catch {
-        // fallback
-      }
-    }
-    fallbackCache.delete(key);
-  },
-};
-
-// In-memory store for rate limiting (fallback if nope-redis fails)
-const memoryCache = new Map<string, { count: number; resetAt: number }>();
-
-export const memoryStore = {
-  get: (key: string): { count: number; resetAt: number } | null => {
-    const entry = memoryCache.get(key);
-    if (entry && entry.resetAt > Date.now()) {
-      return entry;
-    }
+    
     memoryCache.delete(key);
-    return null;
   },
-  set: (key: string, count: number, ttlSeconds: number): void => {
+
+  async incr(key: string, ttlSeconds?: number): Promise<number> {
+    const ttl = ttlSeconds || 60;
+    
+    if (redisAvailable && redisClient) {
+      try {
+        const newValue = await redisClient.incr(key);
+        await redisClient.expire(key, ttl);
+        return newValue;
+      } catch (err) {
+        console.error('[Redis] INCR failed:', err);
+      }
+    }
+    
+    // Fallback to in-memory
+    const current = (memoryCache.get(key)?.value as number) || 0;
+    const newValue = current + 1;
     memoryCache.set(key, {
-      count,
-      resetAt: Date.now() + ttlSeconds * 1000,
+      value: newValue,
+      expiresAt: Date.now() + ttl * 1000,
     });
+    return newValue;
   },
-  increment: (key: string, ttlSeconds: number): number => {
-    const entry = memoryStore.get(key);
-    if (entry) {
-      const newCount = entry.count + 1;
-      memoryCache.set(key, { count: newCount, resetAt: entry.resetAt });
-      return newCount;
+
+  async exists(key: string): Promise<boolean> {
+    if (redisAvailable && redisClient) {
+      try {
+        const result = await redisClient.exists(key);
+        return result === 1;
+      } catch (err) {
+        console.error('[Redis] EXISTS failed:', err);
+      }
     }
-    memoryCache.set(key, { count: 1, resetAt: Date.now() + ttlSeconds * 1000 });
-    return 1;
+    
+    const entry = memoryCache.get(key);
+    return !!(entry && entry.expiresAt > Date.now());
   },
-  reset: (key: string): void => {
-    memoryCache.delete(key);
+
+  // Rate limiting specific methods
+  async incrementWithTTL(key: string, windowSeconds: number): Promise<number> {
+    const count = await this.incr(key, windowSeconds);
+    return count;
   },
-  clear: (): void => {
+
+  async getRemainingTTL(key: string): Promise<number> {
+    if (redisAvailable && redisClient) {
+      try {
+        const ttl = await redisClient.ttl(key);
+        return Math.max(0, ttl);
+      } catch (err) {
+        console.error('[Redis] TTL failed:', err);
+      }
+    }
+    
+    const entry = memoryCache.get(key);
+    if (entry) {
+      return Math.max(0, Math.floor((entry.expiresAt - Date.now()) / 1000));
+    }
+    return 0;
+  },
+
+  // Clear all in-memory cache (for testing)
+  clear(): void {
     memoryCache.clear();
   },
+
+  // Get stats
+  getStats(): { redisAvailable: boolean; memorySize: number } {
+    return {
+      redisAvailable,
+      memorySize: memoryCache.size,
+    };
+  },
 };
+
+export default cache;

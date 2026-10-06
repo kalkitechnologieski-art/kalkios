@@ -1,0 +1,53 @@
+# == KALKI B6 ENTERPRISE SEO ==
+# Robots.txt - Control search engine crawling
+# -----------------------------------------------------------------------------
+
+User-agent: *
+Allow: /
+Allow: /explore
+Allow: /marketplace
+Allow: /chat
+Allow: /about
+Allow: /contact
+Allow: /careers
+Allow: /support
+
+# Disallow admin and private areas
+Disallow: /admin
+Disallow: /employee
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /api/
+Disallow: /_next/
+Disallow: /*?*
+
+# Allow specific bots full access for indexing
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /marketplace/
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+# AI crawlers - allow for AEO/GEO optimization
+User-agent: GPTBot
+Allow: /
+Allow: /marketplace
+Allow: /explore
+Allow: /about
+
+User-agent: CCBot
+Allow: /
+Allow: /marketplace
+Allow: /explore
+
+# Sitemap location
+Sitemap: https://kalkios.com/sitemap.xml
+
+# Host (Yandex-specific)
+Host: kalkios.com

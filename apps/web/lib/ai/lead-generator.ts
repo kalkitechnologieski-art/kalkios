@@ -44,17 +44,19 @@ class LeadGenerator {
 
   async generateLeads(request: LeadGenerationRequest): Promise<LeadGenerationResult> {
     const startTime = Date.now();
-    const { query, location, maxResults = 30, maxPagesPerSite = 3 } = request;
+    const { query, location, maxResults = 50, maxPagesPerSite = 3 } = request;
 
     logger.info(`[LeadGenerator] Starting lead generation for "${query}" in ${location || 'any location'}`);
 
-    // Step 1: Search for relevant websites
+    // Step 1: Search for relevant websites - increased from 30 to 50 for more coverage
     const urls = await openSearch.extractUrlsFromSearch(query, location);
+    
+    // Take top URLs but ensure we have enough for good coverage
     const limitedUrls = urls.slice(0, Math.min(maxResults, urls.length));
 
     logger.info(`[LeadGenerator] Found ${limitedUrls.length} URLs to scrape`);
 
-    // Step 2: Scrape leads from websites
+    // Step 2: Scrape leads from websites with improved extraction
     let progressCurrent = 0;
     const progressTotal = limitedUrls.length * maxPagesPerSite;
 
@@ -68,15 +70,19 @@ class LeadGenerator {
       },
     });
 
-    // Step 3: Generate CSV
-    const csvContent = webScraper.generateCSV(leads);
+    // Step 3: Filter and deduplicate leads
+    const uniqueLeads = this.deduplicateLeads(leads);
+    logger.info(`[LeadGenerator] Deduplicated: ${leads.length} → ${uniqueLeads.length} leads`);
+
+    // Step 4: Generate CSV
+    const csvContent = webScraper.generateCSV(uniqueLeads);
 
     const duration = Date.now() - startTime;
 
     const result: LeadGenerationResult = {
-      leads,
+      leads: uniqueLeads,
       totalSearched: urls.length,
-      totalScraped: leads.length,
+      totalScraped: uniqueLeads.length,
       csvContent,
       metadata: {
         query,
@@ -86,9 +92,31 @@ class LeadGenerator {
       },
     };
 
-    logger.info(`[LeadGenerator] Completed in ${duration}ms: ${leads.length} leads from ${urls.length} URLs`);
+    logger.info(`[LeadGenerator] Completed in ${duration}ms: ${uniqueLeads.length} leads from ${urls.length} URLs`);
 
     return result;
+  }
+
+  /**
+   * Remove duplicate leads based on email or business name
+   */
+  private deduplicateLeads(leads: LeadContact[]): LeadContact[] {
+    const seen = new Set<string>();
+    const unique: LeadContact[] = [];
+
+    for (const lead of leads) {
+      // Create a unique key from email or business name
+      const key = lead.email 
+        ? `email:${lead.email.toLowerCase()}`
+        : `business:${(lead.businessName || '').toLowerCase()}:${(lead.name || '').toLowerCase()}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(lead);
+      }
+    }
+
+    return unique;
   }
 
   async downloadCSV(result: LeadGenerationResult, filename?: string): Promise<void> {

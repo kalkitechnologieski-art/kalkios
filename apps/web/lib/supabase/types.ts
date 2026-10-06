@@ -40,9 +40,93 @@ export interface Database {
         Update: { id?: string; order_id?: string | null; invoice_number?: string; total?: number; gst?: number | null; pdf_url?: string | null; status?: string; generated_at?: string };
       };
       leads: {
-        Row: { id: string; email: string | null; phone: string | null; first_name: string | null; last_name: string | null; company: string | null; industry: string | null; website: string | null; source: string | null; score: number | null; intent: string | null; budget: string | null; timeline: string | null; notes: string | null; tags: string[] | null; created_at: string; updated_at: string };
-        Insert: { id?: string; email?: string | null; phone?: string | null; first_name?: string | null; last_name?: string | null; company?: string | null; industry?: string | null; website?: string | null; source?: string | null; score?: number | null; intent?: string | null; budget?: string | null; timeline?: string | null; notes?: string | null; tags?: string[] | null; created_at?: string; updated_at?: string };
-        Update: { id?: string; email?: string | null; phone?: string | null; first_name?: string | null; last_name?: string | null; company?: string | null; industry?: string | null; website?: string | null; source?: string | null; score?: number | null; intent?: string | null; budget?: string | null; timeline?: string | null; notes?: string | null; tags?: string[] | null; created_at?: string; updated_at?: string };
+        Row: { 
+          id: string; 
+          session_id: string | null;
+          name: string | null;
+          email: string | null; 
+          phone: string | null; 
+          first_name: string | null; 
+          last_name: string | null; 
+          company: string | null; 
+          industry: string | null; 
+          website: string | null;
+          job_title: string | null;
+          linkedin_url: string | null;
+          twitter_url: string | null;
+          city: string | null;
+          country: string | null;
+          verified: boolean | null;
+          source: string | null; 
+          score: number | null; 
+          intent: string | null; 
+          budget: string | null; 
+          timeline: string | null; 
+          notes: string | null; 
+          tags: string[] | null;
+          data_source: string | null;
+          raw_data: Json | null;
+          created_at: string; 
+          updated_at: string 
+        };
+        Insert: { 
+          id?: string; 
+          session_id?: string | null;
+          name?: string | null;
+          email?: string | null; 
+          phone?: string | null; 
+          first_name?: string | null; 
+          last_name?: string | null; 
+          company?: string | null; 
+          industry?: string | null; 
+          website?: string | null;
+          job_title?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          city?: string | null;
+          country?: string | null;
+          verified?: boolean | null;
+          source?: string | null; 
+          score?: number | null; 
+          intent?: string | null; 
+          budget?: string | null; 
+          timeline?: string | null; 
+          notes?: string | null; 
+          tags?: string[] | null;
+          data_source?: string | null;
+          raw_data?: Json | null;
+          created_at?: string; 
+          updated_at?: string 
+        };
+        Update: { 
+          id?: string; 
+          session_id?: string | null;
+          name?: string | null;
+          email?: string | null; 
+          phone?: string | null; 
+          first_name?: string | null; 
+          last_name?: string | null; 
+          company?: string | null; 
+          industry?: string | null; 
+          website?: string | null;
+          job_title?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          city?: string | null;
+          country?: string | null;
+          verified?: boolean | null;
+          source?: string | null; 
+          score?: number | null; 
+          intent?: string | null; 
+          budget?: string | null; 
+          timeline?: string | null; 
+          notes?: string | null; 
+          tags?: string[] | null;
+          data_source?: string | null;
+          raw_data?: Json | null;
+          created_at?: string; 
+          updated_at?: string 
+        };
       };
       audit_logs: {
         Row: { id: string; actor_id: string | null; action: string; target_id: string | null; details: Json | null; created_at: string };

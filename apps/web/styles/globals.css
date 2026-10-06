@@ -641,6 +641,22 @@ body {
    Accessibility & Motion Preferences
    ========================================================================== */
 
+/* Focus visible styles for keyboard navigation */
+*:focus-visible {
+  outline: none;
+  ring: 2px solid rgba(6, 182, 212, 0.5);
+  ring-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

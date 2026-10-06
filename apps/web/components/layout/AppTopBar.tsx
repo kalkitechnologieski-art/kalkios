@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, Bell, User } from 'lucide-react';
-import Image from 'next/image';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useUser } from '@/hooks/useAuth';
+import { PremiumBrandLabel } from '@/components/ui/PremiumBrandLabel';
 
 interface AppTopBarProps {
   onMenuClick: () => void;
@@ -41,20 +41,8 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
         >
           <Menu className="w-5 h-5 text-white/70" />
         </button>
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative w-7 h-7">
-            <Image
-              src="/images/logo.svg"
-              alt="KALKI"
-              width={28}
-              height={28}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <span className="text-sm font-semibold text-white/90 hidden sm:block">
-            KALKI
-          </span>
+        <Link href="/">
+          <PremiumBrandLabel />
         </Link>
       </div>
 

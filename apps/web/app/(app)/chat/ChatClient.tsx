@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // == SIDDHI F1 WIRE - IMPORTS ==
-import { ChatTopBar } from '@/components/chat/ChatTopBar';
+import { PremiumChatTopBar } from '@/components/chat/PremiumChatTopBar';
 import { ChatHistorySidebar } from '@/components/chat/ChatHistorySidebar';
 import { useConversations } from '@/hooks/useConversations';
 import type { ConversationMessage } from '@/lib/conversations/types';
@@ -75,7 +75,6 @@ export default function ChatClient() {
   }, [isLoading]);
 
   const { loadMemory, saveMemory } = useMemory();
-  const [setuMode, setSetuMode] = useState(false);
   const [searchMode, setSearchMode] = useState(true);
   const [mode, setMode] = useState<'chat' | 'image' | 'video' | 'leads'>('chat');
   const [imageSettings, setImageSettings] = useState({
@@ -155,13 +154,13 @@ export default function ChatClient() {
 
       if (mode === 'video') {
         const enhancedPrompt = `Generate video: ${text} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
-        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false });
+        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false, video: true });
         return;
       }
 
-      await sendMessage(text, { deep: true, setu: setuMode, search: searchMode });
+      await sendMessage(text, { deep: true, setu: false, search: searchMode });
     },
-    [sendMessage, isLoading, setuMode, searchMode, mode, imageSettings, videoSettings, setMessages]
+    [sendMessage, isLoading, searchMode, mode, imageSettings, videoSettings, setMessages]
   );
 
   // ─── Handle Image/Video Edit: regenerate with new prompt ────────
@@ -183,7 +182,7 @@ export default function ChatClient() {
         await sendMessage(fullPrompt, { deep: true, setu: false, search: false, image: true });
       } else {
         const fullPrompt = `Generate video: ${newPrompt} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
-        await sendMessage(fullPrompt, { deep: true, setu: false, search: false });
+        await sendMessage(fullPrompt, { deep: true, setu: false, search: false, video: true });
       }
     },
     [sendMessage, messages, imageSettings, videoSettings]
@@ -434,15 +433,21 @@ export default function ChatClient() {
   );
 
   return (
-    <div className="chat-fullscreen relative">
+    <div className="chat-fullscreen relative z-30 bg-gradient-to-br from-black via-slate-950 to-black min-h-screen overflow-hidden">
+      {/* Premium ambient background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+      
       <GradientGlowBackground isThinking={isLoading} />
 
-      {/* == SIDDHI F1 WIRE - JSX == */}
-      <ChatTopBar
+      {/* == SIDDHI F1 WIRE - PREMIUM TOP BAR == */}
+      <PremiumChatTopBar
         title={conv.active?.title ?? 'New chat'}
         messageCount={messages.length}
         autoTitled={conv.active?.autoTitled ?? false}
-        modeLabel={setuMode ? 'SETU' : mode === 'image' ? 'Image' : mode === 'video' ? 'Video' : 'Siddhi'}
+        modeLabel={mode === 'leads' ? 'Leads' : mode === 'image' ? 'Image' : mode === 'video' ? 'Video' : 'Siddhi'}
         onNew={() => { conv.createNew(); setMessages([]); }}
         onOpenHistory={() => setHistoryOpen((v) => !v)}
         onRename={(t) => conv.renameActive(t)}
@@ -518,17 +523,6 @@ export default function ChatClient() {
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span className="text-[10px] font-mono hidden sm:inline">Leads</span>
-          </button>
-          <button
-            onClick={() => setSetuMode(!setuMode)}
-            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
-              setuMode
-                ? 'bg-amber-600/30 text-amber-400 border border-amber-500/30 shadow-glow'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-            title="SETU Mode"
-          >
-            <span className="text-xs font-bold">SETU</span>
           </button>
         </div>
       </div>
@@ -664,8 +658,8 @@ export default function ChatClient() {
           onModeChange={setMode}
           isDeepThink={true}
           setIsDeepThink={() => {}}
-          isSetuMode={setuMode}
-          setIsSetuMode={setSetuMode}
+          isSetuMode={false}
+          setIsSetuMode={() => {}}
           isSearchMode={searchMode}
           setIsSearchMode={setSearchMode}
           onClear={() => {}}

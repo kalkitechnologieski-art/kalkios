@@ -25,13 +25,16 @@ interface FulfillmentRow {
 
 function signatureMatches(rawBody: string, signature: string): boolean {
   if (!INSTAMOJO_PRIVATE_SALT || !signature) return false;
+  
+  // Instamojo signs the raw body with the private salt
+  const expected = createHmac('sha256', INSTAMOJO_PRIVATE_SALT)
+    .update(rawBody)
+    .digest('hex');
+  
   const sigBuf = Buffer.from(signature, 'utf8');
-  // Instamojo signs the raw body; some integrations append the salt first.
-  return [rawBody, rawBody + INSTAMOJO_PRIVATE_SALT].some((base) => {
-    const expected = createHmac('sha256', INSTAMOJO_PRIVATE_SALT).update(base).digest('hex');
-    const expBuf = Buffer.from(expected, 'utf8');
-    return sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
-  });
+  const expBuf = Buffer.from(expected, 'utf8');
+  
+  return sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
 }
 
 function parsePayload(contentType: string, rawBody: string): Record<string, unknown> | null {

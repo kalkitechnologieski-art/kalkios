@@ -156,42 +156,118 @@ export function NeonComposer({
     if (isListening) return '🎤 Listening...';
     if (mode === 'image') return '🎨 Describe the image you want to generate...';
     if (mode === 'video') return '🎬 Describe the video you want to create...';
+    if (mode === 'leads') return '🔍 Search for companies or industries to find leads...';
     return '>_ ask Siddhi anything...';
   };
 
   return (
-    <div className={`flex flex-col gap-3 ${className}`}>
-      <div className="flex flex-wrap items-center gap-3 px-1">
+    <div className={`flex flex-col gap-4 ${className}`}>
+      {/* Premium mode selector bar */}
+      <div className="flex flex-wrap items-center gap-3 px-2 py-3 rounded-2xl bg-gradient-to-r from-black/60 via-slate-950/60 to-black/60 backdrop-blur-xl border border-white/10 shadow-lg">
         <ModeToggleButton active={isDeepThink} onToggle={() => setIsDeepThink(!isDeepThink)} label="DeepThink" tooltip="Enable deep reasoning" colorScheme="gold" />
-        <ModeToggleButton active={isSetuMode} onToggle={() => setIsSetuMode(!isSetuMode)} label="SETU" tooltip="Lead generation mode" colorScheme="red" />
-        <div className="h-6 w-px bg-white/10 hidden sm:block" />
+        <ModeToggleButton active={mode === 'leads'} onToggle={() => onModeChange(mode === 'leads' ? 'chat' : 'leads')} label="Leads" tooltip="Lead generation mode" colorScheme="red" />
+        
+        {/* Premium separator */}
+        <div className="h-8 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent hidden sm:block" />
 
-        <button onClick={() => onModeChange(mode === 'image' ? 'chat' : 'image')} className={`p-1.5 rounded-lg transition flex items-center gap-1 ${mode === 'image' ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30' : 'text-white/40 hover:text-white/70'}`} title="Image Mode">
-          <ImageIcon className="w-4 h-4" />
-        </button>
-        <button onClick={() => onModeChange(mode === 'video' ? 'chat' : 'video')} className={`p-1.5 rounded-lg transition flex items-center gap-1 ${mode === 'video' ? 'bg-red-600/30 text-red-400 border border-red-500/30' : 'text-white/40 hover:text-white/70'}`} title="Video Mode">
-          <Video className="w-4 h-4" />
-        </button>
-        <button onClick={() => setIsSearchMode(!isSearchMode)} className={`p-1.5 rounded-lg transition ${isSearchMode ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'text-white/40 hover:text-white/70'}`} title="Web Search">
-          <Search className="w-4 h-4" />
-        </button>
+        {/* Premium mode buttons with glow effects */}
+        <motion.button
+          onClick={() => onModeChange(mode === 'image' ? 'chat' : 'image')}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`group relative p-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${
+            mode === 'image'
+              ? 'bg-gradient-to-br from-pink-600/30 to-rose-600/30 text-pink-300 border border-pink-500/40 shadow-lg shadow-pink-500/20'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
+          }`}
+          title="Image Generation"
+        >
+          <ImageIcon className="w-5 h-5" />
+          {mode === 'image' && (
+            <span className="text-[10px] font-semibold hidden sm:inline">Image</span>
+          )}
+        </motion.button>
 
-        <button onClick={isListening ? stopVoice : startVoice} className={`p-1.5 rounded-lg transition ${isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-white/40 hover:text-white/70'}`} title={isListening ? 'Stop' : 'Voice input'}>
-          {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </button>
+        <motion.button
+          onClick={() => onModeChange(mode === 'video' ? 'chat' : 'video')}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`group relative p-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${
+            mode === 'video'
+              ? 'bg-gradient-to-br from-red-600/30 to-pink-600/30 text-red-300 border border-red-500/40 shadow-lg shadow-red-500/20'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
+          }`}
+          title="Video Generation"
+        >
+          <Video className="w-5 h-5" />
+          {mode === 'video' && (
+            <span className="text-[10px] font-semibold hidden sm:inline">Video</span>
+          )}
+        </motion.button>
 
-        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition" title="Attach file">
-          <Paperclip className="w-4 h-4" />
-        </button>
+        <motion.button
+          onClick={() => setIsSearchMode(!isSearchMode)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`group relative p-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${
+            isSearchMode
+              ? 'bg-gradient-to-br from-blue-600/30 to-cyan-600/30 text-blue-300 border border-blue-500/40 shadow-lg shadow-blue-500/20'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
+          }`}
+          title="Web Search"
+        >
+          <Search className="w-5 h-5" />
+          {isSearchMode && (
+            <span className="text-[10px] font-semibold hidden sm:inline">Search</span>
+          )}
+        </motion.button>
+
+        {/* Voice input - Premium */}
+        <motion.button
+          onClick={isListening ? stopVoice : startVoice}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`group relative p-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${
+            isListening
+              ? 'bg-gradient-to-br from-red-500/30 to-orange-500/30 text-red-300 border border-red-500/40 shadow-lg shadow-red-500/30 animate-pulse'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
+          }`}
+          title={isListening ? 'Stop recording' : 'Voice input'}
+        >
+          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {isListening && (
+            <span className="text-[10px] font-semibold hidden sm:inline">Listening</span>
+          )}
+        </motion.button>
+
+        {/* File attachment - Premium */}
+        <motion.button
+          onClick={() => fileInputRef.current?.click()}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="group relative p-2.5 rounded-xl transition-all duration-300 hover:bg-white/5 text-white/50 hover:text-white/80 border border-transparent hover:border-white/10"
+          title="Attach file"
+        >
+          <Paperclip className="w-5 h-5" />
+        </motion.button>
         <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt,.md" onChange={handleFileUpload} className="hidden" />
 
-        <div className="ml-auto flex items-center gap-1 text-[10px] font-mono text-cyan-400/60 border border-cyan-500/20 px-2 py-1 rounded-full">
-          <Cpu className="w-3 h-3" />
-          <span>{deviceLabel}</span>
+        {/* Device status badge - Premium */}
+        <div className="ml-auto flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 text-cyan-400/70 text-xs font-medium">
+          <Cpu className="w-4 h-4" />
+          <span className="hidden sm:inline">{deviceLabel}</span>
         </div>
 
+        {/* Clear button - Premium */}
         {onClear && (
-          <button onClick={onClear} className="text-red-400/60 hover:text-red-400 transition text-xs font-mono px-2 py-1">✕ Clear</button>
+          <motion.button
+            onClick={onClear}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400/80 hover:bg-red-500/20 hover:text-red-300 transition-all text-xs font-medium"
+          >
+            Clear
+          </motion.button>
         )}
       </div>
 

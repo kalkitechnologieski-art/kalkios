@@ -14,17 +14,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-black overflow-hidden">
-      <AppTopBar onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)} />
+      {!isChatPage && <AppTopBar onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)} />}
 
       <main className={cn(
-        'flex-1 overflow-y-auto pt-14',
-        isChatPage ? 'pb-0' : 'pb-20'
+        'flex-1 overflow-y-auto',
+        isChatPage ? 'pt-0 pb-0' : 'pt-14 pb-20'
       )}>
         {children}
       </main>
 
       {!isChatPage && <BottomTabBar />}
-      <EnterpriseSidebar isMobileOpen={isDrawerOpen} setMobileOpen={setIsDrawerOpen} />
+      {!isChatPage && <EnterpriseSidebar isMobileOpen={isDrawerOpen} setMobileOpen={setIsDrawerOpen} />}
     </div>
   );
 }
