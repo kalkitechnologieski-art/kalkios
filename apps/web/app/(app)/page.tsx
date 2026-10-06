@@ -8,7 +8,8 @@ import { ArrowRight, Zap, Shield, Globe, Brain, Building2, Users, TrendingUp, Aw
 import { fetchServices } from '@/lib/services'
 import ServiceCard from '@/components/ui/ServiceCard'
 import { buildHomepageMetadata } from '@/lib/seo/enhanced-metadata'
-import { FAQStructuredData, FAQ_PRESETS } from '@/components/seo/FAQStructuredData'
+import { FAQStructuredData } from '@/components/seo/FAQStructuredData'
+import { FAQ_PRESETS } from '@/lib/seo/faq-presets'
 import type { Metadata } from 'next'
 
 // Generate metadata for homepage (SEO)
@@ -46,13 +47,11 @@ export default async function Homepage() {
         </div>
         
         <div className="relative z-10 text-center max-w-5xl mx-auto">
-          {/* Brand badge with entity markup */}
-          <div className="flex justify-center mb-8" itemScope itemtype="https://schema.org/Organization">
+          {/* Brand badge */}
+          <div className="flex justify-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
               <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm text-white/70 font-medium" itemProp="name">KALKI Intelligence</span>
-              <meta itemProp="url" content="https://kalkios.com" />
-              <meta itemProp="areaServed" content="India" />
+              <span className="text-sm text-white/70 font-medium">KALKI Intelligence</span>
             </div>
           </div>
 
@@ -87,10 +86,10 @@ export default async function Homepage() {
           </div>
 
           {/* Stats bar - E-E-A-T signals */}
-          <div className="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-xs md:text-sm text-white/40" itemScope itemtype="https://schema.org/Organization">
+          <div className="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-xs md:text-sm text-white/40">
             <div className="flex flex-col items-center gap-1">
               <Users className="w-5 h-5 text-cyan-400/60" />
-              <span className="font-semibold text-white/70" itemProp="numberOfEmployees">500+</span>
+              <span className="font-semibold text-white/70">500+</span>
               <span>Clients Served Across India</span>
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -100,18 +99,13 @@ export default async function Homepage() {
             </div>
             <div className="flex flex-col items-center gap-1">
               <Award className="w-5 h-5 text-pink-400/60" />
-              <span className="font-semibold text-white/70" itemProp="aggregateRating" itemScope itemtype="https://schema.org/AggregateRating">
-                4.8/5 Rating
-                <meta itemProp="ratingValue" content="4.8" />
-                <meta itemProp="reviewCount" content="500" />
-              </span>
+              <span className="font-semibold text-white/70">4.8/5 Rating</span>
               <span>Client Satisfaction</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <MapPin className="w-5 h-5 text-green-400/60" />
               <span className="font-semibold text-white/70">🇮🇳 Indore, MP</span>
-              <span itemProp="location">Made in India, Serving Nationally</span>
-              <meta itemProp="address" content="Indore, Madhya Pradesh, India" />
+              <span>Made in India, Serving Nationally</span>
             </div>
           </div>
         </div>
@@ -205,17 +199,12 @@ export default async function Homepage() {
               <div
                 key={idx}
                 className={`group relative p-6 md:p-8 rounded-2xl bg-gradient-to-br ${colorMap[feature.color]} border backdrop-blur-sm hover:scale-105 transition-all duration-300`}
-                itemScope
-                itemtype="https://schema.org/Service"
               >
                 <div className="mb-4 inline-flex p-3 rounded-xl bg-white/5">
                   <Icon className="w-6 h-6 md:w-7 md:h-7 text-white/80" />
                 </div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2" itemProp="name">{feature.title}</h3>
-                <p className="text-white/60 text-sm md:text-base leading-relaxed" itemProp="description">{feature.desc}</p>
-                {feature.keywords && (
-                  <meta itemProp="keywords" content={feature.keywords.join(', ')} />
-                )}
+                <h3 className="text-lg md:text-xl font-bold text-white mb-2">{feature.title}</h3>
+                <p className="text-white/60 text-sm md:text-base leading-relaxed">{feature.desc}</p>
               </div>
             )
           })}
@@ -231,7 +220,7 @@ export default async function Homepage() {
         <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 gap-4"><div className="animate-pulse bg-white/5 rounded-xl h-48" /></div>}>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {featured.map(service => (
-              <div key={service.id} className="hover:scale-105 transition-transform duration-300" itemScope itemtype="https://schema.org/Product">
+              <div key={service.id} className="hover:scale-105 transition-transform duration-300">
                 <ServiceCard service={service} />
               </div>
             ))}

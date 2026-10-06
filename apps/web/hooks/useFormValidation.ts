@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, UseFormReturn, FieldValues, Path } from 'react-hook-form';
+import { useForm, UseFormReturn, FieldValues, Path, DefaultValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useCallback } from 'react';
@@ -68,7 +68,7 @@ export function useZodForm<T extends FieldValues>(
 
   const form = useForm<T>({
     resolver: zodResolver(schema),
-    defaultValues: defaultValues as T,
+    defaultValues: defaultValues as DefaultValues<T>,
     mode: 'onBlur', // Validate on blur for better UX
     reValidateMode: 'onChange', // Re-validate on change after first error
   });
@@ -97,7 +97,7 @@ export function useZodForm<T extends FieldValues>(
 
   return {
     ...form,
-    handleSubmit,
+    handleSubmit: handleSubmit as typeof form.handleSubmit,
     isSubmitting,
     submitError,
   };

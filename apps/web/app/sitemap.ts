@@ -16,6 +16,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .select('slug, category, updated_at')
     .eq('is_active', true);
 
+  interface ServiceRow {
+    slug: string;
+    category: string;
+    updated_at: string | null;
+  }
+
   // Fetch blog posts (if you have them)
   // const { data: posts } = await supabase
   //   .from('blog_posts')
@@ -79,7 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...getServiceCategoryPages(),
 
     // Individual service pages
-    ...(services?.map((service) => ({
+    ...((services as ServiceRow[])?.map((service) => ({
       url: `${SITE}/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
       lastModified: service.updated_at || now,
       changeFrequency: 'weekly' as const,

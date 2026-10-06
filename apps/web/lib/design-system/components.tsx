@@ -4,6 +4,7 @@
 
 import { cn } from '@/lib/utils';
 import { ButtonHTMLAttributes, InputHTMLAttributes, forwardRef } from 'react';
+import { Slot } from '@radix-ui/react-slot';
 
 /**
  * Enterprise Button - Full state support, accessible, WCAG compliant
@@ -15,6 +16,7 @@ export interface EnterpriseButtonProps extends ButtonHTMLAttributes<HTMLButtonEl
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   fullWidth?: boolean;
+  asChild?: boolean;
 }
 
 export const EnterpriseButton = forwardRef<HTMLButtonElement, EnterpriseButtonProps>(
@@ -28,6 +30,7 @@ export const EnterpriseButton = forwardRef<HTMLButtonElement, EnterpriseButtonPr
       icon,
       iconPosition = 'left',
       fullWidth = false,
+      asChild = false,
       disabled,
       ...props
     },
@@ -55,8 +58,10 @@ export const EnterpriseButton = forwardRef<HTMLButtonElement, EnterpriseButtonPr
       lg: 'h-12 px-6 text-lg rounded-xl',
     };
 
+    const Comp = asChild ? Slot : 'button';
+
     return (
-      <button
+      <Comp
         ref={ref}
         className={cn(
           baseClasses,
@@ -94,7 +99,7 @@ export const EnterpriseButton = forwardRef<HTMLButtonElement, EnterpriseButtonPr
         ) : null}
         {children}
         {icon && iconPosition === 'right' && !loading && icon}
-      </button>
+      </Comp>
     );
   }
 );
@@ -104,7 +109,7 @@ EnterpriseButton.displayName = 'EnterpriseButton';
 /**
  * Enterprise Input - Accessible form input with validation states
  */
-export interface EnterpriseInputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface EnterpriseInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   error?: string;
   helperText?: string;

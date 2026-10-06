@@ -18,13 +18,24 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(50);
 
+  interface ServiceRow {
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    description: string | null;
+    price: number | null;
+    created_at: string;
+    updated_at: string | null;
+  }
+
   // Build RSS 2.0 feed
   const rss = buildRSS({
     title: 'KALKI OS - Latest AI Services & Updates',
     description: 'Discover the latest AI-powered digital services from KALKI Intelligence. Web development, SEO, chatbots, automation, and more.',
     link: SITE,
     language: 'en-IN',
-    items: (services || []).map((service) => ({
+    items: ((services as ServiceRow[]) || []).map((service) => ({
       title: `${service.name} - ${service.category}`,
       description: service.description || '',
       link: `${SITE}/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,

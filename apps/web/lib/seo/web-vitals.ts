@@ -47,7 +47,7 @@ export function reportWebVitals(onReport?: (vital: WebVitalsReport) => void) {
   if (typeof window === 'undefined') return;
 
   // Import web-vitals library dynamically
-  import('web-vitals').then(({ onCLS, onFID, onFCP, onLCP, onTTFB }) => {
+  import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
     onCLS((metric) => {
       const report = {
         name: 'CLS',
@@ -58,9 +58,9 @@ export function reportWebVitals(onReport?: (vital: WebVitalsReport) => void) {
       onReport?.(report);
     });
 
-    onFID((metric) => {
+    onINP((metric) => {
       const report = {
-        name: 'FID',
+        name: 'INP',
         value: metric.value,
         id: metric.id,
       };
@@ -164,7 +164,7 @@ export function getPerformanceGrade(vitals: {
   }
 
   // Calculate score (0-100)
-  const scores = Object.values(details).map((status) => {
+  const scores: number[] = Object.values(details).map((status) => {
     if (status === 'good') return 100;
     if (status === 'needs-improvement') return 50;
     return 0;

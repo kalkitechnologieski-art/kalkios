@@ -3,34 +3,35 @@
 // Puppeteer is only available in Node.js environments, not during build
 // -----------------------------------------------------------------------------
 
-let puppeteer: typeof import('puppeteer') | null = null;
-let Browser: any = null;
+let puppeteer: any = null;
+let puppeteerChecked = false;
 
-// Try to load puppeteer dynamically (only in runtime, not during build)
-try {
-  if (typeof window === 'undefined') {
-    // Only attempt in server-side environment
-    import('puppeteer').then((module) => {
-      puppeteer = module.default;
-      Browser = module.Browser;
-    }).catch(() => {
-      // Puppeteer not available - will use fetch fallback
-      console.warn('[Scraper] Puppeteer not available, using fetch fallback');
-    });
+// Load puppeteer lazily via runtime require so bundlers (Turbopack/webpack)
+// never attempt to resolve it at build time
+function loadPuppeteer(): any {
+  if (puppeteerChecked) return puppeteer;
+  puppeteerChecked = true;
+  if (typeof window !== 'undefined') return null;
+  try {
+    const req = eval('require');
+    puppeteer = req('puppeteer');
+  } catch {
+    console.warn('[Scraper] Puppeteer not available, using fetch fallback');
+    puppeteer = null;
   }
-} catch {
-  // Puppeteer not available
+  return puppeteer;
 }
 
 let browser: any = null;
 
 async function getBrowser(): Promise<any> {
-  if (!puppeteer) {
+  const pptr = loadPuppeteer();
+  if (!pptr) {
     throw new Error('Puppeteer not available');
   }
-  
+
   if (browser) return browser;
-  browser = await puppeteer.launch({
+  browser = await pptr.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
@@ -42,7 +43,7 @@ async function getBrowser(): Promise<any> {
  */
 export async function scrapeWebsite(url: string): Promise<string> {
   // Try puppeteer first
-  if (puppeteer) {
+  if (loadPuppeteer()) {
     try {
       const browser = await getBrowser();
       let page = await browser.newPage();

@@ -112,8 +112,6 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
             'max-video-preview': -1,
             'max-image-preview': 'large',
             'max-snippet': -1, // Allow unlimited snippet length for featured snippets
-            'max-headline-length': 110,
-            'max-description-length': 300,
           },
         },
 
@@ -139,15 +137,14 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
       industry: 'Artificial Intelligence, Digital Services, SaaS',
       
       // AEO: Question-answer format indicators
-      'question-format': options.faqCount ? `${options.faqCount} FAQs` : undefined,
-      'howto-steps': options.howToSteps ? `${options.howToSteps} steps` : undefined,
+      'question-format': options.faqCount ? `${options.faqCount} FAQs` : '',
+      'howto-steps': options.howToSteps ? `${options.howToSteps} steps` : '',
     },
 
     // Verification tags (add your actual verification codes)
     verification: {
       google: 'your-google-verification-code',
       yandex: 'your-yandex-verification-code',
-      bing: 'your-bing-verification-code',
     },
   };
 }
