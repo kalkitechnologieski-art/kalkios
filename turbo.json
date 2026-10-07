@@ -1,10 +1,29 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalEnv": [
+    "NODE_ENV",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "OPENROUTER_API_KEY",
+    "GROQ_API_KEY",
+    "ZHIPU_API_KEY",
+    "AGNES_API_KEY",
+    "INSTAMOJO_API_KEY",
+    "INSTAMOJO_AUTH_TOKEN",
+    "INSTAMOJO_PRIVATE_SALT",
+    "REDIS_URL",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "NEXT_PUBLIC_APP_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
       "cache": false,
