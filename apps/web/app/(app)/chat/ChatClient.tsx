@@ -11,7 +11,7 @@ import { SetuProgress } from '@/components/chat/SetuProgress';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
 import { Badge } from '@/components/ui/badge';
-import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet } from 'lucide-react';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // == SIDDHI F1 WIRE - IMPORTS ==
 import { PremiumChatTopBar } from '@/components/chat/PremiumChatTopBar';
@@ -21,7 +21,8 @@ import type { ConversationMessage } from '@/lib/conversations/types';
 import type { ChatMessage as SiddhiChatMessage } from '@/hooks/useStreamingChat';
 import { LeadViewer } from '@/components/siddhi/LeadViewer';
 import { EnterpriseLeadViewer } from '@/components/siddhi/EnterpriseLeadViewer';
-import { leadGenerator, type LeadGenerationResult } from '@/lib/ai/lead-generator';
+import { MediaProgress } from '@/components/chat/MediaProgress';
+import type { LeadGenerationResult } from '@/lib/ai/lead-generator';
 
 interface TraceStep {
   id: string;
@@ -53,7 +54,9 @@ export default function ChatClient() {
     if (loadedConvIdRef.current === id) return;
     loadedConvIdRef.current = id;
     skipPersistRef.current = true;
-    setMessages((conv.active?.messages ?? []) as unknown as SiddhiChatMessage[]);
+    // A reload mid-stream would otherwise persist isStreaming=true forever and
+    // pin a fake "typing" bubble to the history.
+    setMessages((conv.active?.messages ?? []).map((m) => ({ ...m, isStreaming: false })) as unknown as SiddhiChatMessage[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv.ready, conv.active?.id, setMessages]);
 
@@ -77,21 +80,10 @@ export default function ChatClient() {
   const { loadMemory, saveMemory } = useMemory();
   const [searchMode, setSearchMode] = useState(true);
   const [mode, setMode] = useState<'chat' | 'image' | 'video' | 'leads'>('chat');
-  const [imageSettings, setImageSettings] = useState({
-    size: '2K',
-    ratio: '16:9',
-    quality: 'standard',
-    style: 'photorealistic',
-  });
-  const [videoSettings, setVideoSettings] = useState({
-    resolution: '720P',
-    duration: '5',
-    aspectRatio: '16:9',
-    quality: 'balanced',
-  });
   const [mounted, setMounted] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const [leadResult, setLeadResult] = useState<LeadGenerationResult | null>(null);
+  const [leadsPanelOpen, setLeadsPanelOpen] = useState(false);
   const [isGeneratingLeads, setIsGeneratingLeads] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +91,7 @@ export default function ChatClient() {
     const load = async () => {
       const saved = await loadMemory();
       if (saved && saved.length > 0) {
-        setMessages(saved);
+        setMessages(saved.map((m) => ({ ...m, isStreaming: false })));
       }
       setMounted(true);
     };
@@ -121,25 +113,37 @@ export default function ChatClient() {
       if (!text.trim() || isLoading) return;
 
       if (mode === 'leads') {
+        const userMsg: SiddhiChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
+        setMessages(prev => [...prev, userMsg]);
         setIsGeneratingLeads(true);
+        setLeadResult(null);
         try {
-          const result = await leadGenerator.generateLeads({
-            query: text,
-            location: undefined,
-            maxResults: 20,
-            maxPagesPerSite: 2,
+          const res = await fetch('/api/leads/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: text, maxResults: 20 }),
           });
+          const data = await res.json().catch(() => null) as LeadGenerationResult & { error?: string } | null;
+          if (!res.ok || !data || !Array.isArray(data.leads)) {
+            throw new Error(data?.error || `lead service returned ${res.status}`);
+          }
+          const result = data as LeadGenerationResult;
           setLeadResult(result);
-          
-          // Add system message about lead generation
-          const systemMsg: SiddhiChatMessage = {
+          setLeadsPanelOpen(true);
+          setMessages(prev => [...prev, {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: `Found ${result.leads.length} leads from ${result.totalSearched} websites. Ready to download CSV with ${result.totalScraped} contacts.`,
-          };
-          setMessages(prev => [...prev, systemMsg]);
-        } catch (error) {
-          console.error('Lead generation failed:', error);
+            content: `Found ${result.leads.length} leads from ${result.totalSearched} websites. Open the Leads panel above to review and export the CSV with ${result.totalScraped} contacts.`,
+          }]);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'unknown error';
+          // eslint-disable-next-line no-console
+          console.error('Lead generation failed:', msg);
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: `I could not generate leads right now (${msg}). Please try again with a different industry or region.`,
+          }]);
         } finally {
           setIsGeneratingLeads(false);
         }
@@ -147,20 +151,19 @@ export default function ChatClient() {
       }
 
       if (mode === 'image') {
-        const enhancedPrompt = `Generate image: ${text} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
-        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false, image: true });
+        // Fixed recipe — the buyer just types the subject and presses Enter.
+        await sendMessage(`Generate image: ${text} | Style: photorealistic | Quality: high | Size: 2K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
         return;
       }
 
       if (mode === 'video') {
-        const enhancedPrompt = `Generate video: ${text} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
-        await sendMessage(enhancedPrompt, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${text} | Resolution: 1080P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
         return;
       }
 
       await sendMessage(text, { deep: true, setu: false, search: searchMode });
     },
-    [sendMessage, isLoading, searchMode, mode, imageSettings, videoSettings, setMessages]
+    [sendMessage, isLoading, searchMode, mode, setMessages]
   );
 
   // ─── Handle Image/Video Edit: regenerate with new prompt ────────
@@ -169,23 +172,14 @@ export default function ChatClient() {
       const originalMsg = messages.find(m => m.id === messageId);
       if (!originalMsg) return;
 
-      // Find the user message that preceded this assistant message
-      const userMsgIndex = messages.findIndex(m => m.id === messageId) - 1;
-      if (userMsgIndex < 0) return;
-      const userMsg = messages[userMsgIndex];
-      if (!userMsg || userMsg.role !== 'user') return;
-
-      // Determine if it's an image or video
       const isImage = originalMsg.content.includes('![');
       if (isImage) {
-        const fullPrompt = `Generate image: ${newPrompt} | Style: ${imageSettings.style} | Quality: ${imageSettings.quality} | Size: ${imageSettings.size} | Ratio: ${imageSettings.ratio}`;
-        await sendMessage(fullPrompt, { deep: true, setu: false, search: false, image: true });
+        await sendMessage(`Generate image: ${newPrompt} | Style: photorealistic | Quality: high | Size: 2K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
       } else {
-        const fullPrompt = `Generate video: ${newPrompt} | Resolution: ${videoSettings.resolution} | Duration: ${videoSettings.duration}s | Aspect: ${videoSettings.aspectRatio} | Quality: ${videoSettings.quality}`;
-        await sendMessage(fullPrompt, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${newPrompt} | Resolution: 1080P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
       }
     },
-    [sendMessage, messages, imageSettings, videoSettings]
+    [sendMessage, messages]
   );
 
   const handleModeToggle = (newMode: 'chat' | 'image' | 'video' | 'leads') => {
@@ -302,136 +296,6 @@ export default function ChatClient() {
     </motion.div>
   );
 
-  const ImageSettingsPanel = () => (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="bg-white/5 border border-cyan-500/10 rounded-xl p-3 mb-2 overflow-hidden"
-    >
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Size</label>
-          <select
-            value={imageSettings.size}
-            onChange={(e) => setImageSettings(prev => ({ ...prev, size: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="1K">1K</option>
-            <option value="2K">2K</option>
-            <option value="3K">3K</option>
-            <option value="4K">4K</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Ratio</label>
-          <select
-            value={imageSettings.ratio}
-            onChange={(e) => setImageSettings(prev => ({ ...prev, ratio: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="1:1">1:1</option>
-            <option value="16:9">16:9</option>
-            <option value="9:16">9:16</option>
-            <option value="4:3">4:3</option>
-            <option value="3:4">3:4</option>
-            <option value="21:9">21:9</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Quality</label>
-          <select
-            value={imageSettings.quality}
-            onChange={(e) => setImageSettings(prev => ({ ...prev, quality: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="low">Low</option>
-            <option value="standard">Standard</option>
-            <option value="high">High</option>
-            <option value="ultra">Ultra</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Style</label>
-          <input
-            type="text"
-            value={imageSettings.style}
-            onChange={(e) => setImageSettings(prev => ({ ...prev, style: e.target.value }))}
-            placeholder="e.g. cinematic"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none placeholder-white/20"
-          />
-        </div>
-      </div>
-    </motion.div>
-  );
-
-  const VideoSettingsPanel = () => (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="bg-white/5 border border-cyan-500/10 rounded-xl p-3 mb-2 overflow-hidden"
-    >
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Resolution</label>
-          <select
-            value={videoSettings.resolution}
-            onChange={(e) => setVideoSettings(prev => ({ ...prev, resolution: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="720P">720P</option>
-            <option value="1080P">1080P</option>
-            <option value="2K">2K</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Duration (s)</label>
-          <select
-            value={videoSettings.duration}
-            onChange={(e) => setVideoSettings(prev => ({ ...prev, duration: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="4">4s</option>
-            <option value="5">5s</option>
-            <option value="6">6s</option>
-            <option value="7">7s</option>
-            <option value="8">8s</option>
-            <option value="9">9s</option>
-            <option value="10">10s</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Aspect Ratio</label>
-          <select
-            value={videoSettings.aspectRatio}
-            onChange={(e) => setVideoSettings(prev => ({ ...prev, aspectRatio: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="16:9">16:9</option>
-            <option value="9:16">9:16</option>
-            <option value="1:1">1:1</option>
-            <option value="4:3">4:3</option>
-            <option value="3:4">3:4</option>
-            <option value="21:9">21:9</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-white/40 font-mono block mb-1">Quality</label>
-          <select
-            value={videoSettings.quality}
-            onChange={(e) => setVideoSettings(prev => ({ ...prev, quality: e.target.value }))}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
-          >
-            <option value="speed">Speed</option>
-            <option value="balanced">Balanced</option>
-            <option value="quality">Quality</option>
-          </select>
-        </div>
-      </div>
-    </motion.div>
-  );
-
   return (
     <div className="chat-fullscreen relative z-30 bg-gradient-to-br from-black via-slate-950 to-black min-h-screen overflow-hidden">
       {/* Premium ambient background */}
@@ -463,7 +327,7 @@ export default function ChatClient() {
         activeId={conv.active?.id ?? null}
         onSelect={(id) => {
           const c = conv.selectConversation(id);
-          if (c) setMessages(c.messages as unknown as SiddhiChatMessage[]);
+          if (c) setMessages(c.messages.map((m) => ({ ...m, isStreaming: false })) as unknown as SiddhiChatMessage[]);
         }}
         onNew={() => { conv.createNew(); setMessages([]); }}
         onDelete={(id) => conv.deleteById(id)}
@@ -527,36 +391,75 @@ export default function ChatClient() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {mode === 'image' && <ImageSettingsPanel />}
-        {mode === 'video' && <VideoSettingsPanel />}
-        {mode === 'leads' && leadResult && (
+      {/* Leads dashboard — collapsed by default so it never covers the chat */}
+      <AnimatePresence initial={false}>
+        {leadResult && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-white/5 border border-green-500/10 rounded-xl p-4 mb-4"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="bg-white/5 border border-green-500/15 rounded-xl overflow-hidden mb-2"
           >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white/90 flex items-center gap-2">
+            <button
+              onClick={() => setLeadsPanelOpen(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition"
+            >
+              <span className="text-sm font-semibold text-white/90 flex items-center gap-2">
                 <Download className="w-4 h-4 text-green-400" />
-                Lead Generation Results
-              </h3>
-              <Badge variant="secondary" className="text-xs">
-                {leadResult.leads.length} leads found
-              </Badge>
-            </div>
-            <EnterpriseLeadViewer 
-              leads={leadResult.leads} 
-              onExport={(format) => console.log(`Exported as ${format}`)}
-            />
+                Lead results
+                <Badge variant="secondary" className="text-[10px]">
+                  {leadResult.leads.length} found
+                </Badge>
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-mono text-green-400/70">
+                {leadsPanelOpen ? 'HIDE' : 'SHOW'}
+                {leadsPanelOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </span>
+            </button>
+            <AnimatePresence initial={false}>
+              {leadsPanelOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-green-500/10"
+                >
+                  {/* Bounded height + internal scroll: chat stays readable below */}
+                  <div className="max-h-[45vh] overflow-y-auto p-4">
+                    <EnterpriseLeadViewer
+                      leads={leadResult.leads}
+                      onExport={() => {
+                        if (!leadResult.csvContent) return;
+                        const blob = new Blob([leadResult.csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `kalki-leads-${Date.now()}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Animated generation progress: leads / image / video */}
+      {isGeneratingLeads && <MediaProgress isLoading mode="leads" />}
+      {(mode === 'image' || mode === 'video') && isLoading && (
+        <MediaProgress key={mode} isLoading mode={mode} />
+      )}
+
       <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
-          {messages.map((msg) => {
+          {messages
+            // Failed/aborted turns used to persist empty assistant bubbles that
+            // rendered as a dangling "…" — never show those.
+            .filter((msg) => !(msg.role === 'assistant' && !msg.isStreaming && !String(msg.content ?? '').replace(/[.…\s]/g, '')))
+            .map((msg) => {
             const contentStr = typeof msg.content === 'string' ? msg.content : String(msg.content);
             const isImageMessage = msg.role === 'assistant' && contentStr.includes('![');
             const isVideoMessage = msg.role === 'assistant' && contentStr.includes('<video');

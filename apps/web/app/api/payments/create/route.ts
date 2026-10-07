@@ -77,11 +77,31 @@ export async function POST(req: NextRequest) {
     const existingRows = (existing ?? []) as OrderRow[];
     if (existingRows.length > 0) {
       logger.info('[Payments] Idempotent order replay', { id: existingRows[0]?.id });
+      // Pending orders already have a gateway payment request — re-fetch its
+      // live URL so the buyer can resume payment instead of dead-ending.
+      let replayUrl: string | null = null;
+      const pendingPr = existingRows.find((r) => r.status === 'pending' && r.payment_request_id);
+      if (pendingPr?.payment_request_id && INSTAMOJO_API_KEY && INSTAMOJO_AUTH_TOKEN) {
+        try {
+          const res = await fetch(`${INSTAMOJO_BASE}/payment_requests/${pendingPr.payment_request_id}/`, {
+            headers: {
+              Authorization: `Bearer ${INSTAMOJO_AUTH_TOKEN}`,
+              'X-Api-Key': INSTAMOJO_API_KEY,
+            },
+          });
+          if (res.ok) {
+            const fresh = (await res.json()) as { payment_request?: { longurl?: string; url?: string } };
+            replayUrl = fresh.payment_request?.longurl ?? fresh.payment_request?.url ?? null;
+          }
+        } catch {
+          /* replay without URL; checkout page will guide the buyer */
+        }
+      }
       return NextResponse.json({
         orderIds: existingRows.map((r) => r.id),
         idempotent: true,
         total: existingRows.reduce((s, r) => s + (r.amount ?? 0), 0),
-        paymentUrl: null,
+        paymentUrl: replayUrl,
       });
     }
 
@@ -162,6 +182,24 @@ export async function POST(req: NextRequest) {
     const buyerEmail = user.email || body.buyerEmail || 'guest@example.com';
     const buyerPhone = body.buyerPhone || '';
 
+    // Fail before creating orders if the gateway cannot actually be reached —
+    // stranded pending orders with no payment link are worse than a 503.
+    if (!INSTAMOJO_API_KEY || !INSTAMOJO_AUTH_TOKEN) {
+      logger.error('[Payments] INSTAMOJO_API_KEY / INSTAMOJO_AUTH_TOKEN missing');
+      return NextResponse.json(
+        { error: 'Payments are temporarily unavailable: the payment gateway is not configured on this site yet.' },
+        { status: 503 }
+      );
+    }
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/+$/, '');
+    if (!appUrl || /localhost|127\.0\.0\.1/.test(appUrl)) {
+      logger.error('[Payments] NEXT_PUBLIC_APP_URL missing or localhost — gateway will reject redirect/webhook URLs');
+      return NextResponse.json(
+        { error: 'Payments need a public HTTPS site URL to redirect back to. Complete this purchase on the live site.' },
+        { status: 503 }
+      );
+    }
+
     // Create one order per service
     const createdOrderIds: string[] = [];
 
@@ -208,16 +246,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create orders' }, { status: 500 });
     }
 
-    if (!INSTAMOJO_API_KEY || !INSTAMOJO_AUTH_TOKEN) {
-      logger.warn('[Payments] Instamojo not configured; returning order IDs only');
-      return NextResponse.json({
-        orderIds: createdOrderIds,
-        total: grandTotal,
-        paymentUrl: null,
-        idempotent: false,
-      });
-    }
-
     const firstOrderId = createdOrderIds[0]!;
     const purpose = `KALKI OS order ${firstOrderId.slice(0, 8)} (${services.length} item${services.length > 1 ? 's' : ''})`;
 
@@ -227,27 +255,38 @@ export async function POST(req: NextRequest) {
       buyer_name: buyerName,
       email: buyerEmail,
       phone: buyerPhone,
-      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?order=${firstOrderId}`,
-      webhook: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook`,
+      redirect_url: `${appUrl}/checkout/success?order=${firstOrderId}`,
+      webhook: `${appUrl}/api/payments/webhook`,
       allow_repeated_payments: false,
       send_email: true,
       send_sms: false,
       custom_field_order_id: firstOrderId,
     };
 
+    // InstaMojo's v2 write endpoints accept application/x-www-form-urlencoded;
+    // a JSON body is rejected with 400 on payment_requests creation.
+    const formBody = new URLSearchParams();
+    for (const [key, value] of Object.entries(paymentPayload)) {
+      if (value === null || value === undefined || value === '') continue;
+      formBody.set(key, String(value));
+    }
+
     const response = await fetch(`${INSTAMOJO_BASE}/payment_requests/`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${INSTAMOJO_AUTH_TOKEN}`,
         'X-Api-Key': INSTAMOJO_API_KEY,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(paymentPayload),
+      body: formBody.toString(),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      logger.error('[Payments] Instamojo error', errorData);
+      const errorData = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        data?: Record<string, string[]>;
+      };
+      logger.error('[Payments] Instamojo error', { status: response.status, errorData });
       for (const id of createdOrderIds) {
         // Owner sessions cannot flip status (orders_guard_columns trigger);
         // roll back with the service client.
@@ -255,14 +294,25 @@ export async function POST(req: NextRequest) {
         const admin = (await createAdminClient()) as any;
         await admin.from('orders').update({ status: 'failed' }).eq('id', id);
       }
-      return NextResponse.json({ error: 'Payment gateway error' }, { status: 500 });
+      const fieldHints = errorData.data
+        ? Object.entries(errorData.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`).join('; ')
+        : '';
+      return NextResponse.json(
+        { error: errorData.message ? `Gateway rejected the payment request: ${errorData.message}${fieldHints ? ` (${fieldHints})` : ''}` : 'Payment gateway error' },
+        { status: 502 }
+      );
     }
 
-    const data = (await response.json()) as {
+    const gatewayData = (await response.json()) as {
       payment_request?: { id?: string; longurl?: string; url?: string };
+      data?: { payment_request?: { id?: string; longurl?: string; url?: string } };
+      id?: string;
+      longurl?: string;
+      url?: string;
     };
-    const paymentUrl = data.payment_request?.longurl ?? data.payment_request?.url;
-    const paymentRequestId = data.payment_request?.id;
+    const pr = gatewayData.payment_request ?? gatewayData.data?.payment_request ?? gatewayData;
+    const paymentUrl = pr.longurl ?? pr.url;
+    const paymentRequestId = pr.id;
 
     if (!paymentUrl || !paymentRequestId) {
       for (const id of createdOrderIds) {
@@ -276,8 +326,11 @@ export async function POST(req: NextRequest) {
     }
 
     // The webhook fulfills the whole batch by payment_request_id; orders that
-    // can't be linked would never be marked paid.
-    const { error: linkError } = await supabase
+    // can't be linked would never be marked paid. Owner sessions are blocked
+    // from touching payment columns by the orders_guard_columns trigger, so
+    // link with the service-role client.
+    const linkAdmin = (await createAdminClient()) as any;
+    const { error: linkError } = await linkAdmin
       .from('orders')
       .update({ payment_request_id: paymentRequestId })
       .in('id', createdOrderIds);

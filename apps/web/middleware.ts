@@ -33,6 +33,13 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!session?.user) {
+    // API callers need a JSON 401 they can render, not an HTML login redirect
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Please log in to use this feature.' },
+        { status: 401, headers: { 'WWW-Authenticate': 'Session' } }
+      );
+    }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);

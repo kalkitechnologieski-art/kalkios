@@ -1529,7 +1529,9 @@ ${ctx.docs.slice(0, 2).join('\n\n').slice(0, 4000)}
 ${ctx.memories.slice(-5).map((m) => `${m.role}: ${m.content}`).join('\n')}
 ${toolContext}`;
 
-    const tasks = ctx.plan.providers.map(async (provider) => {
+    const tasks = ctx.plan.providers
+      .filter((provider) => this.isProviderConfigured(provider))
+      .map(async (provider) => {
       const t0 = Date.now();
       try {
         const result = await this.callProvider(
@@ -1553,7 +1555,42 @@ ${toolContext}`;
     });
 
     const results = await Promise.all(tasks);
-    return results.filter((r): r is NonNullable<typeof r> => r !== null);
+    const drafts = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    if (drafts.length > 0) return drafts;
+
+    // Emergency fallback: any configured provider not already tried
+    const tried = new Set(ctx.plan.providers);
+    for (const provider of ['groq', 'agnes', 'zhipu']) {
+      if (tried.has(provider) || !this.isProviderConfigured(provider)) continue;
+      try {
+        const t0 = Date.now();
+        const result = await this.callProvider(provider as never, query, systemPrompt, { reasoningDepth: 'medium' });
+        const parsed = this.parsePipelineReasoning(result.content);
+        if (parsed.answer) {
+          return [{
+            id: this.generateId(),
+            provider,
+            reasoning: parsed.reasoning,
+            answer: parsed.answer,
+            confidence: 0.6,
+            tokens: result.tokens ?? 0,
+            timeMs: Date.now() - t0,
+          }];
+        }
+      } catch (error) {
+        this.logSafe('warn', `[Pipeline] Fallback draft from ${provider} failed`, error);
+      }
+    }
+    return drafts;
+  }
+
+  private isProviderConfigured(provider: string): boolean {
+    switch (provider) {
+      case 'groq': return !!process.env.GROQ_API_KEY;
+      case 'agnes': return !!process.env.AGNES_API_KEY;
+      case 'zhipu': return !!process.env.ZHIPU_API_KEY;
+      default: return false;
+    }
   }
 
   private parsePipelineReasoning(content: string): { reasoning: string; answer: string } {

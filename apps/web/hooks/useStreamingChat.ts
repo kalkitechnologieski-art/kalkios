@@ -117,11 +117,26 @@ export function useStreamingChat() {
           setu: options.setu || false,
           search: options.search ?? true,
           image: options.image || false,
+          video: options.video || false,
         }),
         signal: abortControllerRef.current.signal,
       });
 
-      if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+      if (response.status === 401) {
+        throw new Error('Please log in to chat with Siddhi.');
+      }
+      if (response.status === 429) {
+        throw new Error('You are sending messages too fast. Please wait a moment.');
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
+        let detail = '';
+        try {
+          const json = await response.json() as { error?: string };
+          detail = json.error ? ` (${json.error})` : '';
+        } catch { /* non-JSON body */ }
+        throw new Error(`Siddhi is unavailable right now${detail}. Please try again.`);
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -141,8 +156,17 @@ export function useStreamingChat() {
           try {
             const parsed = JSON.parse(data) as { type: string; [k: string]: unknown };
 
-            if (parsed.type === 'error' && typeof parsed.message === 'string') {
-              setError(parsed.message);
+            if (parsed.type === 'error') {
+              const msg = typeof parsed.content === 'string' ? parsed.content
+                : typeof parsed.message === 'string' ? parsed.message
+                : 'Siddhi encountered an error. Please try again.';
+              setError(msg);
+              continue;
+            }
+            if (parsed.type === 'status' && typeof parsed.message === 'string') {
+              setMessages((prev) => prev.map((m) =>
+                m.id === assistantMsg.id ? { ...m, progressMessage: parsed.message as string } : m
+              ));
               continue;
             }
             if (parsed.type === 'queue_status') {
@@ -168,9 +192,10 @@ export function useStreamingChat() {
               ));
               continue;
             }
-            if (parsed.type === 'delta' && typeof parsed.content === 'string') {
+            if ((parsed.type === 'delta' || parsed.type === 'token') && typeof parsed.content === 'string') {
+              const chunk = parsed.content as string;
               setMessages((prev) => prev.map((m) =>
-                m.id === assistantMsg.id ? { ...m, content: (m.content ?? '') + parsed.content } : m
+                m.id === assistantMsg.id ? { ...m, content: (m.content ?? '') + chunk } : m
               ));
               continue;
             }
@@ -242,14 +267,19 @@ export function useStreamingChat() {
         }
       }
     } catch (err: unknown) {
-      const e = err as { name?: string };
+      const e = err as { name?: string; message?: string };
       if (e?.name !== 'AbortError') {
-        setError('Network error. Please check your connection and try again.');
+        setError(e?.message && e.message !== 'Network error' ? e.message : 'Network error. Please check your connection and try again.');
         // eslint-disable-next-line no-console
         console.error('[useStreamingChat]', err);
       }
     } finally {
       setIsLoading(false);
+      // Stop the typing indicator; drop the placeholder entirely if nothing
+      // streamed in, so an error never leaves a dangling "…" bubble.
+      setMessages((prev) => prev
+        .map((m) => (m.id === assistantMsg.id ? { ...m, isStreaming: false } : m))
+        .filter((m) => !(m.id === assistantMsg.id && !m.content)));
       abortControllerRef.current = null;
     }
   }, []);

@@ -77,11 +77,19 @@ export async function POST(req: NextRequest) {
       const armTimeout = () => {
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-          void sendEvent({ type: 'error', message: 'Request timed out. Please try again.' });
+          void sendEvent({ type: 'error', message: 'Siddhi took too long to respond. Please try again.' });
           void close();
-        }, 55_000);
+        }, 90_000);
       };
       armTimeout();
+
+      const anyProviderConfigured = ['GROQ_API_KEY', 'AGNES_API_KEY', 'ZHIPU_API_KEY', 'OPENROUTER_API_KEY']
+        .some((k) => !!process.env[k]);
+      if (!anyProviderConfigured) {
+        await sendEvent({ type: 'error', message: 'Siddhi is offline: no AI provider is configured yet. Please try again later.' });
+        await close();
+        return;
+      }
 
       // Use omnibus router when privacy/speed hints are provided, else pipeline
       const useOmnibus = privacy || preferSpeed || preferQuality;
@@ -118,7 +126,9 @@ export async function POST(req: NextRequest) {
         await sendEvent({ type: 'provider', provider: result.provider });
         await sendEvent({ type: 'layer', layer: result.layer });
         if (result.sources?.length) await sendEvent({ type: 'sources', sources: result.sources });
-        
+        // Final full-content frame: guarantees rendering even if token frames are lost
+        await sendEvent({ type: 'content', content: fullContent });
+
         const metrics = await streamer.close();
         logger.info(`[Stream] Omnibus complete: ${metrics.totalTokens} tokens in ${metrics.totalLatencyMs}ms`);
         return;
@@ -160,6 +170,8 @@ export async function POST(req: NextRequest) {
       if (result.toolCalls && result.toolCalls.length > 0) {
         await sendEvent({ type: 'tool_calls', toolCalls: result.toolCalls });
       }
+      // Final full-content frame: guarantees rendering even if token frames are lost
+      if (fullContent) await sendEvent({ type: 'content', content: fullContent });
 
       const metrics = await streamer.close();
       logger.info(`[Stream] Pipeline complete: ${metrics.totalTokens} tokens in ${metrics.totalLatencyMs}ms`);

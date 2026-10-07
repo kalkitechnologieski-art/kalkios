@@ -75,11 +75,11 @@ export function ChatHistorySidebar({
           />
 
           <motion.aside
-            initial={{ x: '-100%' }}
+            initial={{ x: '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
+            exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-            className="fixed top-14 bottom-0 left-0 z-40 w-[290px] max-w-[86vw] bg-black/95 backdrop-blur-2xl border-r border-cyan-500/10 flex flex-col"
+            className="fixed top-14 bottom-0 right-0 z-50 w-[290px] max-w-[86vw] bg-black/95 backdrop-blur-2xl border-l border-cyan-500/10 flex flex-col"
           >
             <div className="p-3 border-b border-cyan-500/10 flex items-center gap-2">
               <button

@@ -23,18 +23,32 @@ interface FulfillmentRow {
   buyer_email?: string | null;
 }
 
-function signatureMatches(rawBody: string, signature: string): boolean {
-  if (!INSTAMOJO_PRIVATE_SALT || !signature) return false;
-  
-  // Instamojo signs the raw body with the private salt
-  const expected = createHmac('sha256', INSTAMOJO_PRIVATE_SALT)
-    .update(rawBody)
-    .digest('hex');
-  
-  const sigBuf = Buffer.from(signature, 'utf8');
-  const expBuf = Buffer.from(expected, 'utf8');
-  
-  return sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+function safeEqualHex(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
+
+// InstaMojo v2 webhooks are application/x-www-form-urlencoded POSTs whose raw
+// body carries a trailing `sig` field = hex HMAC-MD5 of the body with the
+// sig parameter removed, keyed with the webhook salt. A header-based
+// HMAC-SHA256 scheme is kept as a fallback for the newer JSON webhooks.
+function verifySignature(rawBody: string, contentType: string, headerSignature: string): boolean {
+  if (!INSTAMOJO_PRIVATE_SALT) return false;
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    const sig = new URLSearchParams(rawBody).get('sig') ?? '';
+    if (!/^[0-9a-f]{32}$/i.test(sig)) return false;
+    const bodyWithoutSig = rawBody.replace(/&sig=[0-9a-f]{32}/i, '').replace(/^sig=[0-9a-f]{32}&?/i, '');
+    const expected = createHmac('md5', INSTAMOJO_PRIVATE_SALT).update(bodyWithoutSig).digest('hex');
+    return safeEqualHex(expected, sig);
+  }
+
+  if (headerSignature) {
+    const expected = createHmac('sha256', INSTAMOJO_PRIVATE_SALT).update(rawBody).digest('hex');
+    return safeEqualHex(expected, headerSignature);
+  }
+  return false;
 }
 
 function parsePayload(contentType: string, rawBody: string): Record<string, unknown> | null {
@@ -72,13 +86,14 @@ export async function POST(req: NextRequest) {
   }
 
   const rawBody = await req.text();
-  const signature = req.headers.get('x-instamojo-signature') || '';
-  if (!signatureMatches(rawBody, signature)) {
+  const contentType = req.headers.get('content-type') ?? '';
+  const headerSignature = req.headers.get('x-instamojo-signature') || '';
+  if (!verifySignature(rawBody, contentType, headerSignature)) {
     logger.warn('[Webhook] Invalid signature');
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  const data = parsePayload(req.headers.get('content-type') ?? '', rawBody);
+  const data = parsePayload(contentType, rawBody);
   if (!data) {
     return NextResponse.json({ error: 'Unparseable payload' }, { status: 400 });
   }
@@ -99,9 +114,25 @@ export async function POST(req: NextRequest) {
   // fulfill_paid_orders RPC; regenerate types after applying the migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createAdminClient()) as any;
-  const paymentStatus = String(data.payment_status ?? data.status ?? '');
+  const paymentStatus = String(data.payment_status ?? '');
+  const eventAction = String(data.event_action ?? data.event ?? '');
+  const requestStatus = String(data.status ?? '');
 
-  if (paymentStatus !== 'Credit' && paymentStatus !== 'Paid') {
+  const isSuccess =
+    paymentStatus === 'Credit' || paymentStatus === 'Paid' ||
+    eventAction === 'payment.success' || requestStatus === 'completed';
+  const isFailure =
+    ['Failed', 'Declined', 'Cancelled'].includes(paymentStatus) ||
+    eventAction === 'payment.failed' ||
+    requestStatus === 'failed' || requestStatus === 'expired';
+
+  // Pending/created events carry no money movement — acknowledge and ignore
+  // so InstaMojo does not retry them.
+  if (!isSuccess && !isFailure) {
+    return NextResponse.json({ success: true, ignored: true });
+  }
+
+  if (!isSuccess) {
     const filter = paymentRequestId
       ? orderId
         ? `payment_request_id.eq.${paymentRequestId},id.eq.${orderId}`

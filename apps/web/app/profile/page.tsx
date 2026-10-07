@@ -78,6 +78,7 @@ export default function ProfilePage() {
   const displayName = ((profile?.full_name as string | undefined) || user.email?.split('@')[0] || 'User')
   const email = user.email || 'No email'
   const role = profile?.role || 'client'
+  const isAdmin = role === 'admin' || role === 'ceo' || (user.user_metadata as { role?: string } | undefined)?.role === 'admin'
   const roleColors: Record<string, string> = {
     ceo: 'text-purple-400 border-purple-500/30 bg-purple-600/10',
     admin: 'text-cyan-400 border-cyan-500/30 bg-cyan-600/10',
@@ -113,6 +114,14 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
+            {isAdmin && (
+              <Link href="/admin">
+                <button className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 rounded-lg text-cyan-300 text-sm font-mono transition border border-cyan-500/30 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Admin Panel
+                </button>
+              </Link>
+            )}
             <Link href="/settings">
               <button className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm font-mono transition border border-white/10 flex items-center gap-2">
                 <Settings className="w-4 h-4" />

@@ -75,12 +75,17 @@ function CheckoutInner() {
           buyerPhone: buyer.phone,
         }),
       });
-      const data = (await response.json()) as { paymentUrl?: string; error?: string; orderIds?: string[] };
+      const data = (await response.json()) as { paymentUrl?: string; error?: string; orderIds?: string[]; idempotent?: boolean };
 
       if (!response.ok) throw new Error(data.error ?? 'Payment failed');
       if (!data.paymentUrl) {
-        const firstOrder = data.orderIds?.[0];
-        router.push(firstOrder ? `/checkout/success?order=${firstOrder}` : '/client');
+        // No gateway link — never claim success; guide the buyer instead.
+        setError(
+          data.error ??
+            (data.idempotent
+              ? 'You already have a pending order for this item. Track it from your dashboard or try again in a few minutes.'
+              : 'We could not open the payment page. Please try again — no money has been taken.')
+        );
         return;
       }
 

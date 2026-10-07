@@ -10,17 +10,39 @@ interface Stage {
 
 interface MediaProgressProps {
   isLoading: boolean;
-  mode: "image" | "video";
+  mode: "image" | "video" | "leads";
   onComplete?: () => void;
 }
 
-const STAGES: Stage[] = [
-  { progress: 10, text: "Analyzing..." },
-  { progress: 25, text: "Initializing..." },
-  { progress: 45, text: "Generating..." },
-  { progress: 70, text: "Refining..." },
-  { progress: 90, text: "Finalizing..." },
-];
+const STAGES: Record<MediaProgressProps["mode"], Stage[]> = {
+  image: [
+    { progress: 10, text: "Analyzing prompt..." },
+    { progress: 25, text: "Initializing model..." },
+    { progress: 45, text: "Generating..." },
+    { progress: 70, text: "Refining details..." },
+    { progress: 90, text: "Finalizing..." },
+  ],
+  video: [
+    { progress: 10, text: "Analyzing prompt..." },
+    { progress: 25, text: "Planning scenes..." },
+    { progress: 45, text: "Rendering frames..." },
+    { progress: 70, text: "Refining motion..." },
+    { progress: 90, text: "Encoding video..." },
+  ],
+  leads: [
+    { progress: 10, text: "Discovering sources..." },
+    { progress: 30, text: "Scraping websites..." },
+    { progress: 50, text: "Enriching contacts..." },
+    { progress: 70, text: "Scoring & deduping..." },
+    { progress: 90, text: "Compiling results..." },
+  ],
+};
+
+const MODE_META: Record<MediaProgressProps["mode"], { emoji: string; label: string; short: string }> = {
+  image: { emoji: "🖼️", label: "Generating Image", short: "Image" },
+  video: { emoji: "🎬", label: "Generating Video", short: "Video" },
+  leads: { emoji: "📊", label: "Finding Leads", short: "Leads" },
+};
 
 export function MediaProgress({ isLoading, mode, onComplete }: MediaProgressProps) {
   const [progress, setProgress] = useState(0);
@@ -39,12 +61,13 @@ export function MediaProgress({ isLoading, mode, onComplete }: MediaProgressProp
     setProgress(0);
     setStatusText("Connecting to AI...");
 
+    const stages = STAGES[mode];
     let currentStage = 0;
     let intervalId: NodeJS.Timeout | null = null;
 
     intervalId = setInterval(() => {
       setProgress((prev) => {
-        const stage = currentStage < STAGES.length ? STAGES[currentStage] : null;
+        const stage = currentStage < stages.length ? stages[currentStage] : null;
         if (stage && prev >= stage.progress - 2) {
           setStatusText(stage.text);
           currentStage++;
@@ -58,19 +81,19 @@ export function MediaProgress({ isLoading, mode, onComplete }: MediaProgressProp
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoading, onComplete]);
+  }, [isLoading, onComplete, mode]);
 
   if (!isLoading && progress === 0) return null;
 
-  const isImage = mode === "image";
+  const meta = MODE_META[mode];
 
   return (
     <div className="bg-white/5 border border-cyan-500/10 rounded-xl p-2.5 sm:p-4 backdrop-blur-sm">
       <div className="flex items-center justify-between mb-1.5 sm:mb-2">
         <span className="text-[10px] sm:text-sm text-white/60 font-mono flex items-center gap-1.5 sm:gap-2">
-          <span className="text-sm sm:text-base">{isImage ? "🖼️" : "🎬"}</span>
-          <span className="hidden xs:inline">{isImage ? "Generating Image" : "Generating Video"}</span>
-          <span className="inline xs:hidden">{isImage ? "Image" : "Video"}</span>
+          <span className="text-sm sm:text-base">{meta.emoji}</span>
+          <span className="hidden xs:inline">{meta.label}</span>
+          <span className="inline xs:hidden">{meta.short}</span>
         </span>
         <span className="text-xs sm:text-sm text-cyan-400 font-mono font-bold">{progress}%</span>
       </div>
