@@ -6,6 +6,7 @@
 import type { VideoGenerationOptions, VideoGenerationResult } from './types';
 import { videoCache } from './cache';
 import { AgnesClient } from '@/lib/providers/agnes/client';
+import { normalizeVideoOptions } from '@/lib/providers/agnes/normalize';
 import { videoQueue } from '@/lib/ai/queue';
 import { CONCURRENCY } from '@/lib/orchestration/concurrency';
 import { globalBreaker } from '@/lib/orchestration/circuit-breaker';
@@ -28,8 +29,15 @@ class EnhancedVideoGenerator {
     onProgress?: (event: VideoProgressEvent) => void
   ): Promise<VideoGenerationResult> {
     const start = Date.now();
-    const resolution = options.resolution ?? '720P';
-    const duration = options.duration ?? 5;
+    // Map the requested resolution/aspect/duration onto Agnes's whitelist
+    // (Agnes video currently only accepts 720P; reject nothing else upstream).
+    const normalized = normalizeVideoOptions({
+      size: options.resolution,
+      ratio: options.aspect_ratio,
+      duration: typeof options.duration === 'number' ? options.duration : undefined,
+    });
+    const resolution = normalized.size;
+    const duration = normalized.seconds;
     const quality = options.quality ?? 'balanced';
 
     onProgress?.({ type: 'queued', progress: 5, message: 'Queued' });
@@ -52,7 +60,7 @@ class EnhancedVideoGenerator {
       priority: options.priority ?? 'normal',
       maxRetries: 2,
       retries: 0,
-      execute: async () => this.generateWithFallback(options, resolution, duration, onProgress),
+      execute: async () => this.generateWithFallback(options, resolution, duration, normalized.ratio, onProgress),
     });
 
     if (!this.isServer && options.cache !== false) {
@@ -73,6 +81,7 @@ class EnhancedVideoGenerator {
     options: VideoGenerationOptions,
     resolution: string,
     duration: number,
+    aspectRatio: string,
     onProgress?: (event: VideoProgressEvent) => void
   ): Promise<string> {
     // Primary: Agnes Video 2.5
@@ -80,7 +89,7 @@ class EnhancedVideoGenerator {
       try {
         onProgress?.({ type: 'processing', progress: 20, message: 'Submitting task…', provider: 'agnes' });
         const url = await CONCURRENCY.video.run(() =>
-          this.callAgnesVideo(options, resolution, duration, onProgress)
+          this.callAgnesVideo(options, resolution, duration, aspectRatio, onProgress)
         );
         globalBreaker.recordSuccess('agnes-video');
         return url;
@@ -111,6 +120,7 @@ class EnhancedVideoGenerator {
     options: VideoGenerationOptions,
     resolution: string,
     duration: number,
+    aspectRatio: string,
     onProgress?: (event: VideoProgressEvent) => void
   ): Promise<string> {
     const model = resolution === '720P' ? 'agnes-video-2.5-flash' : 'agnes-video-2.5';
@@ -120,7 +130,7 @@ class EnhancedVideoGenerator {
       mode: options.mode ?? 'text',
       seconds: String(duration),
       size: resolution,
-      aspect_ratio: options.aspect_ratio ?? '16:9',
+      aspect_ratio: aspectRatio,
       n: 1,
     };
 

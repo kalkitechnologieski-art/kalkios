@@ -11,7 +11,7 @@ import { SetuProgress } from '@/components/chat/SetuProgress';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
 import { Badge } from '@/components/ui/badge';
-import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet, ChevronDown, ChevronUp, Square, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // == SIDDHI F1 WIRE - IMPORTS ==
 import { PremiumChatTopBar } from '@/components/chat/PremiumChatTopBar';
@@ -35,6 +35,19 @@ interface TraceStep {
   tokens?: number;
   provider?: string;
 }
+
+interface LeadProgressState {
+  step: 'idle' | 'searching' | 'search_done' | 'scraping' | 'extracting' | 'expansion' | 'done' | 'error' | 'aborted';
+  percent: number;
+  message: string;
+  engines: Array<{ name: string; ok: number; failed: number; durationMs: number; code?: string }>;
+  directories: Array<{ name: string; ok: number; failed: number; durationMs: number; code?: string }>;
+  structuredCount: number;
+  leadsSoFar: number;
+  errors: Array<{ code: string; engine?: string; message: string }>;
+}
+
+const IDLE_LEAD_PROGRESS: LeadProgressState = { step: 'idle', percent: 0, message: '', engines: [], directories: [], structuredCount: 0, leadsSoFar: 0, errors: [] };
 
 export default function ChatClient() {
   const { messages, setMessages, isLoading, error, queueStatus, sendMessage, clearError } = useStreamingChat();
@@ -85,7 +98,17 @@ export default function ChatClient() {
   const [leadResult, setLeadResult] = useState<LeadGenerationResult | null>(null);
   const [leadsPanelOpen, setLeadsPanelOpen] = useState(false);
   const [isGeneratingLeads, setIsGeneratingLeads] = useState(false);
+  const [leadProgress, setLeadProgress] = useState<LeadProgressState>(IDLE_LEAD_PROGRESS);
+  const leadControllerRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const handleStopLeads = useCallback(() => {
+    const ctrl = leadControllerRef.current;
+    if (ctrl) {
+      try { ctrl.abort(new DOMException('user stop', 'AbortError')); } catch { /* some runtimes don't accept reason */ try { ctrl.abort(); } catch {} }
+    }
+    setLeadProgress(prev => ({ ...prev, step: 'aborted', message: 'Stopping…' }));
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -117,47 +140,155 @@ export default function ChatClient() {
         setMessages(prev => [...prev, userMsg]);
         setIsGeneratingLeads(true);
         setLeadResult(null);
+        setLeadProgress({ ...IDLE_LEAD_PROGRESS, step: 'searching', message: 'Fanning out 11 search engines + 7 business directories…' });
+        const controller = new AbortController();
+        leadControllerRef.current = controller;
+        let leadCount = 0;
+        let structuredCount = 0;
         try {
           const res = await fetch('/api/leads/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: text, maxResults: 20 }),
+            headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+            body: JSON.stringify({ query: text, maxResults: 30, stream: true }),
+            signal: controller.signal,
           });
-          const data = await res.json().catch(() => null) as LeadGenerationResult & { error?: string } | null;
-          if (!res.ok || !data || !Array.isArray(data.leads)) {
+          if (!res.ok || !res.body) {
+            const data = await res.json().catch(() => null) as { error?: string; code?: string } | null;
             throw new Error(data?.error || `lead service returned ${res.status}`);
           }
-          const result = data as LeadGenerationResult;
-          setLeadResult(result);
+          // Consume SSE stream, accumulating events. Final 'complete' event carries full result.
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let finalResult: LeadGenerationResult | null = null;
+          const engines = new Map<string, { ok: number; failed: number; durationMs: number; code?: string }>();
+          const directories = new Map<string, { ok: number; failed: number; durationMs: number; code?: string }>();
+          const errors: Array<{ code: string; engine?: string; message: string }> = [];
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const frames = buffer.split('\n\n');
+            buffer = frames.pop() ?? '';
+            for (const frame of frames) {
+              const line = frame.trim();
+              if (!line.startsWith('data:')) continue;
+              const raw = line.slice(5).trim();
+              if (!raw) continue;
+              let ev: Record<string, unknown>;
+              try { ev = JSON.parse(raw); } catch { continue; }
+              const type = ev.type as string;
+
+              if (type === 'started') {
+                const engineList = (ev.engines as string[]) ?? [];
+                const dirList = (ev.directories as string[]) ?? [];
+                setLeadProgress(prev => ({ ...prev, message: `${engineList.length} search engines + ${dirList.length} business directories running in parallel` }));
+              } else if (type === 'engine_ok') {
+                const name = ev.engine as string;
+                engines.set(name, { ok: (ev.count as number) ?? 0, failed: 0, durationMs: (ev.durationMs as number) ?? 0 });
+                setLeadProgress(prev => ({ ...prev, engines: [...engines.entries()].map(([n, v]) => ({ name: n, ...v })), message: `Engine ${name} returned ${(ev.count as number) ?? 0} URLs` }));
+              } else if (type === 'engine_failed') {
+                const name = ev.engine as string;
+                engines.set(name, { ok: 0, failed: 1, durationMs: (ev.durationMs as number) ?? 0, code: ev.code as string });
+                setLeadProgress(prev => ({ ...prev, engines: [...engines.entries()].map(([n, v]) => ({ name: n, ...v })) }));
+              } else if (type === 'directory_ok') {
+                const name = ev.directory as string;
+                const count = (ev.count as number) ?? 0;
+                directories.set(name, { ok: count, failed: 0, durationMs: (ev.durationMs as number) ?? 0 });
+                structuredCount += count;
+                setLeadProgress(prev => ({ ...prev, directories: [...directories.entries()].map(([n, v]) => ({ name: n, ...v })), structuredCount, message: `${name}: ${count} structured leads ready` }));
+              } else if (type === 'directory_failed') {
+                const name = ev.directory as string;
+                directories.set(name, { ok: 0, failed: 1, durationMs: (ev.durationMs as number) ?? 0, code: ev.code as string });
+                setLeadProgress(prev => ({ ...prev, directories: [...directories.entries()].map(([n, v]) => ({ name: n, ...v })) }));
+              } else if (type === 'structured_ready') {
+                setLeadProgress(prev => ({ ...prev, percent: Math.max(prev.percent, 20), message: `${(ev.count as number) ?? 0} structured leads locked in` }));
+              } else if (type === 'search_done') {
+                setLeadProgress(prev => ({ ...prev, step: 'search_done', percent: 25, message: `Found ${ev.urls as number} URLs across ${[...engines.values()].filter(e => e.failed === 0).length} engines` }));
+              } else if (type === 'scraping') {
+                setLeadProgress(prev => ({ ...prev, step: 'scraping', percent: 30, message: `Scraping ${ev.total as number} pages…` }));
+              } else if (type === 'progress') {
+                const percent = (ev.percent as number) ?? 30;
+                setLeadProgress(prev => ({ ...prev, percent, message: (ev.message as string) ?? prev.message }));
+              } else if (type === 'expansion') {
+                const list = (ev.queries as string[]) ?? [];
+                setLeadProgress(prev => ({ ...prev, step: 'expansion', percent: 60, message: `Underfilled — expanding to ${list.length} variant queries` }));
+              } else if (type === 'lead') {
+                leadCount++;
+                setLeadProgress(prev => ({ ...prev, leadsSoFar: leadCount }));
+              } else if (type === 'scrape_failed') {
+                errors.push({ code: ev.code as string, message: `scrape ${ev.url ?? ''} failed` });
+                setLeadProgress(prev => ({ ...prev, errors: [...errors] }));
+              } else if (type === 'aborted') {
+                setLeadProgress(prev => ({ ...prev, step: 'aborted', message: (ev.reason as string) ?? 'Stopped by user' }));
+              } else if (type === 'complete') {
+                finalResult = {
+                  leads: (ev.leads as unknown[]) ?? [],
+                  totalSearched: (ev.totalSearched as number) ?? 0,
+                  totalScraped: (ev.totalScraped as number) ?? 0,
+                  csvContent: '',
+                  metadata: { duration: (ev.durationMs as number) ?? 0, structured: (ev as { totalStructured?: number }).totalStructured ?? 0, directories: (ev as { directoriesUsed?: string[] }).directoriesUsed ?? [] },
+                } as unknown as LeadGenerationResult;
+              } else if (type === 'error') {
+                errors.push({ code: (ev.code as string) ?? 'LEADS_INTERNAL_ERROR', message: (ev.message as string) ?? 'unknown' });
+              }
+            }
+          }
+
+          if (controller.signal.aborted) {
+            setLeadProgress(prev => ({ ...prev, step: 'aborted', message: 'Cancelled by you' }));
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: `Stopped. Captured ${leadCount} leads before cancellation.`,
+            }]);
+            return;
+          }
+
+          if (!finalResult) throw new Error('no complete event received from stream');
+          setLeadProgress(prev => ({ ...prev, step: 'done', percent: 100, message: `Done: ${finalResult!.leads.length} leads` }));
+          setLeadResult(finalResult);
           setLeadsPanelOpen(true);
           setMessages(prev => [...prev, {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: `Found ${result.leads.length} leads from ${result.totalSearched} websites. Open the Leads panel above to review and export the CSV with ${result.totalScraped} contacts.`,
+            content: `Found ${finalResult.leads.length} leads across ${structuredCount} structured + ${leadCount - structuredCount} scraped. ${[...engines.values()].filter(e => e.failed === 0).length} engines up, ${[...engines.values()].filter(e => e.failed > 0).length} blocked. ${[...directories.values()].filter(e => e.failed === 0).length} directories delivered.`,
           }]);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'unknown error';
-          // eslint-disable-next-line no-console
-          console.error('Lead generation failed:', msg);
-          setMessages(prev => [...prev, {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: `I could not generate leads right now (${msg}). Please try again with a different industry or region.`,
-          }]);
+          const isAbort = (err instanceof DOMException && err.name === 'AbortError') || controller.signal.aborted;
+          if (isAbort) {
+            setLeadProgress(prev => ({ ...prev, step: 'aborted', message: 'Cancelled by you' }));
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: `Stopped. Captured ${leadCount} leads before cancellation.`,
+            }]);
+          } else {
+            const msg = err instanceof Error ? err.message : 'unknown error';
+            console.error('Lead generation failed:', msg);
+            setLeadProgress(prev => ({ ...prev, step: 'error', message: msg }));
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: `I could not generate leads right now (${msg}). Please try again with a different industry or region.`,
+            }]);
+          }
         } finally {
           setIsGeneratingLeads(false);
+          leadControllerRef.current = null;
         }
         return;
       }
 
       if (mode === 'image') {
         // Fixed recipe — the buyer just types the subject and presses Enter.
-        await sendMessage(`Generate image: ${text} | Style: photorealistic | Quality: high | Size: 2K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
+        await sendMessage(`Generate image: ${text} | Style: photorealistic | Quality: high | Size: 1K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
         return;
       }
 
       if (mode === 'video') {
-        await sendMessage(`Generate video: ${text} | Resolution: 1080P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${text} | Resolution: 720P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
         return;
       }
 
@@ -174,9 +305,9 @@ export default function ChatClient() {
 
       const isImage = originalMsg.content.includes('![');
       if (isImage) {
-        await sendMessage(`Generate image: ${newPrompt} | Style: photorealistic | Quality: high | Size: 2K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
+        await sendMessage(`Generate image: ${newPrompt} | Style: photorealistic | Quality: high | Size: 1K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
       } else {
-        await sendMessage(`Generate video: ${newPrompt} | Resolution: 1080P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${newPrompt} | Resolution: 720P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
       }
     },
     [sendMessage, messages]
@@ -448,7 +579,63 @@ export default function ChatClient() {
       </AnimatePresence>
 
       {/* Animated generation progress: leads / image / video */}
-      {isGeneratingLeads && <MediaProgress isLoading mode="leads" />}
+      {isGeneratingLeads && (
+        <div className="space-y-2">
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <MediaProgress
+                isLoading={isGeneratingLeads}
+                mode="leads"
+                livePercent={leadProgress.percent}
+                liveMessage={`${leadProgress.message} · ${leadProgress.leadsSoFar} leads found`}
+              />
+            </div>
+            <button
+              onClick={handleStopLeads}
+              className="shrink-0 mt-1 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/40 text-red-300 hover:bg-red-500/25 hover:text-red-200 hover:border-red-400/60 transition-all font-mono text-[11px] uppercase tracking-wider backdrop-blur-sm"
+              title="Stop lead generation"
+              aria-label="Stop lead generation"
+            >
+              <Ban className="w-3.5 h-3.5" />
+              Stop
+            </button>
+          </div>
+          {leadProgress.engines.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-1">
+              <span className="text-[10px] font-mono text-white/40 mr-1 mt-0.5">SEARCH</span>
+              {leadProgress.engines.map((e) => (
+                <span
+                  key={e.name}
+                  className={`px-2 py-0.5 text-[10px] font-mono rounded border ${
+                    e.failed > 0
+                      ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  }`}
+                >
+                  {e.name}: {e.failed > 0 ? (e.code ?? 'blocked') : `${e.ok}`}
+                </span>
+              ))}
+            </div>
+          )}
+          {leadProgress.directories.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-1">
+              <span className="text-[10px] font-mono text-white/40 mr-1 mt-0.5">DIRECTORIES</span>
+              {leadProgress.directories.map((d) => (
+                <span
+                  key={d.name}
+                  className={`px-2 py-0.5 text-[10px] font-mono rounded border ${
+                    d.failed > 0
+                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-300'
+                      : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                  }`}
+                >
+                  {d.name}: {d.failed > 0 ? (d.code ?? 'blocked') : `${d.ok}`}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {(mode === 'image' || mode === 'video') && isLoading && (
         <MediaProgress key={mode} isLoading mode={mode} />
       )}

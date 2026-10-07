@@ -12,6 +12,8 @@ interface MediaProgressProps {
   isLoading: boolean;
   mode: "image" | "video" | "leads";
   onComplete?: () => void;
+  livePercent?: number;
+  liveMessage?: string;
 }
 
 const STAGES: Record<MediaProgressProps["mode"], Stage[]> = {
@@ -44,11 +46,18 @@ const MODE_META: Record<MediaProgressProps["mode"], { emoji: string; label: stri
   leads: { emoji: "📊", label: "Finding Leads", short: "Leads" },
 };
 
-export function MediaProgress({ isLoading, mode, onComplete }: MediaProgressProps) {
+export function MediaProgress({ isLoading, mode, onComplete, livePercent, liveMessage }: MediaProgressProps) {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("Initializing...");
 
+  const usingLive = typeof livePercent === 'number' && typeof liveMessage === 'string' && liveMessage.length > 0;
+
   useEffect(() => {
+    if (usingLive) {
+      setProgress(Math.min(100, Math.max(0, livePercent ?? 0)));
+      setStatusText(liveMessage ?? '');
+      return;
+    }
     if (!isLoading) {
       setProgress(100);
       setStatusText("Complete!");
@@ -81,7 +90,7 @@ export function MediaProgress({ isLoading, mode, onComplete }: MediaProgressProp
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoading, onComplete, mode]);
+  }, [isLoading, onComplete, mode, usingLive, livePercent, liveMessage]);
 
   if (!isLoading && progress === 0) return null;
 

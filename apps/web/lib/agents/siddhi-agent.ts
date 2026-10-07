@@ -278,7 +278,7 @@ export class SiddhiAgent {
         }ms`
       );
       if (searchResults.length > 0) {
-        const topUrls = searchResults.slice(0, 3).map((r) => r.url);
+        const topUrls = searchResults.slice(0, 2).map((r) => r.url);
         const contents = await Promise.all(topUrls.map((url) => this.extractContent(url)));
         searchContext = contents
           .filter((c) => c.content.length > 100)
@@ -617,103 +617,90 @@ export class SiddhiAgent {
       return cached.value;
     }
 
-    if (agntkSearch) {
-      try {
-        const response = await agntkSearch(query, { maxResults: 10 });
-        if (response?.results?.length > 0) {
-          const results: SearchResult[] = response.results.map((r: any) => ({
-            title: r.title ?? '',
-            url: r.url ?? '',
-            snippet: r.snippet ?? '',
-            source: 'DuckDuckGo',
-            score: 1.0,
-          }));
-          this.setSearchCache(query, results);
-          return results;
-        }
-      } catch (error) {
-        logger.warn('[Search] DuckDuckGo failed:', error);
-      }
-    }
-
+    // Primary — use the enterprise parallel aggregator (Promise.allSettled fanout
+    // across SearXNG, DuckDuckGo, Bing, Wikipedia, Wikidata, Mojeek, Startpage,
+    // Qwant, Yandex with circuit breakers and per-engine timeouts).
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.SEARCH_TIMEOUT);
-      const response = await fetch(
-        `https://parallel-search.vercel.app/search?q=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
-      );
-      clearTimeout(timeout);
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.results?.length > 0) {
-          const results: SearchResult[] = data.results.map((r: any) => ({
-            title: r.title ?? '',
-            url: r.link ?? '',
-            snippet: r.snippet ?? '',
-            source: 'Parallel Search',
-            score: 0.9,
-          }));
-          this.setSearchCache(query, results);
-          return results;
-        }
+      const { parallelSearch } = await import('@/lib/leads/engines');
+      const out = await parallelSearch(query, { limit: 10 });
+      if (out.results.length > 0) {
+        const results: SearchResult[] = out.results.slice(0, 10).map((r) => ({
+          title: r.title,
+          url: r.url,
+          snippet: r.snippet,
+          source: r.engine,
+          score: Math.min(1, (r.relevance || 0) / 10),
+        }));
+        this.setSearchCache(query, results);
+        return results;
       }
     } catch (error) {
-      logger.warn('[Search] Parallel Search failed:', error);
+      logger.warn('[Search] Parallel aggregator failed:', error);
     }
 
-    for (const instance of this.SEARXNG_INSTANCES) {
+    // Local opt-in fallback chain — only used if the parallel aggregator
+    // returned zero results or threw. Each step is itself wrapped in its
+    // own timeout so the whole block cannot exceed ~6s.
+    if (agntkSearch) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.SEARCH_TIMEOUT);
-        const response = await fetch(
-          `${instance}/search?q=${encodeURIComponent(query)}&format=json`,
-          { signal: controller.signal }
-        );
+        const response = await agntkSearch(query, { maxResults: 10, signal: controller.signal } as any);
         clearTimeout(timeout);
-        if (response.ok) {
-          const data = await response.json();
-          if (data?.results?.length > 0) {
-            const results: SearchResult[] = data.results.map((r: any) => ({
-              title: r.title ?? '',
-              url: r.url ?? '',
-              snippet: r.content ?? r.snippet ?? '',
-              source: `SearXNG (${instance})`,
-              score: 0.8,
-            }));
-            this.setSearchCache(query, results);
-            return results;
-          }
-        }
-      } catch (error) {
-        logger.warn(`[Search] SearXNG ${instance} failed:`, error);
-      }
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.SEARCH_TIMEOUT);
-      const response = await fetch(
-        `https://api.mojeek.com/search?q=${encodeURIComponent(query)}&fmt=json`,
-        { signal: controller.signal }
-      );
-      clearTimeout(timeout);
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.response?.results?.length > 0) {
-          const results: SearchResult[] = data.response.results.map((r: any) => ({
-            title: r.title ?? '',
-            url: r.url ?? '',
-            snippet: r.description ?? '',
-            source: 'Mojeek',
-            score: 0.7,
+        if (response?.results?.length > 0) {
+          const results: SearchResult[] = response.results.map((r: any) => ({
+            title: r.title ?? '', url: r.url ?? '', snippet: r.snippet ?? '', source: 'DuckDuckGo', score: 1.0,
           }));
           this.setSearchCache(query, results);
           return results;
         }
+      } catch (error) {
+        logger.warn('[Search] agntk DuckDuckGo failed:', error);
       }
-    } catch (error) {
-      logger.warn('[Search] Mojeek failed:', error);
+    }
+
+    // Last-resort: parallel-search.vercel.app and SEARXNG fan-out in parallel
+    const lastResort = await Promise.allSettled([
+      (async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.SEARCH_TIMEOUT);
+        try {
+          const response = await fetch(
+            `https://parallel-search.vercel.app/search?q=${encodeURIComponent(query)}`,
+            { signal: controller.signal }
+          );
+          if (!response.ok) throw new Error(`status ${response.status}`);
+          const data = await response.json();
+          if (!data?.results?.length) throw new Error('no results');
+          return (data.results as Array<any>).map((r) => ({
+            title: r.title ?? '', url: r.link ?? '', snippet: r.snippet ?? '', source: 'Parallel Search', score: 0.9,
+          }));
+        } finally { clearTimeout(timeout); }
+      })(),
+      ...this.SEARXNG_INSTANCES.map(async (instance) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.SEARCH_TIMEOUT);
+        try {
+          const response = await fetch(
+            `${instance}/search?q=${encodeURIComponent(query)}&format=json`,
+            { signal: controller.signal }
+          );
+          if (!response.ok) throw new Error(`status ${response.status}`);
+          const data = await response.json();
+          if (!data?.results?.length) throw new Error('no results');
+          return (data.results as Array<any>).map((r) => ({
+            title: r.title ?? '', url: r.url ?? '', snippet: r.content ?? r.snippet ?? '',
+            source: `SearXNG (${instance})`, score: 0.8,
+          }));
+        } finally { clearTimeout(timeout); }
+      }),
+    ]);
+
+    for (const r of lastResort) {
+      if (r.status === 'fulfilled' && r.value.length > 0) {
+        this.setSearchCache(query, r.value);
+        return r.value;
+      }
     }
 
     logger.warn('[Search] All tiers failed');
@@ -736,66 +723,59 @@ export class SiddhiAgent {
       return { url, content: cached.value, success: true };
     }
 
-    try {
+    // Race Jina Reader, agntk, and direct fetch concurrently — first to return
+    // >200 chars wins. Previous version was sequential (worst-case ~15s for 3 URLs).
+    const fromJina = (async (): Promise<ExtractedContent> => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.EXTRACT_TIMEOUT);
-      const cleanUrl = url.replace(/^https?:\/\//, '');
-      const response = await fetch(`https://r.jina.ai/https://${cleanUrl}`, {
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (response.ok) {
-        const text = await response.text();
-        if (text.length > 200) {
-          this.contentCache.set(url, {
-            value: text,
-            expires: Date.now() + this.CACHE_TTL * 1000,
-          });
-          return { url, content: text, success: true };
-        }
-      }
-    } catch (error) {
-      logger.warn(`[Extract] Jina Reader failed for ${url}:`, error);
-    }
-
-    if (agntkExtract) {
       try {
-        const page = await agntkExtract(url);
-        if (page?.content?.length > 200) {
-          this.contentCache.set(url, {
-            value: page.content,
-            expires: Date.now() + this.CACHE_TTL * 1000,
-          });
-          return { url, content: page.content, success: true, title: page.title };
-        }
-      } catch (error) {
-        logger.warn(`[Extract] agntk extract failed for ${url}:`, error);
-      }
-    }
+        const cleanUrl = url.replace(/^https?:\/\//, '');
+        const response = await fetch(`https://r.jina.ai/https://${cleanUrl}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const text = await response.text();
+        if (text.length <= 200) throw new Error('too short');
+        this.contentCache.set(url, { value: text, expires: Date.now() + this.CACHE_TTL * 1000 });
+        return { url, content: text, success: true };
+      } finally { clearTimeout(timeout); }
+    })();
+
+    const fromAgntk: Promise<ExtractedContent> | null = agntkExtract ? (async () => {
+      const page = await agntkExtract(url);
+      if (!page?.content || page.content.length <= 200) throw new Error('too short');
+      this.contentCache.set(url, { value: page.content, expires: Date.now() + this.CACHE_TTL * 1000 });
+      return { url, content: page.content, success: true, title: page.title };
+    })() : null;
+
+    const fromDirect = (async (): Promise<ExtractedContent> => {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(this.EXTRACT_TIMEOUT),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SiddhiBot/2.0; +https://kalkicore.local)',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+      });
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const html = await response.text();
+      const clean = html
+        .replace(/<script[\s\S]*?<\/script>/g, '')
+        .replace(/<style[\s\S]*?<\/style>/g, '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (clean.length <= 200) throw new Error('too short');
+      this.contentCache.set(url, { value: clean, expires: Date.now() + this.CACHE_TTL * 1000 });
+      return { url, content: clean, success: true };
+    })();
+
+    const racers: Promise<ExtractedContent>[] = [fromJina, fromDirect]
+    if (fromAgntk) racers.push(fromAgntk)
 
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (response.ok) {
-        const html = await response.text();
-        const clean = html
-          .replace(/<script[\s\S]*?<\/script>/g, '')
-          .replace(/<style[\s\S]*?<\/style>/g, '')
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        if (clean.length > 200) {
-          this.contentCache.set(url, {
-            value: clean,
-            expires: Date.now() + this.CACHE_TTL * 1000,
-          });
-          return { url, content: clean, success: true };
-        }
-      }
-    } catch (error) {
-      logger.warn(`[Extract] Direct fetch failed for ${url}:`, error);
+      return await Promise.any(racers)
+    } catch {
+      logger.warn(`[Extract] All extractors failed for ${url}`);
+      return { url, content: '', success: false, error: 'All extraction methods failed' };
     }
-
-    return { url, content: '', success: false, error: 'All extraction methods failed' };
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -1404,14 +1384,19 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
     let searchResults: Array<{ title: string; url: string }> = [];
     let docs: string[] = [];
     let toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
+    const stageTimings: Record<string, number> = {};
 
     if (plan.useSearch) {
+      const t0 = Date.now();
       try {
         const raw = await this.searchWithFallback(query);
+        stageTimings.search = Date.now() - t0;
         const results = raw as unknown as Array<{ title: string; url: string; snippet?: string }>;
         searchResults = results.map((r) => ({ title: r.title, url: r.url }));
-        const topUrls = results.slice(0, 3).map((r) => r.url);
+        const extractStart = Date.now();
+        const topUrls = results.slice(0, 2).map((r) => r.url);
         const contents = await Promise.all(topUrls.map((u) => this.extractContent(u)));
+        stageTimings.extract = Date.now() - extractStart;
         docs = contents.map((c) => {
           const anyC = c as unknown as { content?: unknown };
           return typeof anyC?.content === 'string' ? anyC.content : '';
@@ -1422,24 +1407,39 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
     }
 
     if (plan.useTools.length > 0) {
+      const t0 = Date.now();
       toolCalls = await this.executeToolCalls(query, plan.useTools);
+      stageTimings.tools = Date.now() - t0;
       for (const tc of toolCalls) {
         emit({ type: 'trace', step: { id: `tool-${tc.name}`, type: 'reasoning', status: 'completed', message: `${tc.name} → ${JSON.stringify(tc.result).slice(0, 80)}` } });
       }
     }
 
-    emit({ type: 'trace', step: { id: 'gather', type: 'search', status: 'completed', message: `Gathered: ${searchResults.length} sources, ${toolCalls.length} tools` } });
+    emit({ type: 'trace', step: { id: 'gather', type: 'search', status: 'completed', message: `Gathered: ${searchResults.length} sources, ${toolCalls.length} tools (${stageTimings.search ?? 0}ms search, ${stageTimings.extract ?? 0}ms extract)` } });
 
     // STAGE 4: REASON
+    const reasonStart = Date.now();
     const drafts = await this.generateDrafts(query, { plan, memories, docs, searchResults, toolCalls });
-    emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: `Generated ${drafts.length} drafts` } });
+    stageTimings.reason = Date.now() - reasonStart;
+    emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: `Generated ${drafts.length} drafts in ${stageTimings.reason}ms` } });
 
-    // STAGE 5: CRITIQUE
+    // STAGE 5: CRITIQUE — only fires when we have multiple conflicting drafts.
+    // Skipped for single-draft or low-confidence-spread cases (saves ~2-4s).
     let critique = { issues: [] as string[], confidence: 0.7, shouldRefine: false };
-    if (plan.depth === 'max' || drafts.length >= 2) {
+    const confidences = drafts.map((d) => d?.confidence ?? 0);
+    const spread = confidences.length > 0 ? Math.max(...confidences) - Math.min(...confidences) : 0;
+    const shouldCritique = plan.depth === 'max' && drafts.length >= 2 && spread > 0.15;
+    if (shouldCritique) {
+      const critiqueStart = Date.now();
       critique = await this.selfCritique(query, drafts);
-      emit({ type: 'trace', step: { id: 'critique', type: 'consensus', status: 'completed', message: `Confidence: ${(critique.confidence * 100).toFixed(0)}%` } });
+      stageTimings.critique = Date.now() - critiqueStart;
+      emit({ type: 'trace', step: { id: 'critique', type: 'consensus', status: 'completed', message: `Confidence: ${(critique.confidence * 100).toFixed(0)}% (${stageTimings.critique}ms)` } });
+    } else if (drafts.length >= 2) {
+      // Cheap heuristic: average confidence across drafts
+      critique = { issues: [], confidence: confidences.reduce((a, b) => a + b, 0) / confidences.length, shouldRefine: false };
     }
+
+    logger.info(`[SiddhiPipeline] stages: search=${stageTimings.search ?? 0}ms extract=${stageTimings.extract ?? 0}ms tools=${stageTimings.tools ?? 0}ms reason=${stageTimings.reason ?? 0}ms critique=${stageTimings.critique ?? 0}ms total=${Date.now() - startTime}ms`)
 
     const best = drafts.reduce((a, b) => ((a?.confidence ?? 0) > (b?.confidence ?? 0) ? a : b), drafts[0]);
     const finalAnswer = best?.answer ?? '';

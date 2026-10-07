@@ -6,6 +6,7 @@
 import type { ImageGenerationOptions, ImageGenerationResult } from './types';
 import { imageCache } from './cache';
 import { AgnesClient } from '@/lib/providers/agnes/client';
+import { normalizeImageOptions } from '@/lib/providers/agnes/normalize';
 import { imageQueue } from '@/lib/ai/queue';
 import { CONCURRENCY, raceFirstSuccess } from '@/lib/orchestration/concurrency';
 import { globalBreaker } from '@/lib/orchestration/circuit-breaker';
@@ -32,8 +33,11 @@ class EnhancedImageGenerator {
     onProgress?: (event: ImageProgressEvent) => void
   ): Promise<ImageGenerationResult> {
     const start = Date.now();
-    const size = options.size ?? '2K';
-    const ratio = options.ratio ?? '16:9';
+    // Clamp incoming options to Agnes's whitelist so we never send an unknown
+    // size/ratio (Agnes returns 400 instead of generating).
+    const normalized = normalizeImageOptions({ size: options.size, ratio: options.ratio });
+    const size = normalized.size;
+    const ratio = normalized.ratio;
     const quality = options.quality ?? 'standard';
 
     onProgress?.({ type: 'processing', progress: 10, message: 'Analyzing prompt…' });

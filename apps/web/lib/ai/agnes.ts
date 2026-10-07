@@ -6,6 +6,7 @@
 import { AgnesClient } from '@/lib/providers/agnes/client';
 import { logger } from '@/lib/utils/logger';
 import type { ChatMessage, ChatOptions, ChatResponse } from './types';
+import { normalizeImageOptions, normalizeVideoOptions } from '@/lib/providers/agnes/normalize';
 
 const IMAGE_MODEL = 'agnes-image-2.1-flash';
 const VIDEO_MODEL = 'agnes-video-2.5-flash';
@@ -134,11 +135,13 @@ export async function generateImageWithRetry(
     if (options.steps) extra.steps = options.steps;
     if (imageData) extra.image = [imageData];
 
+    const normalized = normalizeImageOptions({ size: options.size, ratio: options.ratio });
+
     const result = await client.image({
       model: IMAGE_MODEL,
       prompt: options.prompt,
-      size: options.size ?? '2K',
-      ratio: options.ratio ?? '16:9',
+      size: normalized.size,
+      ratio: normalized.ratio,
       extra_body: extra,
     });
 
@@ -184,13 +187,18 @@ export async function generateVideoWithPolling(
       imageData = typeof options.image === 'string' ? options.image : await fileToDataUrl(options.image);
     }
 
+    const normalized = normalizeVideoOptions({
+      size: options.resolution,
+      duration: typeof options.duration === 'number' ? options.duration : undefined,
+    });
+
     const submit = await client.video({
       model: VIDEO_MODEL,
       prompt: options.prompt,
       mode: imageData ? 'reference' : 'text',
-      seconds: String(options.duration ?? 5),
-      size: options.resolution ?? '720P',
-      aspect_ratio: '16:9',
+      seconds: String(normalized.seconds),
+      size: normalized.size,
+      aspect_ratio: normalized.ratio,
       ...(imageData ? { images: [imageData] } : {}),
     });
 

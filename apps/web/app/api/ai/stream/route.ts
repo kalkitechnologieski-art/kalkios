@@ -8,6 +8,7 @@ import { logger } from '@/lib/utils/logger';
 import { verifySession, isResponse, rateLimit } from '@/lib/security/api-guards';
 import { TokenLevelStreamer, splitIntoTokens } from '@/lib/streaming/sse-token-streamer';
 import { classifyError, retryWithBackoff } from '@/lib/error-handling/error-classifier';
+import { tryAcquireUserStream, MAX_USER_STREAMS } from '@/lib/ai/user-concurrency';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,29 @@ export async function POST(req: NextRequest) {
       { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } }
     );
   }
+
+  // Cap how many streams a single user can run in parallel so a runaway tab
+  // can't exhaust the free-tier provider quotas.
+  const slot = tryAcquireUserStream(user.id);
+  if ('busy' in slot) {
+    return NextResponse.json(
+      {
+        error: `You already have ${slot.active} Siddhi requests running (max ${slot.max}). Wait for one to finish before sending another.`,
+        code: 'concurrent_limit',
+        active: slot.active,
+        max: slot.max,
+      },
+      { status: 429, headers: { 'Retry-After': '10' } }
+    );
+  }
+
+  // Always release the slot exactly once, no matter how the stream ends.
+  let slotReleased = false;
+  const releaseSlot = () => {
+    if (slotReleased) return;
+    slotReleased = true;
+    slot.release();
+  };
 
   const encoder = new TextEncoder();
   const stream = new TransformStream<Uint8Array, Uint8Array>();
@@ -190,6 +214,7 @@ export async function POST(req: NextRequest) {
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
       if (!closed) await close();
+      releaseSlot();
     }
   })();
 
