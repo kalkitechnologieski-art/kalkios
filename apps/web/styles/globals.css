@@ -678,3 +678,20 @@ textarea:focus-visible {
   background: rgba(0,255,255,0.2);
   color: #ffffff;
 }
+
+/* Streaming typewriter caret — sits inline after the last revealed glyph. */
+.typing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  background: currentColor;
+  color: #67e8f9;
+  border-radius: 1px;
+  animation: typing-caret-blink 1s steps(2, start) infinite;
+}
+@keyframes typing-caret-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}

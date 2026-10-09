@@ -78,8 +78,8 @@ export function CosmicPromptBar({
         <div className="cosmic-ring-layer" />
 
         <div id="cosmic-main" className="relative flex items-center w-full">
-          {/* Send Button – LEFT SIDE */}
-          <div className="btn-wrapper flex-shrink-0 mr-2 z-10">
+          {/* Send Button – RIGHT SIDE */}
+          <div className="btn-wrapper flex-shrink-0 ml-2 z-10">
             <div className="light" />
             <div
               className="gradient-layer"
@@ -370,6 +370,7 @@ export function CosmicPromptBar({
           position: relative;
           width: 100%;
           display: flex;
+          flex-direction: row-reverse;
           align-items: center;
         }
         .cosmic-input {
@@ -622,7 +623,7 @@ export function CosmicPromptBar({
             width: 60px;
             height: 36px;
             font-size: 0.7rem;
-            margin-right: 6px;
+            margin-left: 6px;
           }
           .gradient-layer {
             left: -100px;

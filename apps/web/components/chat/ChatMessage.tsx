@@ -4,12 +4,13 @@
 
 'use client';
 
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { Maximize2, Download, Volume2, VolumeX, Copy, Check } from 'lucide-react';
+import { Maximize2, Minimize2, Download, Share2, X, Volume2, VolumeX, Copy, Check, Loader2 } from 'lucide-react';
+import { useSmoothText } from '@/hooks/useSmoothText';
 
 export interface ArtifactItem {
   type: 'react' | 'html' | 'svg' | 'markdown' | 'code';
@@ -46,34 +47,211 @@ interface ChatMessageProps {
 
 interface MediaToolbarProps { src?: string; alt?: string; isVideo?: boolean; }
 
-function MediaToolbar({ src = '', alt = '', isVideo = false }: MediaToolbarProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+/** Cross-origin-safe download: fetch → blob → objectURL. Falls back to a
+ *  same-tab navigation when CORS blocks the fetch (rare for provider CDNs). */
+async function downloadMedia(url: string, filename: string): Promise<void> {
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+  } catch {
+    // CORS/opaque response — open in a new tab so the user can still save.
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
 
-  const handleDownload = () => {
-    if (typeof document === 'undefined') return;
-    const link = document.createElement('a');
-    link.href = src;
-    link.download = alt || (isVideo ? 'video.mp4' : 'image.png');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+function MediaToolbar({ src = '', alt = '', isVideo = false }: MediaToolbarProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [nativeFs, setNativeFs] = useState(false);
+  const [overlay, setOverlay] = useState(false);        // iOS / no-Fullscreen-API fallback
+  const [busy, setBusy] = useState(false);
+  const [scale, setScale] = useState(1);
+  const sentinelRef = useRef(false);                      // did we push a history entry?
+
+  const isExpanded = nativeFs || overlay;
+
+  const clearTransform = () => setScale(1);
+
+  // Enter OS-level fullscreen; if unavailable (iOS Safari), use an overlay and
+  // wire the hardware/gesture back button to a history sentinel.
+  const enter = useCallback(async () => {
+    const el = stageRef.current;
+    if (!el) return;
+    const req = el.requestFullscreen?.bind(el)
+      ?? (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen?.bind(el as unknown as Element);
+    if (req) {
+      try {
+        await req();
+        setNativeFs(true);
+        return;
+      } catch { /* permission/policy denied → fall through to overlay */ }
+    }
+    setOverlay(true);
+    clearTransform();
+    if (typeof window !== 'undefined' && !sentinelRef.current) {
+      window.history.pushState({ __mediaOverlay: true }, '');
+      sentinelRef.current = true;
+    }
+  }, []);
+
+  const exit = useCallback(() => {
+    const doc = document as Document & {
+      exitFullscreen?: () => Promise<void>;
+      webkitExitFullscreen?: () => Promise<void>;
+    };
+    if (nativeFs && (document.fullscreenElement || (document as unknown as { webkitFullscreenElement?: unknown }).webkitFullscreenElement)) {
+      const doExit = doc.exitFullscreen?.bind(doc) ?? doc.webkitExitFullscreen?.bind(doc);
+      try { void doExit?.(); } catch { /* ignore */ }
+    }
+    if (overlay && sentinelRef.current) {
+      sentinelRef.current = false;
+      // Pop our own sentinel so a later hardware-back doesn't misfire.
+      try { window.history.back(); } catch { /* ignore */ }
+    }
+    setNativeFs(false);
+    setOverlay(false);
+    clearTransform();
+  }, [nativeFs, overlay]);
+
+  const toggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (isExpanded) exit(); else void enter();
   };
 
-  const handleFullscreen = (e: React.MouseEvent) => { e.stopPropagation(); setIsFullscreen((v) => !v); };
+  // Reflect browser-driven fullscreen exits (ESC / Android back) in our state.
+  useEffect(() => {
+    const onChange = () => {
+      const active = !!(document.fullscreenElement
+        || (document as unknown as { webkitFullscreenElement?: unknown }).webkitFullscreenElement);
+      setNativeFs(active);
+      if (!active) clearTransform();
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange as EventListener);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange as EventListener);
+    };
+  }, []);
 
+  // ESC (overlay) + hardware back (overlay sentinel → popstate).
+  useEffect(() => {
+    if (!overlay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') exit(); };
+    const onPop = () => { if (sentinelRef.current) { sentinelRef.current = false; exit(); } };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('popstate', onPop);
+    };
+  }, [overlay, exit]);
+
+  const onWheel = (e: React.WheelEvent) => {
+    if (!isExpanded || isVideo) return;
+    e.preventDefault();
+    setScale((s) => Math.min(5, Math.max(1, s + (e.deltaY < 0 ? 0.2 : -0.2))));
+  };
+
+  const filename = alt?.trim() || (isVideo ? 'kalki-video.mp4' : 'kalki-image.png');
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!src) return;
+    setBusy(true);
+    try { await downloadMedia(src, filename); }
+    finally { setTimeout(() => setBusy(false), 600); }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'KALKI OS', url: src }); } catch { /* dismissed */ }
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try { await navigator.clipboard.writeText(src); } catch { /* ignore */ }
+    }
+  };
+
+  const btn = 'p-2 bg-black/70 hover:bg-black/90 rounded-lg text-white/85 hover:text-white transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 disabled:opacity-50';
+
+  const media = isVideo ? (
+    <video
+      src={src}
+      className={cn('max-w-full rounded-lg', isExpanded && 'max-h-full w-auto object-contain')}
+      controls
+      playsInline
+    />
+  ) : (
+    <img
+      src={src}
+      alt={alt || 'Media'}
+      onClick={() => { if (!isExpanded) void enter(); }}
+      onDoubleClick={toggle}
+      style={isExpanded && scale > 1 ? { transform: `scale(${scale})`, transformOrigin: 'center', cursor: 'zoom-out' } : undefined}
+      className={cn('max-w-full rounded-lg cursor-zoom-in transition-transform', isExpanded && 'max-h-full w-auto object-contain')}
+    />
+  );
+
+  // ONE persistent container so toggling expand never remounts the media and
+  // drops the native fullscreen element.
   return (
-    <>
-      {isVideo ? (
-        <video src={src} className={cn('max-w-full rounded-lg', isFullscreen && 'fixed inset-0 z-50 max-w-[90vw] max-h-[90vh] m-auto')} controls playsInline />
-      ) : (
-        <img src={src} alt={alt || 'Media'} className={cn('max-w-full rounded-lg cursor-pointer', isFullscreen && 'fixed inset-0 z-50 max-w-[90vw] max-h-[90vh] m-auto')} onClick={() => setIsFullscreen(true)} />
+    <div
+      ref={stageRef}
+      onWheel={onWheel}
+      role={isExpanded ? 'dialog' : undefined}
+      aria-modal={isExpanded ? true : undefined}
+      aria-label={isVideo ? 'Video viewer' : 'Image viewer'}
+      className={cn(
+        'group',
+        isExpanded
+          ? 'fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md'
+          : 'relative inline-block',
       )}
-      {isFullscreen && <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm" onClick={() => setIsFullscreen(false)} />}
-      <div className={cn('absolute bottom-2 right-2 flex gap-1 transition-opacity', isFullscreen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}>
-        <button onClick={(e) => { e.stopPropagation(); handleDownload(); }} className="p-1.5 bg-black/70 hover:bg-black/90 rounded-lg text-white/80 transition" title="Download"><Download className="w-4 h-4" /></button>
-        <button onClick={handleFullscreen} className="p-1.5 bg-black/70 hover:bg-black/90 rounded-lg text-white/80 transition" title="Fullscreen"><Maximize2 className="w-4 h-4" /></button>
+    >
+      <div className={cn(isExpanded && 'flex-1 min-h-0 w-full flex items-center justify-center p-4')}>
+        {media}
       </div>
-    </>
+
+      {isExpanded ? (
+        <div className="flex items-center gap-2 pb-6 pt-2 px-4">
+          <button onClick={handleDownload} disabled={busy} className={btn} title="Download" aria-label="Download">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          </button>
+          <button onClick={handleShare} className={btn} title="Share" aria-label="Share">
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button onClick={toggle} className={btn} title="Exit (Esc)" aria-label="Exit fullscreen">
+            <Minimize2 className="w-4 h-4" />
+          </button>
+          <button onClick={toggle} className={btn} title="Close (Esc)" aria-label="Close">
+            <X className="w-4 h-4" />
+          </button>
+          {!isVideo && (
+            <span className="text-white/40 text-xs font-mono ml-2 hidden sm:inline">
+              scroll to zoom{scale !== 1 ? ` · ${Math.round(scale * 100)}%` : ''}
+            </span>
+          )}
+          <span className="ml-auto text-white/30 text-[11px] font-mono hidden sm:inline">Esc / ← to exit</span>
+        </div>
+      ) : (
+        <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <button onClick={handleDownload} disabled={busy} className={btn} title="Download" aria-label="Download">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          </button>
+          <button onClick={toggle} className={btn} title="Fullscreen" aria-label="Fullscreen">
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -166,7 +344,7 @@ function CopyButton({ text }: { text: string }) {
 const markdownComponents: Components = {
   video({ src }) {
     const url = typeof src === 'string' ? src : undefined;
-    return <div className="relative group my-2"><MediaToolbar src={url} isVideo /></div>;
+    return <div className="my-2"><MediaToolbar src={url} isVideo /></div>;
   },
   audio({ src }) {
     const url = typeof src === 'string' ? src : undefined;
@@ -174,7 +352,7 @@ const markdownComponents: Components = {
   },
   img({ src, alt }) {
     const url = typeof src === 'string' ? src : undefined;
-    return <div className="relative group my-2"><MediaToolbar src={url} alt={alt} /></div>;
+    return <div className="my-2"><MediaToolbar src={url} alt={alt} /></div>;
   },
 };
 
@@ -183,9 +361,13 @@ export const ChatMessage = memo(function ChatMessage({
   onEdit, messageId, artifacts, citations, toolCalls,
 }: ChatMessageProps) {
   const safeContent = typeof content === 'string' ? content : String(content);
-  const displayContent = safeContent.trim() || (role === 'assistant' ? '…' : '');
   const [editOpen, setEditOpen] = useState(false);
   const [editValue, setEditValue] = useState(safeContent);
+
+  // Letter-by-letter reveal decoupled from SSE burst arrival.
+  const shown = useSmoothText(safeContent, isStreaming);
+  const assistantContent = shown.trim() || (isStreaming ? '' : '…');
+  const displayContent = role === 'assistant' ? assistantContent : (safeContent.trim());
 
   // Cancel speech on unmount
   useEffect(() => {
@@ -215,6 +397,9 @@ export const ChatMessage = memo(function ChatMessage({
       {role === 'assistant' ? (
         <div className="prose prose-invert prose-sm max-w-none dark:prose-invert">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{displayContent}</ReactMarkdown>
+          {isStreaming && (
+            <span className="typing-caret" aria-hidden="true" />
+          )}
         </div>
       ) : (
         <span className="whitespace-pre-wrap break-words">{displayContent}</span>

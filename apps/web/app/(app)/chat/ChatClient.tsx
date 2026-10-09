@@ -101,6 +101,8 @@ export default function ChatClient() {
   const [leadProgress, setLeadProgress] = useState<LeadProgressState>(IDLE_LEAD_PROGRESS);
   const leadControllerRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
 
   const handleStopLeads = useCallback(() => {
     const ctrl = leadControllerRef.current;
@@ -128,8 +130,19 @@ export default function ChatClient() {
   }, [messages, mounted, saveMemory]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!atBottomRef.current) return;
+    // During live token streaming the message list mutates many times per second;
+    // smooth-scrolling on every mutation fights itself and looks janky. Snap
+    // instantly while streaming, ease smoothly for one-off layout changes.
+    endRef.current?.scrollIntoView({ behavior: isLoading ? 'auto' : 'smooth', block: 'end' });
   }, [messages, isLoading]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    atBottomRef.current = distanceFromBottom < 90;
+  }, []);
 
   const handleSend = useCallback(
     async (text: string, file?: File) => {
@@ -288,7 +301,7 @@ export default function ChatClient() {
       }
 
       if (mode === 'video') {
-        await sendMessage(`Generate video: ${text} | Resolution: 720P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${text} | Resolution: 720P | Duration: 4s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
         return;
       }
 
@@ -307,7 +320,7 @@ export default function ChatClient() {
       if (isImage) {
         await sendMessage(`Generate image: ${newPrompt} | Style: photorealistic | Quality: high | Size: 1K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
       } else {
-        await sendMessage(`Generate video: ${newPrompt} | Resolution: 720P | Duration: 5s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
+        await sendMessage(`Generate video: ${newPrompt} | Resolution: 720P | Duration: 4s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
       }
     },
     [sendMessage, messages]
@@ -406,8 +419,50 @@ export default function ChatClient() {
     );
   };
 
-  const DeepThinkIndicator = () => (
-    <motion.div
+  const VideoQueuePanel = ({ phase, position, pending, etaSeconds }: {
+    phase: NonNullable<typeof queueStatus.phase>;
+    position: number;
+    pending: number;
+    etaSeconds: number;
+  }) => {
+    const mins = Math.max(1, Math.round(etaSeconds / 60));
+    const isActive = phase === 'processing' || position === 0;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md
+          bg-gradient-to-r from-purple-600/15 via-fuchsia-600/10 to-cyan-600/15 border-purple-500/25"
+      >
+        <div className="relative shrink-0">
+          <div className={`w-9 h-9 rounded-full grid place-items-center ${isActive ? 'bg-cyan-500/20' : 'bg-amber-500/20'}`}>
+            {isActive ? (
+              <Video className="w-4 h-4 text-cyan-300 animate-pulse" />
+            ) : (
+              <Clock className="w-4 h-4 text-amber-300" />
+            )}
+          </div>
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse ring-2 ring-black" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-mono uppercase tracking-wider text-purple-300/80">Video queue</p>
+          {isActive ? (
+            <p className="text-sm text-white/90 font-medium">Now rendering your clip…</p>
+          ) : (
+            <p className="text-sm text-white/90 font-medium">
+              You&apos;re <span className="text-cyan-300 font-bold">#{position}</span> in line
+              <span className="text-white/50"> · about {mins} min wait</span>
+            </p>
+          )}
+          <p className="text-[10px] text-white/40 mt-0.5">
+            {pending > 1 ? `${pending - 1} other ${pending - 1 === 1 ? 'render' : 'renders'} ahead. ` : ''}Free tier renders one video per minute — keep this tab open.
+          </p>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const DeepThinkIndicator = () => (    <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex items-center gap-1.5 px-2 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full"
@@ -480,45 +535,28 @@ export default function ChatClient() {
           </span>
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <QueueStatus />
           <DeepThinkIndicator />
-          <button
-            onClick={() => handleModeToggle('image')}
-            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
-              mode === 'image'
-                ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30 shadow-glow'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-            title="Image Mode"
-          >
-            <ImageIcon className="w-4 h-4" />
-            <span className="text-[10px] font-mono hidden sm:inline">Image</span>
-          </button>
-          <button
-            onClick={() => handleModeToggle('video')}
-            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
-              mode === 'video'
-                ? 'bg-red-600/30 text-red-400 border border-red-500/30 shadow-glow'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-            title="Video Mode"
-          >
-            <Video className="w-4 h-4" />
-            <span className="text-[10px] font-mono hidden sm:inline">Video</span>
-          </button>
-          <button
-            onClick={() => handleModeToggle('leads')}
-            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 ${
-              mode === 'leads'
-                ? 'bg-green-600/30 text-green-400 border border-green-500/30 shadow-glow'
-                : 'text-white/40 hover:text-white/70'
-            }`}
-            title="Lead Generation Mode"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span className="text-[10px] font-mono hidden sm:inline">Leads</span>
-          </button>
+          {mode !== 'chat' && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono uppercase tracking-wider border backdrop-blur-sm ${
+                mode === 'image'
+                  ? 'bg-pink-600/15 text-pink-300 border-pink-500/30'
+                  : mode === 'video'
+                  ? 'bg-red-600/15 text-red-300 border-red-500/30'
+                  : 'bg-green-600/15 text-green-300 border-green-500/30'
+              }`}
+              title="Active mode — change it in the composer below"
+            >
+              {mode === 'image' ? <ImageIcon className="w-3.5 h-3.5" />
+                : mode === 'video' ? <Video className="w-3.5 h-3.5" />
+                : <FileSpreadsheet className="w-3.5 h-3.5" />}
+              {mode} mode
+            </motion.span>
+          )}
         </div>
       </div>
 
@@ -637,10 +675,20 @@ export default function ChatClient() {
         </div>
       )}
       {(mode === 'image' || mode === 'video') && isLoading && (
-        <MediaProgress key={mode} isLoading mode={mode} />
+        <div className="space-y-2">
+          <MediaProgress key={mode} isLoading mode={mode} />
+          {mode === 'video' && queueStatus.lane === 'video' && (
+            <VideoQueuePanel
+              phase={queueStatus.phase ?? 'queued'}
+              position={queueStatus.position ?? 0}
+              pending={queueStatus.pending}
+              etaSeconds={queueStatus.etaSeconds ?? 0}
+            />
+          )}
+        </div>
       )}
 
-      <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
         <AnimatePresence initial={false}>
           {messages
             // Failed/aborted turns used to persist empty assistant bubbles that
@@ -650,6 +698,12 @@ export default function ChatClient() {
             const contentStr = typeof msg.content === 'string' ? msg.content : String(msg.content);
             const isImageMessage = msg.role === 'assistant' && contentStr.includes('![');
             const isVideoMessage = msg.role === 'assistant' && contentStr.includes('<video');
+
+            // While waiting for the first token, show only the ThinkingLoader
+            // (rendered below) — not an empty bubble plus a loader.
+            if (msg.role === 'assistant' && msg.isStreaming && !contentStr.trim()) {
+              return null;
+            }
 
             return (
               <motion.div
@@ -717,7 +771,7 @@ export default function ChatClient() {
           })}
         </AnimatePresence>
 
-        {isLoading && (
+        {mode === 'chat' && isLoading && !messages.some((m) => m.role === 'assistant' && m.isStreaming && String(m.content ?? '').trim().length > 0) && (
           <div className="ml-12 mt-2">
             <ThinkingLoader status="thinking" reasoning="Processing…" />
           </div>

@@ -6,7 +6,8 @@
 import { AgnesClient } from '@/lib/providers/agnes/client';
 import { logger } from '@/lib/utils/logger';
 import type { ChatMessage, ChatOptions, ChatResponse } from './types';
-import { normalizeImageOptions, normalizeVideoOptions } from '@/lib/providers/agnes/normalize';
+import { normalizeImageOptions, normalizeVideoOptions, AGNES_VIDEO_SECONDS } from '@/lib/providers/agnes/normalize';
+import { videoScheduler, type VideoQueueStatus } from '@/lib/media/video-queue';
 
 const IMAGE_MODEL = 'agnes-image-2.1-flash';
 const VIDEO_MODEL = 'agnes-video-2.5-flash';
@@ -74,8 +75,6 @@ interface MediaJob {
 
 class MediaQueue {
   private jobs = new Map<string, MediaJob>();
-  private videoActive = 0;
-  private readonly VIDEO_CONCURRENCY = 2; // Increased from 1 to match new concurrency limits
 
   create(type: 'image' | 'video'): MediaJob {
     const job: MediaJob = {
@@ -93,10 +92,6 @@ class MediaQueue {
     const job = this.jobs.get(id);
     if (job) Object.assign(job, patch);
   }
-
-  canStartVideo(): boolean { return this.videoActive < this.VIDEO_CONCURRENCY; }
-  videoStarted(): void { this.videoActive += 1; }
-  videoEnded(): void { this.videoActive = Math.max(0, this.videoActive - 1); }
 
   gc(): void {
     const cutoff = Date.now() - 3_600_000;
@@ -158,88 +153,102 @@ export async function generateImageWithRetry(
   }
 }
 
-// ─── Video generation with polling ──────────────────────────────────
+// ─── Video generation (FIFO queue + polling) ────────────────────────
+// Free-tier Agnes allows ONE video submission per minute, so every request is
+// funnelled through the server-side scheduler which spaces submissions, tracks
+// a per-user daily budget, and reports live queue position/ETA to the caller.
+// We pin the free tier to the shortest/lowest resolution.
 export async function generateVideoWithPolling(
   options: VideoOptions & {
     onProgress?: (progress: number, stage: string) => void;
+    onQueue?: (status: VideoQueueStatus) => void;
+    userId?: string;
     signal?: AbortSignal;
   }
 ): Promise<{ url: string; jobId: string }> {
-  const job = mediaQueue.create('video');
-  try {
-    // Wait for a video slot (max 1 concurrent)
-    if (!mediaQueue.canStartVideo()) {
-      options.onProgress?.(0, 'Waiting for video slot...');
-      const waitStart = Date.now();
-      while (!mediaQueue.canStartVideo() && Date.now() - waitStart < 60_000) {
-        await new Promise((r) => setTimeout(r, 500));
-        if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const normalized = normalizeVideoOptions({
+    size: options.resolution,
+    duration: typeof options.duration === 'number' ? options.duration : undefined,
+  });
+  // Free tier: force the cheapest render — shortest duration, 720P.
+  const freeSeconds = AGNES_VIDEO_SECONDS[0]!;
+  const seconds = Math.min(normalized.seconds, freeSeconds);
+  const userId = options.userId ?? 'anonymous';
+
+  options.onProgress?.(0, 'Entering video queue…');
+
+  const url = await videoScheduler.enqueue({
+    userId,
+    seconds,
+    signal: options.signal,
+    onUpdate: (status) => {
+      options.onQueue?.(status);
+      if (status.phase === 'queued' && status.position > 0) {
+        options.onProgress?.(5, `You're #${status.position} in queue · ~${Math.max(1, Math.round(status.etaSeconds / 60))} min wait`);
+      } else if (status.phase === 'processing') {
+        options.onProgress?.(15, 'Rendering your video…');
       }
-      if (!mediaQueue.canStartVideo()) throw new Error('Video queue timeout');
-    }
+    },
+    execute: async () => {
+      const job = mediaQueue.create('video');
+      try {
+        mediaQueue.update(job.id, { status: 'processing', progress: 15 });
 
-    mediaQueue.videoStarted();
-    mediaQueue.update(job.id, { status: 'processing', progress: 5 });
-    options.onProgress?.(5, 'Submitting video task...');
+        let imageData: string | undefined;
+        if (options.image) {
+          imageData = typeof options.image === 'string' ? options.image : await fileToDataUrl(options.image);
+        }
 
-    let imageData: string | undefined;
-    if (options.image) {
-      imageData = typeof options.image === 'string' ? options.image : await fileToDataUrl(options.image);
-    }
+        const submit = await client.video({
+          model: VIDEO_MODEL,
+          prompt: options.prompt,
+          mode: imageData ? 'reference' : 'text',
+          seconds: String(seconds),
+          size: normalized.size,
+          aspect_ratio: normalized.ratio,
+          ...(imageData ? { images: [imageData] } : {}),
+        });
 
-    const normalized = normalizeVideoOptions({
-      size: options.resolution,
-      duration: typeof options.duration === 'number' ? options.duration : undefined,
-    });
+        const videoId = submit.video_id;
+        if (!videoId) throw new Error('No video_id returned');
 
-    const submit = await client.video({
-      model: VIDEO_MODEL,
-      prompt: options.prompt,
-      mode: imageData ? 'reference' : 'text',
-      seconds: String(normalized.seconds),
-      size: normalized.size,
-      aspect_ratio: normalized.ratio,
-      ...(imageData ? { images: [imageData] } : {}),
-    });
+        let attempts = 0;
+        const maxAttempts = 120;
+        let delay = 2_000;
 
-    const videoId = submit.video_id;
-    if (!videoId) throw new Error('No video_id returned');
+        while (attempts < maxAttempts) {
+          if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+          await new Promise((r) => setTimeout(r, delay));
+          attempts++;
 
-    let attempts = 0;
-    const maxAttempts = 120;
-    let delay = 2_000;
+          const status = await client.videoStatus(videoId, VIDEO_MODEL);
+          const progress = Math.min(90, 20 + (status.progress ?? 0) * 0.7);
+          mediaQueue.update(job.id, { progress });
+          options.onProgress?.(progress, `Rendering… ${status.progress ?? 0}%`);
 
-    while (attempts < maxAttempts) {
-      if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-      await new Promise((r) => setTimeout(r, delay));
-      attempts++;
+          if (status.status === 'completed' || status.status === 'succeeded') {
+            const url = status.metadata?.url ?? status.url;
+            if (!url) throw new Error('No URL in completed status');
+            mediaQueue.update(job.id, { status: 'completed', progress: 100, completedAt: Date.now() });
+            options.onProgress?.(100, 'Done');
+            return url;
+          }
+          if (status.status === 'failed' || status.status === 'error') {
+            throw new Error(status.error?.message ?? 'Video failed');
+          }
+          if (attempts > 10 && delay < 8_000) delay = Math.min(delay * 1.2, 8_000);
+        }
 
-      const status = await client.videoStatus(videoId, VIDEO_MODEL);
-      const progress = Math.min(90, 10 + (status.progress ?? 0) * 0.8);
-      mediaQueue.update(job.id, { progress });
-      options.onProgress?.(progress, `Rendering... ${status.progress ?? 0}%`);
-
-      if (status.status === 'completed' || status.status === 'succeeded') {
-        const url = status.metadata?.url ?? status.url;
-        if (!url) throw new Error('No URL in completed status');
-        mediaQueue.update(job.id, { status: 'completed', progress: 100, completedAt: Date.now() });
-        options.onProgress?.(100, 'Done');
-        return { url, jobId: job.id };
+        throw new Error('Video generation timeout');
+      } catch (error) {
+        mediaQueue.update(job.id, { status: 'failed', error: String(error), completedAt: Date.now() });
+        logger.error('[Agnes] Video generation failed', error);
+        throw error;
       }
-      if (status.status === 'failed' || status.status === 'error') {
-        throw new Error(status.error?.message ?? 'Video failed');
-      }
-      if (attempts > 10 && delay < 8_000) delay = Math.min(delay * 1.2, 8_000);
-    }
+    },
+  });
 
-    throw new Error('Video generation timeout');
-  } catch (error) {
-    mediaQueue.update(job.id, { status: 'failed', error: String(error), completedAt: Date.now() });
-    logger.error('[Agnes] Video generation failed', error);
-    throw error;
-  } finally {
-    mediaQueue.videoEnded();
-  }
+  return { url, jobId: `queued_${userId}_${Date.now()}` };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────

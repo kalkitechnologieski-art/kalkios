@@ -53,6 +53,11 @@ interface QueueStatus {
   active: number;
   completed: number;
   failed: number;
+  lane?: string;
+  phase?: 'queued' | 'processing' | 'done' | 'failed' | 'canceled';
+  position?: number;
+  etaSeconds?: number;
+  retryAfterSec?: number;
 }
 
 function getOrCreateSessionId(): string {
@@ -175,6 +180,11 @@ export function useStreamingChat() {
                 active: Number(parsed.active ?? 0),
                 completed: Number(parsed.completed ?? 0),
                 failed: Number(parsed.failed ?? 0),
+                lane: typeof parsed.lane === 'string' ? parsed.lane : undefined,
+                phase: (typeof parsed.phase === 'string' ? parsed.phase : undefined) as QueueStatus['phase'],
+                position: typeof parsed.position === 'number' ? parsed.position : undefined,
+                etaSeconds: typeof parsed.etaSeconds === 'number' ? parsed.etaSeconds : undefined,
+                retryAfterSec: typeof parsed.retryAfterSec === 'number' ? parsed.retryAfterSec : undefined,
               });
               continue;
             }

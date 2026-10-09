@@ -12,7 +12,7 @@ import { EnterpriseRouter } from '@/lib/orchestration/enterprise-router';
 import type { EnterpriseRouterRequest } from '@/lib/orchestration/enterprise-router';
 import { RateLimiter } from '@/lib/orchestration/rate-limiter';
 import { CircuitBreaker } from '@/lib/orchestration/circuit-breaker';
-import { ZhipuClient, GroqClient, AgnesClient } from '@/lib/providers';
+import { ZhipuClient, GroqClient, AgnesClient, OpenRouterClient } from '@/lib/providers';
 import { logger } from '@/lib/utils/logger';
 import { classifyError, retryWithBackoff, updateCircuitBreaker, CircuitBreakerState } from '@/lib/error-handling/error-classifier';
 
@@ -157,6 +157,7 @@ export class SiddhiAgent {
   private readonly zhipu: ZhipuClient;
   private readonly groq: GroqClient;
   private readonly agnes: AgnesClient;
+  private readonly openrouter: OpenRouterClient;
 
   private readonly rateLimiter: RateLimiter;
   private readonly circuitBreaker: CircuitBreaker;
@@ -195,6 +196,7 @@ export class SiddhiAgent {
     this.zhipu = new ZhipuClient();
     this.groq = new GroqClient();
     this.agnes = new AgnesClient();
+    this.openrouter = new OpenRouterClient();
 
     this.rateLimiter = new RateLimiter();
     this.circuitBreaker = new CircuitBreaker();
@@ -943,7 +945,10 @@ export class SiddhiAgent {
     // Use retry with exponential backoff for resilience
     const result = await retryWithBackoff(
       async () => {
-        let apiResult: any;
+        let apiResult: {
+          choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
+          usage?: { total_tokens?: number };
+        };
         switch (provider) {
           case 'zhipu':
             apiResult = await this.zhipu.chat({
@@ -1323,24 +1328,38 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
       try {
         emit({ type: 'status', message: 'Generating video with Agnes...' });
         const { generateVideoWithPolling } = await import('@/lib/ai/agnes');
-        
+
         // Parse settings from prompt
         const resolutionMatch = query.match(/Resolution:\s*([^|]+)/);
         const durationMatch = query.match(/Duration:\s*(\d+)/);
         const aspectMatch = query.match(/Aspect:\s*([^|]+)/);
         const qualityMatch = query.match(/Quality:\s*([^|]+)/);
-        
+
         const cleanPrompt = query.replace(/Generate video:\s*/, '').replace(/\|.*$/, '').trim();
-        
+
         const result = await generateVideoWithPolling({
           prompt: cleanPrompt,
-          duration: durationMatch ? parseInt(durationMatch[1]) : 5,
+          // Free tier is pinned to the shortest render inside generateVideoWithPolling.
+          duration: durationMatch ? parseInt(durationMatch[1]) : 4,
           resolution: resolutionMatch ? resolutionMatch[1].trim() : '720P',
+          userId: request.userId ?? 'anonymous',
           onProgress: (progress, stage) => {
             emit({ type: 'status', message: `Video: ${stage} (${progress}%)` });
           },
+          onQueue: (q) => {
+            emit({
+              type: 'queue_status',
+              lane: 'video',
+              phase: q.phase,
+              position: q.position,
+              pending: q.pending,
+              etaSeconds: q.etaSeconds,
+              retryAfterSec: q.retryAfterSec,
+              message: q.error,
+            });
+          },
         });
-        
+
         const videoMarkdown = `<video controls src="${result.url}" width="100%"></video>`;
         
         return {
@@ -1359,8 +1378,12 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
         };
       } catch (error) {
         this.logSafe('warn', '[Pipeline] Video generation failed', error);
+        const raw = error instanceof Error ? error.message : 'Unknown error';
+        const friendly = /quota|daily|exhaust|rate.?limit|429|reached/i.test(raw)
+          ? 'The free video quota is busy right now. Video renders are limited to one per minute and a small daily budget — please wait a few minutes (or try again after midnight IST), or use Image mode in the meantime.'
+          : `I encountered an issue generating the video. Error: ${raw}. Please try again.`;
         return {
-          content: `I encountered an issue generating the video. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+          content: friendly,
           reasoning: '',
           provider: 'error',
           tokens: 0,
@@ -1379,31 +1402,38 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
     const plan = this.buildPipelinePlan(query, request);
     emit({ type: 'trace', step: { id: 'plan', type: 'reasoning', status: 'completed', message: `Providers: ${plan.providers.join('+')}` } });
 
-    // STAGE 3: GATHER (search + tools)
+    // STAGE 3: GATHER (search + tools) — hard time budget so it can't stall the first token
     const memories = this.getMemory(sessionId);
     let searchResults: Array<{ title: string; url: string }> = [];
     let docs: string[] = [];
     let toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
     const stageTimings: Record<string, number> = {};
 
+    const gatherBudgetMs = 6_000;
     if (plan.useSearch) {
       const t0 = Date.now();
-      try {
+      emit({ type: 'status', message: 'Checking live sources...' });
+      const gather = (async () => {
         const raw = await this.searchWithFallback(query);
-        stageTimings.search = Date.now() - t0;
         const results = raw as unknown as Array<{ title: string; url: string; snippet?: string }>;
         searchResults = results.map((r) => ({ title: r.title, url: r.url }));
-        const extractStart = Date.now();
-        const topUrls = results.slice(0, 2).map((r) => r.url);
+        const topUrls = results.slice(0, 1).map((r) => r.url);
         const contents = await Promise.all(topUrls.map((u) => this.extractContent(u)));
-        stageTimings.extract = Date.now() - extractStart;
         docs = contents.map((c) => {
           const anyC = c as unknown as { content?: unknown };
           return typeof anyC?.content === 'string' ? anyC.content : '';
         }).filter((s) => s.length > 100);
-      } catch (error) {
-        this.logSafe('warn', '[Pipeline] Search failed', error);
+      })();
+
+      const outcome = await Promise.race([
+        gather.then(() => 'ok').catch(() => 'error'),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), gatherBudgetMs)),
+      ]);
+      stageTimings.search = Date.now() - t0;
+      if (outcome === 'timeout') {
+        this.logSafe('warn', '[Pipeline] Gather exceeded budget — streaming without fresh context');
       }
+      void gather.catch((e: unknown) => this.logSafe('warn', '[Pipeline] Late search error', e));
     }
 
     if (plan.useTools.length > 0) {
@@ -1415,35 +1445,32 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
       }
     }
 
-    emit({ type: 'trace', step: { id: 'gather', type: 'search', status: 'completed', message: `Gathered: ${searchResults.length} sources, ${toolCalls.length} tools (${stageTimings.search ?? 0}ms search, ${stageTimings.extract ?? 0}ms extract)` } });
+    // STAGE 4: REASON — stream live from the fastest provider (no Promise.all stall)
+    const streamed = await this.streamPrimaryDraft(
+      query,
+      { plan, memories, docs, toolCalls, conversation: request.messages },
+      (delta) => emit({ type: 'delta', content: delta })
+    );
 
-    // STAGE 4: REASON
-    const reasonStart = Date.now();
-    const drafts = await this.generateDrafts(query, { plan, memories, docs, searchResults, toolCalls });
-    stageTimings.reason = Date.now() - reasonStart;
-    emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: `Generated ${drafts.length} drafts in ${stageTimings.reason}ms` } });
-
-    // STAGE 5: CRITIQUE — only fires when we have multiple conflicting drafts.
-    // Skipped for single-draft or low-confidence-spread cases (saves ~2-4s).
-    let critique = { issues: [] as string[], confidence: 0.7, shouldRefine: false };
-    const confidences = drafts.map((d) => d?.confidence ?? 0);
-    const spread = confidences.length > 0 ? Math.max(...confidences) - Math.min(...confidences) : 0;
-    const shouldCritique = plan.depth === 'max' && drafts.length >= 2 && spread > 0.15;
-    if (shouldCritique) {
-      const critiqueStart = Date.now();
-      critique = await this.selfCritique(query, drafts);
-      stageTimings.critique = Date.now() - critiqueStart;
-      emit({ type: 'trace', step: { id: 'critique', type: 'consensus', status: 'completed', message: `Confidence: ${(critique.confidence * 100).toFixed(0)}% (${stageTimings.critique}ms)` } });
-    } else if (drafts.length >= 2) {
-      // Cheap heuristic: average confidence across drafts
-      critique = { issues: [], confidence: confidences.reduce((a, b) => a + b, 0) / confidences.length, shouldRefine: false };
+    if (!streamed) {
+      emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: 'No provider reachable' } });
+      return {
+        content: "I couldn't reach any AI provider right now. Please try again in a moment.",
+        reasoning: '',
+        provider: 'error',
+        tokens: 0,
+        latency: Date.now() - startTime,
+        emotion: 'apologetic',
+        sources: [],
+      };
     }
 
-    logger.info(`[SiddhiPipeline] stages: search=${stageTimings.search ?? 0}ms extract=${stageTimings.extract ?? 0}ms tools=${stageTimings.tools ?? 0}ms reason=${stageTimings.reason ?? 0}ms critique=${stageTimings.critique ?? 0}ms total=${Date.now() - startTime}ms`)
+    stageTimings.reason = streamed.timeMs;
+    stageTimings.firstToken = streamed.firstTokenMs;
+    emit({ type: 'trace', step: { id: 'reason', type: 'reasoning', status: 'completed', message: `Streamed via ${streamed.provider} (first token ${streamed.firstTokenMs}ms, ${streamed.timeMs}ms total)` } });
 
-    const best = drafts.reduce((a, b) => ((a?.confidence ?? 0) > (b?.confidence ?? 0) ? a : b), drafts[0]);
-    const finalAnswer = best?.answer ?? '';
-    const finalReasoning = best?.reasoning ?? '';
+    const finalAnswer = streamed.full;
+    const finalReasoning = '';
 
     this.updateMemory(sessionId, { role: 'user', content: query, timestamp: Date.now() });
     this.updateMemory(sessionId, { role: 'assistant', content: finalAnswer, timestamp: Date.now() });
@@ -1456,21 +1483,24 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
       emit({ type: 'artifact', count: artifacts.length });
     }
 
+    logger.info(`[SiddhiPipeline] fast: search=${stageTimings.search ?? 0}ms tools=${stageTimings.tools ?? 0}ms firstToken=${stageTimings.firstToken ?? 0}ms reason=${stageTimings.reason ?? 0}ms total=${Date.now() - startTime}ms`)
+
     return {
       content: finalAnswer || 'I encountered an issue. Please try again.',
       reasoning: finalReasoning,
-      provider: 'pipeline',
-      tokens: drafts.reduce((s, d) => s + (d?.tokens ?? 0), 0),
+      provider: streamed.provider,
+      tokens: streamed.tokens,
       latency: Date.now() - startTime,
       emotion: this.detectEmotion(query),
       sources: searchResults.slice(0, 5),
-      traces: drafts.map((d) => ({ provider: d?.provider, confidence: d?.confidence })),
-      critique,
-      plan: { providers: plan.providers, useSearch: plan.useSearch, useTools: plan.useTools, depth: plan.depth },
+      traces: [{ provider: streamed.provider, confidence: 0.8 }],
+      critique: { issues: [], confidence: 0.8, shouldRefine: false },
+      plan: { providers: [streamed.provider], useSearch: plan.useSearch, useTools: plan.useTools, depth: plan.depth },
       artifacts,
       toolCalls,
     };
   }
+
 
   private extractEntities(text: string): { people: string[]; places: string[]; dates: string[]; numbers: number[] } {
     const people = [...text.matchAll(/\b(?:Mr|Mrs|Ms|Dr|Prof)\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g)].map((m) => m[1] ?? '').filter(Boolean);
@@ -1482,7 +1512,7 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
 
   private buildPipelinePlan(
     query: string,
-    request: { image?: boolean; video?: boolean; setu?: boolean; deep?: boolean }
+    request: { image?: boolean; video?: boolean; setu?: boolean; deep?: boolean; search?: boolean }
   ): { providers: string[]; useSearch: boolean; useTools: string[]; depth: 'low' | 'medium' | 'high' | 'max' } {
     const complexity = this.assessComplexity(query);
     const needsSearch = /latest|current|recent|news|today|2024|2025|2026|price|weather/i.test(query);
@@ -1499,89 +1529,11 @@ Return ONLY a JSON array of tool calls (or []): [{"name": "calculator", "args": 
     if (/\b(calculate|compute|solve|equation|\d+\s*[\+\-\*\/]\s*\d+)\b/i.test(query)) useTools.push('calculator');
     if (/\b(chart|graph|plot|visualize|bar chart)\b/i.test(query)) useTools.push('chart_generator');
 
-    void request;
-    return { providers, useSearch: needsSearch || complexity > 0.5, useTools, depth };
-  }
-
-  private async generateDrafts(
-    query: string,
-    ctx: {
-      plan: { providers: string[]; depth: 'low' | 'medium' | 'high' | 'max' };
-      memories: Array<{ role: string; content: string }>;
-      docs: string[];
-      searchResults: Array<{ title: string; url: string }>;
-      toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>;
-    }
-  ): Promise<Array<{ id: string; provider: string; reasoning: string; answer: string; confidence: number; tokens: number; timeMs: number }>> {
-    const toolContext = ctx.toolCalls.length > 0
-      ? `\n\nTool results:\n${ctx.toolCalls.map((t) => `${t.name}(${JSON.stringify(t.args)}) → ${JSON.stringify(t.result)}`).join('\n')}`
-      : '';
-
-    const systemPrompt = `You are Siddhi, an elite AI assistant. Provide deep, well-reasoned answers.
-Format:
-## Reasoning
-[step-by-step thinking]
-## Answer
-[final comprehensive answer]
-
-Context:
-${ctx.docs.slice(0, 2).join('\n\n').slice(0, 4000)}
-${ctx.memories.slice(-5).map((m) => `${m.role}: ${m.content}`).join('\n')}
-${toolContext}`;
-
-    const tasks = ctx.plan.providers
-      .filter((provider) => this.isProviderConfigured(provider))
-      .map(async (provider) => {
-      const t0 = Date.now();
-      try {
-        const result = await this.callProvider(
-          provider as never, query, systemPrompt,
-          { reasoningDepth: ctx.plan.depth }
-        );
-        const parsed = this.parsePipelineReasoning(result.content);
-        return {
-          id: this.generateId(),
-          provider,
-          reasoning: parsed.reasoning,
-          answer: parsed.answer,
-          confidence: 0.7,
-          tokens: result.tokens ?? 0,
-          timeMs: Date.now() - t0,
-        };
-      } catch (error) {
-        this.logSafe('warn', `[Pipeline] Draft from ${provider} failed`, error);
-        return null;
-      }
-    });
-
-    const results = await Promise.all(tasks);
-    const drafts = results.filter((r): r is NonNullable<typeof r> => r !== null);
-    if (drafts.length > 0) return drafts;
-
-    // Emergency fallback: any configured provider not already tried
-    const tried = new Set(ctx.plan.providers);
-    for (const provider of ['groq', 'agnes', 'zhipu']) {
-      if (tried.has(provider) || !this.isProviderConfigured(provider)) continue;
-      try {
-        const t0 = Date.now();
-        const result = await this.callProvider(provider as never, query, systemPrompt, { reasoningDepth: 'medium' });
-        const parsed = this.parsePipelineReasoning(result.content);
-        if (parsed.answer) {
-          return [{
-            id: this.generateId(),
-            provider,
-            reasoning: parsed.reasoning,
-            answer: parsed.answer,
-            confidence: 0.6,
-            tokens: result.tokens ?? 0,
-            timeMs: Date.now() - t0,
-          }];
-        }
-      } catch (error) {
-        this.logSafe('warn', `[Pipeline] Fallback draft from ${provider} failed`, error);
-      }
-    }
-    return drafts;
+    // Speed: only pay for web search when the query genuinely needs fresh info.
+    // Blocking every query on a scrape was the dominant latency source.
+    const searchDisabled = request.search === false;
+    void request.image; void request.video; void request.setu; void request.deep;
+    return { providers, useSearch: needsSearch && !searchDisabled, useTools, depth };
   }
 
   private isProviderConfigured(provider: string): boolean {
@@ -1589,47 +1541,108 @@ ${toolContext}`;
       case 'groq': return !!process.env.GROQ_API_KEY;
       case 'agnes': return !!process.env.AGNES_API_KEY;
       case 'zhipu': return !!process.env.ZHIPU_API_KEY;
+      case 'openrouter': return !!process.env.OPENROUTER_API_KEY;
       default: return false;
     }
   }
 
-  private parsePipelineReasoning(content: string): { reasoning: string; answer: string } {
-    const r = content.match(/##\s*Reasoning\s*([\s\S]*?)(?=##\s*Answer|$)/i);
-    const a = content.match(/##\s*Answer\s*([\s\S]*?)$/i);
-    return { reasoning: r?.[1]?.trim() ?? '', answer: a?.[1]?.trim() ?? content.trim() };
-  }
-
-  private async selfCritique(
+  // Streams the answer live from the single fastest healthy provider.
+  // Replaces the old multi-provider Promise.all that made time-to-first-token
+  // equal to the SLOWEST provider. Falls through the preference list only on
+  // failure, so one bad provider can never stall or blank the response.
+  private async streamPrimaryDraft(
     query: string,
-    drafts: Array<{ provider: string; answer: string }>
-  ): Promise<{ issues: string[]; confidence: number; shouldRefine: boolean }> {
-    const draftSummary = drafts.map((d, i) => `Draft ${i + 1} (${d.provider}):\n${d.answer.slice(0, 500)}`).join('\n\n');
-    const critiquePrompt = `Critique these answers to: "${query}"
+    ctx: {
+      plan: { depth: 'low' | 'medium' | 'high' | 'max' };
+      memories: Array<{ role: string; content: string }>;
+      docs: string[];
+      toolCalls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>;
+      conversation: Array<{ role: string; content: string }>;
+    },
+    onDelta: (delta: string) => void
+  ): Promise<{ provider: string; full: string; tokens: number; firstTokenMs: number; timeMs: number } | null> {
+    const start = Date.now();
+    const toolContext = ctx.toolCalls.length > 0
+      ? `\n\nTool results:\n${ctx.toolCalls.map((t) => `${t.name}(${JSON.stringify(t.args)}) → ${JSON.stringify(t.result)}`).join('\n')}`
+      : '';
 
-${draftSummary}
+    const systemPrompt = `You are Siddhi, an elite AI assistant on the KALKI platform. Answer directly, thoroughly and clearly in Markdown. Use the context below only when it is relevant. Do not add disclaimers about which model you are.
 
-Evaluate: accuracy, completeness, clarity, hallucination risk.
+Context:
+${ctx.docs.slice(0, 2).join('\n\n').slice(0, 4000)}
+${toolContext}`.trim();
 
-Return JSON: { "issues": [], "confidence": 0.0-1.0, "shouldRefine": true/false }`;
+    // Feed the recent conversation so Siddhi follows multi-turn context. The
+    // agent is re-instantiated per request, so its own memory is always empty —
+    // the authoritative history is what the client sent.
+    const turns = ctx.conversation
+      .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+      .slice(-10)
+      .map((m) => ({ role: (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user', content: m.content }));
 
-    try {
-      const result = await this.groq.chat({
-        messages: [{ role: 'user', content: critiquePrompt }],
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.1,
-        max_tokens: 400,
-      });
-      const cleaned = (result.choices?.[0]?.message?.content ?? '{}')
-        .replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned) as { issues?: unknown; confidence?: unknown; shouldRefine?: unknown };
-      return {
-        issues: Array.isArray(parsed.issues) ? (parsed.issues as string[]) : [],
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
-        shouldRefine: !!parsed.shouldRefine && Array.isArray(parsed.issues) && parsed.issues.length > 0,
-      };
-    } catch {
-      return { issues: [], confidence: 0.7, shouldRefine: false };
+    // Guarantee the live query is present as the final user turn.
+    if (turns.length === 0 || turns[turns.length - 1]?.role !== 'user') {
+      turns.push({ role: 'user', content: query });
     }
+
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+      ...turns,
+    ];
+
+    const maxTokens = ctx.plan.depth === 'max' ? 3000 : 1800;
+    // Groq first (lowest latency), then Agnes, Zhipu, OpenRouter as stability fallbacks.
+    const order = ['groq', 'agnes', 'zhipu', 'openrouter'].filter((p) => this.isProviderConfigured(p));
+
+    for (const provider of order) {
+      let full = '';
+      let firstTokenMs = 0;
+      try {
+        const gen: AsyncGenerator<string> =
+          provider === 'groq'
+            ? this.groq.invokeStream({ messages, model: 'llama-3.3-70b-versatile', temperature: 0.5, maxTokens })
+            : provider === 'agnes'
+              ? this.agnes.invokeStream({ messages, model: 'agnes-2.5-flash', temperature: 0.5, maxTokens })
+              : provider === 'zhipu'
+                ? this.zhipu.invokeStream({ messages, model: 'glm-4.7-flash', temperature: 0.4, maxTokens })
+                : this.openrouter.invokeStream({ messages, model: 'openrouter/free', temperature: 0.5, maxTokens });
+
+        for await (const delta of gen) {
+          if (!delta) continue;
+          if (firstTokenMs === 0) firstTokenMs = Date.now() - start;
+          full += delta;
+          onDelta(delta);
+        }
+
+        if (full.trim().length > 0) {
+          return { provider, full, tokens: Math.ceil(full.length / 4), firstTokenMs, timeMs: Date.now() - start };
+        }
+      } catch (error) {
+        // If we already streamed text to the client, cascading to another provider
+        // would append a second, unrelated answer on top of the partial. Keep what
+        // arrived; only retry the next provider when nothing was emitted yet.
+        if (full.trim().length > 0) {
+          this.logSafe('warn', `[Pipeline] Stream from ${provider} ended early — keeping partial`, error);
+          return { provider, full, tokens: Math.ceil(full.length / 4), firstTokenMs, timeMs: Date.now() - start };
+        }
+        this.logSafe('warn', `[Pipeline] Stream from ${provider} failed before first token, trying next`, error);
+      }
+    }
+
+    // Last resort: non-streaming call so the user still gets an answer.
+    for (const provider of order) {
+      if (provider === 'openrouter') continue;
+      try {
+        const result = await this.callProvider(provider as Provider, query, systemPrompt, { reasoningDepth: 'medium' });
+        if (result.content?.trim()) {
+          onDelta(result.content);
+          return { provider, full: result.content, tokens: result.tokens ?? 0, firstTokenMs: result.latency, timeMs: Date.now() - start };
+        }
+      } catch (error) {
+        this.logSafe('warn', `[Pipeline] Fallback draft from ${provider} failed`, error);
+      }
+    }
+    return null;
   }
 
   // ═══ SIDDHI v4.0 BATCH 2 — END TOOLS & ARTIFACTS ═══

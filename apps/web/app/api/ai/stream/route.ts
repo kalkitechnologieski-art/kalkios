@@ -118,11 +118,21 @@ export async function POST(req: NextRequest) {
       // Use omnibus router when privacy/speed hints are provided, else pipeline
       const useOmnibus = privacy || preferSpeed || preferQuality;
 
+      // True streaming: the pipeline emits live `delta` frames, so we only
+      // fall back to post-hoc token bursting when nothing actually streamed
+      // (e.g. image/video replies that return a single ready result).
+      let streamedDeltas = false;
+
       const onProgress = async (event: unknown) => {
         armTimeout();
-        const ev = event as { type: string; step?: unknown; message?: string };
+        const ev = event as { type: string; step?: unknown; message?: string; content?: unknown };
         if (ev.type === 'trace' && ev.step) await sendEvent({ type: 'trace', step: ev.step });
         else if (ev.type === 'status' && ev.message) await sendEvent({ type: 'status', message: ev.message });
+        else if (ev.type === 'queue_status') await sendEvent(event as { type: string; [k: string]: unknown });
+        else if (ev.type === 'delta' && typeof ev.content === 'string') {
+          streamedDeltas = true;
+          await streamer.sendToken(ev.content);
+        }
       };
 
       if (useOmnibus) {
@@ -158,21 +168,22 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      const result = await retryWithBackoff(
-        () => agent.processWithPipeline({
-          messages, userId, sessionId,
-          query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
-          deep, setu, search, image, video,
-          correlationId: crypto.randomUUID(),
-          onProgress,
-        }),
-        2, // max retries
-        2000 // base delay
-      );
+      // No outer retry: the pipeline streams live and already cascades through
+      // every configured provider internally (streamPrimaryDraft). Retrying here
+      // would replay the SSE stream and duplicate text on the client.
+      const result = await agent.processWithPipeline({
+        messages, userId, sessionId,
+        query: messages.filter((m: { role: string }) => m.role === 'user').pop()?.content ?? '',
+        deep, setu, search, image, video,
+        correlationId: crypto.randomUUID(),
+        onProgress,
+      });
 
-      // Token-level streaming of response
+      // Token-level streaming of response. The pipeline already streamed live
+      // `delta` frames for chat; only burst the finished text when nothing
+      // streamed (image/video and other single-result replies).
       const fullContent = result.content ?? '';
-      if (fullContent.length > 1) {
+      if (!streamedDeltas && fullContent.length > 1) {
         const tokens = splitIntoTokens(fullContent);
         for (const token of tokens) {
           if (!streamer.isOpen()) break;
