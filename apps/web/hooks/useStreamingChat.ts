@@ -77,23 +77,56 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export interface SendOptions {
+  deep?: boolean;
+  setu?: boolean;
+  search?: boolean;
+  image?: boolean;
+  video?: boolean;
+  sessionId?: string;
+}
+
+interface ErrorState {
+  message: string;
+  kind: 'offline' | 'auth' | 'rate_limit' | 'network' | 'timeout' | 'provider' | 'unknown';
+  retryable: boolean;
+}
+
 export function useStreamingChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<ErrorState | null>(null);
   const [queueStatus, setQueueStatus] = useState<QueueStatus>({ pending: 0, active: 0, completed: 0, failed: 0 });
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Last turn payload so a failed send can be retried without re-typing.
+  const lastTurnRef = useRef<{ content: string; options: SendOptions } | null>(null);
 
   const messagesRef = useRef<ChatMessage[]>(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  const sendMessage = useCallback(async (
+  const runTurn = useCallback(async (
     content: string,
-    options: { deep?: boolean; setu?: boolean; search?: boolean; image?: boolean; video?: boolean; sessionId?: string } = {}
+    options: SendOptions,
+    reuseLastUser: boolean,
   ) => {
     setError(null);
+    setErrorState(null);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offline: ErrorState = {
+        message: "You appear to be offline. Reconnect and try again.",
+        kind: 'offline',
+        retryable: true,
+      };
+      setError(offline.message);
+      setErrorState(offline);
+      return;
+    }
+
     const userMsg: ChatMessage = { id: uid('u'), role: 'user', content, isStreaming: false };
-    setMessages((prev) => [...prev, userMsg]);
+    // On retry the user bubble already exists; don't duplicate it.
+    if (!reuseLastUser) setMessages((prev) => [...prev, userMsg]);
 
     const assistantMsg: ChatMessage = {
       id: uid('a'),
@@ -110,13 +143,20 @@ export function useStreamingChat() {
     setIsLoading(true);
     abortControllerRef.current = new AbortController();
     const sessionId = options.sessionId ?? getOrCreateSessionId();
+    // Track whether any token arrived so a mid-stream drop keeps the partial
+    // answer instead of showing a scary error over good content.
+    let receivedAny = false;
+    const fail = (state: ErrorState) => { setError(state.message); setErrorState(state); };
 
     try {
+      const history = reuseLastUser
+        ? [...messagesRef.current]           // already ends with the user bubble
+        : [...messagesRef.current, userMsg];
       const response = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messagesRef.current, userMsg],
+          messages: history,
           sessionId,
           deep: options.deep ?? true,
           setu: options.setu || false,
@@ -128,10 +168,12 @@ export function useStreamingChat() {
       });
 
       if (response.status === 401) {
-        throw new Error('Please log in to chat with Siddhi.');
+        fail({ message: 'Please log in to chat with Siddhi.', kind: 'auth', retryable: false });
+        return;
       }
       if (response.status === 429) {
-        throw new Error('You are sending messages too fast. Please wait a moment.');
+        fail({ message: 'You are sending messages too fast. Please wait a moment.', kind: 'rate_limit', retryable: true });
+        return;
       }
       const contentType = response.headers.get('content-type') || '';
       if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
@@ -140,7 +182,8 @@ export function useStreamingChat() {
           const json = await response.json() as { error?: string };
           detail = json.error ? ` (${json.error})` : '';
         } catch { /* non-JSON body */ }
-        throw new Error(`Siddhi is unavailable right now${detail}. Please try again.`);
+        fail({ message: `Siddhi is unavailable right now${detail}. Please try again.`, kind: 'provider', retryable: true });
+        return;
       }
 
       const reader = response.body.getReader();
@@ -165,7 +208,9 @@ export function useStreamingChat() {
               const msg = typeof parsed.content === 'string' ? parsed.content
                 : typeof parsed.message === 'string' ? parsed.message
                 : 'Siddhi encountered an error. Please try again.';
-              setError(msg);
+              const timeout = /too long|timed out|timeout/i.test(msg);
+              const kind: ErrorState['kind'] = timeout ? 'timeout' : 'provider';
+              fail({ message: msg, kind, retryable: true });
               continue;
             }
             if (parsed.type === 'status' && typeof parsed.message === 'string') {
@@ -204,12 +249,14 @@ export function useStreamingChat() {
             }
             if ((parsed.type === 'delta' || parsed.type === 'token') && typeof parsed.content === 'string') {
               const chunk = parsed.content as string;
+              if (chunk.length > 0) receivedAny = true;
               setMessages((prev) => prev.map((m) =>
                 m.id === assistantMsg.id ? { ...m, content: (m.content ?? '') + chunk } : m
               ));
               continue;
             }
             if (parsed.type === 'content' && typeof parsed.content === 'string') {
+              if (parsed.content.length > 0) receivedAny = true;
               setMessages((prev) => prev.map((m) =>
                 m.id === assistantMsg.id ? { ...m, content: parsed.content as string } : m
               ));
@@ -278,8 +325,25 @@ export function useStreamingChat() {
       }
     } catch (err: unknown) {
       const e = err as { name?: string; message?: string };
-      if (e?.name !== 'AbortError') {
-        setError(e?.message && e.message !== 'Network error' ? e.message : 'Network error. Please check your connection and try again.');
+      if (e?.name === 'AbortError') {
+        // User cancelled — keep whatever streamed, no error banner.
+      } else if (receivedAny) {
+        // The answer was flowing and then the connection dropped. Keep the
+        // partial text and tell the user gently instead of discarding it.
+        fail({
+          message: 'Connection dropped mid-response. The answer above may be incomplete — retry to continue.',
+          kind: 'network',
+          retryable: true,
+        });
+      } else {
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        fail({
+          message: offline
+            ? 'You appear to be offline. Reconnect and try again.'
+            : (e?.message && e.message !== 'Network error' ? e.message : 'Network error. Please check your connection and try again.'),
+          kind: offline ? 'offline' : 'network',
+          retryable: true,
+        });
         // eslint-disable-next-line no-console
         console.error('[useStreamingChat]', err);
       }
@@ -294,6 +358,22 @@ export function useStreamingChat() {
     }
   }, []);
 
+  const sendMessage = useCallback(async (
+    content: string,
+    options: SendOptions = {}
+  ) => {
+    lastTurnRef.current = { content, options };
+    await runTurn(content, options, false);
+  }, [runTurn]);
+
+  const retryLastMessage = useCallback(async () => {
+    const last = lastTurnRef.current;
+    if (!last || isLoading) return;
+    // The failed turn's user bubble is still present; reuse it (reuseLastUser)
+    // so we don't stack duplicate messages.
+    await runTurn(last.content, last.options, true);
+  }, [runTurn, isLoading]);
+
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -301,7 +381,7 @@ export function useStreamingChat() {
     }
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => { setError(null); setErrorState(null); }, []);
 
-  return { messages, setMessages, isLoading, error, queueStatus, sendMessage, abort, clearError };
+  return { messages, setMessages, isLoading, error, errorState, queueStatus, sendMessage, retryLastMessage, abort, clearError };
 }

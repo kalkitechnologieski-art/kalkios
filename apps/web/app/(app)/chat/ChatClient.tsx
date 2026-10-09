@@ -11,7 +11,7 @@ import { SetuProgress } from '@/components/chat/SetuProgress';
 import { GradientGlowBackground } from '@/components/ui/GradientGlowBackground';
 import { ThinkingLoader } from '@/components/ui/ThinkingLoader';
 import { Badge } from '@/components/ui/badge';
-import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet, ChevronDown, ChevronUp, Square, Ban } from 'lucide-react';
+import { Bot, ImageIcon, Video, Sparkles, Loader2, Clock, CheckCircle, XCircle, Brain, Download, FileSpreadsheet, ChevronDown, ChevronUp, Square, Ban, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // == SIDDHI F1 WIRE - IMPORTS ==
 import { PremiumChatTopBar } from '@/components/chat/PremiumChatTopBar';
@@ -49,8 +49,15 @@ interface LeadProgressState {
 
 const IDLE_LEAD_PROGRESS: LeadProgressState = { step: 'idle', percent: 0, message: '', engines: [], directories: [], structuredCount: 0, leadsSoFar: 0, errors: [] };
 
+const WELCOME_SUGGESTIONS: Array<{ text: string; label: string; icon: string; mode?: 'chat' | 'image' | 'video' | 'leads' }> = [
+  { text: 'Explain how I can price a SaaS product for the Indian market', label: 'Ask', icon: '💡', mode: 'chat' },
+  { text: 'a neon koi fish gliding through a rainy cyberpunk street', label: 'Image', icon: '🎨', mode: 'image' },
+  { text: 'a slow cinematic drone flyover of the Himalayas at sunrise', label: 'Video', icon: '🎬', mode: 'video' },
+  { text: 'solar panel installers in Pune with contact emails', label: 'Leads', icon: '🔍', mode: 'leads' },
+];
+
 export default function ChatClient() {
-  const { messages, setMessages, isLoading, error, queueStatus, sendMessage, clearError } = useStreamingChat();
+  const { messages, setMessages, isLoading, error, errorState, queueStatus, sendMessage, retryLastMessage, clearError } = useStreamingChat();
 
   // == SIDDHI F1 WIRE - HOOK ==
   const conv = useConversations();
@@ -145,10 +152,11 @@ export default function ChatClient() {
   }, []);
 
   const handleSend = useCallback(
-    async (text: string, file?: File) => {
+    async (text: string, file?: File, modeOverride?: 'chat' | 'image' | 'video' | 'leads') => {
       if (!text.trim() || isLoading) return;
+      const activeMode = modeOverride ?? mode;
 
-      if (mode === 'leads') {
+      if (activeMode === 'leads') {
         const userMsg: SiddhiChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         setIsGeneratingLeads(true);
@@ -294,13 +302,13 @@ export default function ChatClient() {
         return;
       }
 
-      if (mode === 'image') {
+      if (activeMode === 'image') {
         // Fixed recipe — the buyer just types the subject and presses Enter.
         await sendMessage(`Generate image: ${text} | Style: photorealistic | Quality: high | Size: 1K | Ratio: 16:9`, { deep: true, setu: false, search: false, image: true });
         return;
       }
 
-      if (mode === 'video') {
+      if (activeMode === 'video') {
         await sendMessage(`Generate video: ${text} | Resolution: 720P | Duration: 4s | Aspect: 16:9 | Quality: balanced`, { deep: true, setu: false, search: false, video: true });
         return;
       }
@@ -689,6 +697,63 @@ export default function ChatClient() {
       )}
 
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-hide">
+        {messages.length === 0 && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center justify-center text-center px-4 py-10 sm:py-16"
+          >
+            {/* Animated orb */}
+            <div className="relative mb-6">
+              <motion.div
+                className="absolute inset-0 rounded-full bg-cyan-500/30 blur-2xl"
+                animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.8, 0.5] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <motion.div
+                className="relative w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/20 to-purple-600/20 border border-white/15 backdrop-blur-xl"
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Bot className="w-9 h-9 text-cyan-300" />
+                <span className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-green-400 ring-2 ring-black animate-pulse" />
+              </motion.div>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-cyan-100 to-purple-200 bg-clip-text text-transparent tracking-tight">
+              Meet Siddhi
+            </h1>
+            <p className="mt-2 max-w-md text-sm text-white/50 leading-relaxed">
+              Your AI copilot for answers, images, videos and lead generation.
+              Pick a starting point below or just ask anything.
+            </p>
+
+            {/* Suggested prompts — clickable, actually send */}
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+              {WELCOME_SUGGESTIONS.map((s, i) => (
+                <motion.button
+                  key={s.text}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 + i * 0.06, duration: 0.4 }}
+                  onClick={() => { if (s.mode) setMode(s.mode); void handleSend(s.text, undefined, s.mode); }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={isLoading}
+                  className="group text-left rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-xl px-4 py-3.5 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/10 transition-all disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base leading-none">{s.icon}</span>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">{s.label}</span>
+                  </div>
+                  <p className="text-[13px] text-white/75 leading-snug group-hover:text-white transition-colors">{s.text}</p>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         <AnimatePresence initial={false}>
           {messages
             // Failed/aborted turns used to persist empty assistant bubbles that
@@ -778,17 +843,40 @@ export default function ChatClient() {
         )}
 
         {error && (
-          <div className="flex justify-center my-2">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 text-xs text-red-400/80 font-mono max-w-[90%] backdrop-blur-sm">
-              {error}
-              <button
-                onClick={clearError}
-                className="ml-2 text-red-400 hover:text-red-300 underline"
-              >
-                Dismiss
-              </button>
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="flex justify-center my-2"
+          >
+            <div className="relative max-w-[92%] w-auto rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/60 to-black/70 backdrop-blur-xl shadow-lg shadow-red-500/10 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+                  <XCircle className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] text-red-100/90 leading-snug">{error}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {errorState?.retryable && (
+                      <button
+                        onClick={() => void retryLastMessage()}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-200 hover:bg-red-500/30 hover:text-white transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                        Retry
+                      </button>
+                    )}
+                    <button
+                      onClick={clearError}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-300/70 hover:text-red-200 hover:bg-white/5 transition-all text-xs font-medium"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={endRef} />
