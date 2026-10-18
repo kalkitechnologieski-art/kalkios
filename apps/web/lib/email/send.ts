@@ -50,6 +50,31 @@ export async function sendRewardEmail(args: RewardEmailArgs): Promise<void> {
   await send({ to: args.to, subject, html });
 }
 
+export interface ServiceRequestArgs {
+  to: string;
+  buyerName: string;
+  serviceName: string;
+  projectId: string;
+}
+
+export async function sendServiceRequestConfirmation(args: ServiceRequestArgs): Promise<void> {
+  if (!args.to || !args.to.includes('@')) {
+    logger.warn('[Email] Skipping request confirmation — invalid recipient', { to: args.to });
+    return;
+  }
+  const subject = `We received your request · ${args.serviceName}`;
+  const html = `
+    <div style="font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:16px">
+      <h1 style="color:#00ffff;font-size:20px;margin:0 0 16px 0">Request received</h1>
+      <p style="color:#ccc;line-height:1.6">Hi ${args.buyerName},</p>
+      <p style="color:#ccc;line-height:1.6">Thanks for your interest in <strong>${args.serviceName}</strong>. No payment was taken — our team will review your brief and send a tailored quote shortly.</p>
+      <p style="color:#888;font-size:13px;line-height:1.6">You can track this request live on your dashboard.</p>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'}/client" style="display:inline-block;margin-top:16px;background:#00ffff;color:#000;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">View your dashboard</a>
+      <p style="color:#666;font-size:12px;margin-top:32px">KALKI OS · Temple of Technology</p>
+    </div>`;
+  await send({ to: args.to, subject, html });
+}
+
 async function send(args: { to: string; subject: string; html: string }): Promise<void> {
   if (!RESEND_API_KEY) {
     logger.info('[Email] (dev) would send', { to: args.to, subject: args.subject });

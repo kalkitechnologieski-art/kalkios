@@ -7,6 +7,8 @@ import Link from 'next/link'
 import { ArrowRight, Zap, Shield, Globe, Brain, Building2, Users, TrendingUp, Award, Clock, CheckCircle2, Sparkles, Star, MapPin } from 'lucide-react'
 import { fetchServices } from '@/lib/services'
 import ServiceCard from '@/components/ui/ServiceCard'
+import { BannerSlideshow } from '@/components/home/BannerSlideshow'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 import { buildHomepageMetadata } from '@/lib/seo/enhanced-metadata'
 import { FAQStructuredData } from '@/components/seo/FAQStructuredData'
 import { FAQ_PRESETS } from '@/lib/seo/faq-presets'
@@ -18,6 +20,7 @@ export const metadata: Metadata = buildHomepageMetadata()
 export default async function Homepage() {
   const services = await fetchServices()
   const featured = services.slice(0, 6)
+  const categories = Array.from(new Set(services.map((s) => s.category).filter(Boolean))).sort()
 
   return (
     <>
@@ -110,6 +113,11 @@ export default async function Homepage() {
           </div>
         </div>
       </section>
+
+      {/* Prime banner slideshow — slim, horizontal, industry-grade */}
+      <div className="py-8 md:py-10 -mt-10 relative z-20">
+        <BannerSlideshow />
+      </div>
 
       {/* Trust Bar */}
       <section className="py-6 md:py-8 border-y border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent">
@@ -238,6 +246,29 @@ export default async function Homepage() {
         </div>
       </section>
 
+      {/* Browse by category — internal linking hub for SEO/AEO/GEO */}
+      {categories.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+          <div className="text-center mb-8 md:mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-white font-mono">Browse Services by Category</h2>
+            <p className="text-cyan-400/50 text-sm md:text-base mt-2 max-w-2xl mx-auto">
+              Jump straight to the {categories.length} service categories KALKI OS delivers for Indian businesses.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+            {categories.map((c) => (
+              <Link
+                key={c}
+                href={`/marketplace/${encodeURIComponent(c)}`}
+                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-cyan-500/10 hover:border-cyan-500/40 text-sm text-white/70 hover:text-cyan-200 transition"
+              >
+                {c} Services
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Local SEO Section - Indore Focus for GEO */}
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -307,6 +338,8 @@ export default async function Homepage() {
           <p className="text-white/40 text-sm mt-4">✓ No credit card required &nbsp; ✓ Free consultation &nbsp; ✓ Cancel anytime</p>
         </div>
       </section>
+
+      <SiteFooter />
     </>
   )
 }

@@ -243,7 +243,7 @@ export function buildCategoryMetadata(
   return buildEnhancedMetadata({
     title: `${category} Services in India | ${count} AI-Powered Solutions | ${SITE_NAME}`,
     description: description || `Browse ${count} professional ${category.toLowerCase()} services. AI-powered solutions for Indian businesses. Starting at ₹499. Free consultation available.`,
-    path: `/marketplace?category=${encodeURIComponent(category)}`,
+    path: `/marketplace/${encodeURIComponent(category)}`,
     keywords: [
       category,
       `${category} services`,

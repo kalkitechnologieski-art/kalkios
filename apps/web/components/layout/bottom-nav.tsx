@@ -4,13 +4,13 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Home, Compass, ShoppingBag, User, Bot } from 'lucide-react';
+import { Home, Compass, FileText, User, Bot } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Explore', icon: Compass, href: '/explore' },
   { label: 'SIDDHI', icon: Bot, href: '/chat', isSpecial: true },
-  { label: 'Cart', icon: ShoppingBag, href: '/cart' },
+  { label: 'Quote', icon: FileText, href: '/request' },
   { label: 'Profile', icon: User, href: '/profile' },
 ];
 

@@ -38,16 +38,16 @@ export interface HowToStepText {
 export function buildHowToSteps(s: ServiceInput): HowToStepText[] {
   return [
     {
-      name: 'Choose your tier',
-      text: `Select the ${s.name} package that matches your scope. All tiers are described on this page.`,
+      name: 'Share your requirement',
+      text: `Submit a free request for ${s.name} — tell us your goal, budget and timeline. No payment is taken.`,
     },
     {
-      name: 'Checkout securely',
-      text: 'Sign in and pay via Instamojo. Your order is confirmed instantly with a GST invoice.',
+      name: 'Receive a tailored quote',
+      text: 'Within 24 hours our team reviews your brief and sends a fixed proposal with scope, timeline and pricing.',
     },
     {
-      name: 'Project kickoff',
-      text: `Our team starts within 24 hours. You receive a live project timeline in your client dashboard.`,
+      name: 'Approve and start',
+      text: 'You only pay once you approve the proposal. Your project then appears live on your client dashboard.',
     },
     {
       name: 'Delivery & review',

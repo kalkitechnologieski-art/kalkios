@@ -55,9 +55,26 @@ export async function GET() {
   lines.push('- Size: 11–50 employees');
   lines.push(`- Website: ${baseUrl}`);
   lines.push('');
+  lines.push('## Pages');
+  lines.push('');
+  lines.push(`- [Home](${baseUrl}): Overview of the KALKI OS AI platform and services.`);
+  lines.push(`- [Marketplace](${baseUrl}/marketplace): Full catalogue of AI-powered digital services with INR pricing.`);
+  lines.push(`- [Request a service](${baseUrl}/request): Free, no-payment intake form to submit a service requirement and get a tailored quote.`);
+  lines.push(`- [Siddhi AI chat](${baseUrl}/chat): Conversational AI concierge for queries, automation and lead generation.`);
+  lines.push(`- [Explore](${baseUrl}/explore): Search and discover services.`);
+  lines.push(`- [About](${baseUrl}/about): KALKI Intelligence LLP company profile.`);
+  lines.push(`- [Contact](${baseUrl}/contact): Reach the team in Indore, India.`);
+  lines.push(`- [Privacy Policy](${baseUrl}/privacy): How personal data is handled (DP Act, 2023).`);
+  lines.push(`- [Terms](${baseUrl}/terms): Terms & conditions of service.`);
+  lines.push('');
+  lines.push('## Categories');
+  lines.push('');
+  for (const [category, list] of groupedByCategory) {
+    lines.push(`- [${category}](${baseUrl}/marketplace/${encodeURIComponent(category)}): ${list.length} service${list.length === 1 ? '' : 's'}.`);
+  }
+  lines.push('');
   lines.push('## Services');
   lines.push('');
-
   for (const [category, list] of groupedByCategory) {
     lines.push(`### ${category}`);
     lines.push('');

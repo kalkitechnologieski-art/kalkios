@@ -5,6 +5,7 @@ import { fetchServices, checkSupabaseConnection } from '@/lib/services'
 import Link from 'next/link'
 import { Search, Filter, Star, ShoppingBag, Sparkles, AlertCircle, Wifi, WifiOff } from 'lucide-react'
 import type { Database } from '@/lib/supabase/types'
+import { getServiceImageUrl } from '@/lib/services/service-image'
 
 type Service = Database['public']['Tables']['services']['Row'] & {
   target_industries?: string[]
@@ -147,16 +148,13 @@ export default function MarketplacePage() {
               className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10 flex flex-col cursor-pointer"
             >
               <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 flex items-center justify-center relative overflow-hidden">
-                {service.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={service.image_url}
-                    alt={service.name}
-                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition"
-                  />
-                ) : (
-                  <span className="text-6xl opacity-30">{service.icon || '📦'}</span>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getServiceImageUrl(service)}
+                  alt={service.name}
+                  loading="lazy"
+                  className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition"
+                />
                 {service.price && (
                   <span className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                     {service.price < 1000 ? 'Starter' : service.price < 100000 ? 'Pro' : 'Enterprise'}

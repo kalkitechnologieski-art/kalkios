@@ -2,12 +2,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Home, Compass, ShoppingBag, User } from 'lucide-react'
+import { Home, Compass, FileText, User } from 'lucide-react'
 
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Explore', icon: Compass, href: '/explore' },
-  { label: 'Cart', icon: ShoppingBag, href: '/cart' },
+  { label: 'Quote', icon: FileText, href: '/request' },
   { label: 'Profile', icon: User, href: '/profile' },
 ]
 

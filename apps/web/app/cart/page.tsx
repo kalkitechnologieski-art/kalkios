@@ -1,15 +1,7 @@
-import { Suspense } from 'react'
-import dynamic from 'next/dynamic'
-
-const CartClient = dynamic(
-  () => import('./CartClient'),
-  { loading: () => <div className="text-white/40 text-center py-20">Loading cart...</div> }
-)
+// The cart belonged to the payment flow, which is now removed.
+// /marketplace is the entry to the no-payment request flow.
+import { redirect } from 'next/navigation'
 
 export default function CartPage() {
-  return (
-    <Suspense fallback={<div className="text-white/40 text-center py-20">Loading cart...</div>}>
-      <CartClient />
-    </Suspense>
-  )
+  redirect('/marketplace')
 }

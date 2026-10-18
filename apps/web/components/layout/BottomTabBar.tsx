@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Home, Compass, MessageCircle, User, ShoppingBag } from 'lucide-react';
+import { Home, Compass, MessageCircle, User, FileText } from 'lucide-react';
 
 const TABS = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Explore', icon: Compass, href: '/explore' },
   { label: 'Chat', icon: MessageCircle, href: '/chat', isSpecial: true },
-  { label: 'Cart', icon: ShoppingBag, href: '/cart' },
+  { label: 'Quote', icon: FileText, href: '/request' },
   { label: 'Profile', icon: User, href: '/profile' },
 ];
 
