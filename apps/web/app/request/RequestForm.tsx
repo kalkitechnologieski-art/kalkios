@@ -93,6 +93,21 @@ export function RequestForm({
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.buyerEmail.trim()) &&
     /^[0-9+\-\s()]{7,15}$/.test(form.buyerPhone.trim())
 
+  // One attempt with a hard timeout so a hung request never leaves the button
+  // stuck. Returns the parsed body plus the HTTP status.
+  const submitOnce = async (signal: AbortSignal) => {
+    const res = await fetch('/api/services/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serviceIds: selected, ...form }),
+      signal,
+    })
+    const data = (await res.json().catch(() => null)) as
+      | { error?: string; requestId?: string; partial?: boolean; submitted?: number; total?: number }
+      | null
+    return { res, data }
+  }
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (selected.length === 0) {
@@ -102,22 +117,51 @@ export function RequestForm({
     }
     setStatus('loading')
     setError(null)
-    try {
-      const res = await fetch('/api/services/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceIds: selected, ...form }),
-      })
-      const data = (await res.json().catch(() => null)) as
-        | { error?: string; requestId?: string }
-        | null
-      if (!res.ok) throw new Error(data?.error ?? 'We could not submit your request. Please try again.')
-      setRequestId(data?.requestId ?? null)
-      setStatus('success')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setStatus('error')
+
+    const TIMEOUT_MS = 20_000
+    const MAX_ATTEMPTS = 2 // first try + one automatic retry for transient faults
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+      try {
+        const { res, data } = await submitOnce(controller.signal)
+
+        if (res.ok) {
+          setRequestId(data?.requestId ?? null)
+          setStatus('success')
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          return
+        }
+
+        // Client-side (4xx) errors are deterministic — never retry, show the reason.
+        if (res.status >= 400 && res.status < 500) {
+          throw new Error(data?.error ?? 'We could not submit your request. Please try again.')
+        }
+
+        // 5xx: retry once, then surface.
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 800))
+          continue
+        }
+        throw new Error(data?.error ?? 'We could not submit your request right now. Please try again.')
+      } catch (err) {
+        const aborted = err instanceof Error && err.name === 'AbortError'
+        if (aborted && attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 800))
+          continue
+        }
+        if (aborted) {
+          setError('That took too long. Please check your connection and try again.')
+          setStatus('error')
+          return
+        }
+        setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+        setStatus('error')
+        return
+      } finally {
+        clearTimeout(timer)
+      }
     }
   }
 

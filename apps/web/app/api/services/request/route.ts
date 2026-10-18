@@ -84,10 +84,34 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = (await createAdminClient()) as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          in: (c: string, v: string[]) => { eq: (c: string, v: unknown) => Promise<{ data: unknown; error: { message: string } | null }> };
+        };
+      };
       rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
     };
 
+    // Validate every requested id against active services BEFORE creating orders.
+    // This turns a cryptic downstream RPC failure into a precise, actionable 400.
+    {
+      const { data: validData } = await admin
+        .from('services')
+        .select('id')
+        .in('id', serviceIds)
+        .eq('is_active', true);
+      const valid = new Set(((validData ?? []) as { id: string }[]).map((r) => r.id));
+      const rejected = serviceIds.filter((id) => !valid.has(id));
+      if (rejected.length === serviceIds.length) {
+        return NextResponse.json({ error: 'The selected service is no longer available. Please pick another.' }, { status: 400 });
+      }
+      if (rejected.length > 0) {
+        return NextResponse.json({ error: 'One or more selected services are no longer available. Please remove them and try again.' }, { status: 400 });
+      }
+    }
+
     const created: Array<{ orderId: string; projectId: string; serviceName: string }> = [];
+    const failed: string[] = [];
     for (const serviceId of serviceIds) {
       const { data, error } = await admin.rpc('create_service_request', {
         p_service_id: serviceId,
@@ -102,10 +126,16 @@ export async function POST(req: NextRequest) {
       });
       if (error) {
         logger.error('[ServiceRequest] RPC failed', { serviceId, error: error.message });
-        return NextResponse.json(
-          { error: 'We could not submit your request right now. Please try again.' },
-          { status: 502 }
-        );
+        failed.push(serviceId);
+        // Nothing committed yet: surface the failure so the client can retry.
+        if (created.length === 0) {
+          return NextResponse.json(
+            { error: 'We could not submit your request right now. Please try again.' },
+            { status: 502 }
+          );
+        }
+        // Partial success already recorded — stop and return what landed.
+        break;
       }
       const r = (data ?? {}) as { order_id?: string; project_id?: string; service_name?: string };
       created.push({
@@ -127,13 +157,16 @@ export async function POST(req: NextRequest) {
       projectId: created[0].projectId,
     }).catch(() => { /* already logged inside */ });
 
-    logger.info('[ServiceRequest] created', { count: created.length, clientId });
+    logger.info('[ServiceRequest] created', { count: created.length, failed: failed.length, clientId });
 
     return NextResponse.json({
       ok: true,
       requestId: created[0].orderId,
       projectId: created[0].projectId,
       services: created,
+      partial: failed.length > 0,
+      submitted: created.length,
+      total: serviceIds.length,
     });
   } catch (err) {
     logger.error('[ServiceRequest] unhandled', err);
