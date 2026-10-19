@@ -21,13 +21,19 @@ export default function robots(): MetadataRoute.Robots {
           '/_next/',
           '/unauthorized',
           '/settings/',
+          '/p/',
+          // Query strings duplicate catalog and service pages.
+          '/*?*',
         ],
       },
+      // ─── Search engines with a polite crawl budget ──────────
+      { userAgent: ['Googlebot', 'Googlebot-Image'], allow: ['/', '/images/'], crawlDelay: 1 },
+      { userAgent: 'Bingbot', allow: '/', crawlDelay: 2 },
       // ─── AI crawlers — allowed on public content ────────────
-      { userAgent: 'GPTBot', allow: '/', disallow: ['/api/', '/admin/', '/employee/', '/client/'] },
+      { userAgent: 'GPTBot', allow: '/', disallow: ['/api/', '/admin/', '/employee/', '/client/', '/p/'] },
       { userAgent: 'OAI-SearchBot', allow: '/' },
       { userAgent: 'ChatGPT-User', allow: '/' },
-      { userAgent: 'ClaudeBot', allow: '/', disallow: ['/api/', '/admin/', '/employee/', '/client/'] },
+      { userAgent: 'ClaudeBot', allow: '/', disallow: ['/api/', '/admin/', '/employee/', '/client/', '/p/'] },
       { userAgent: 'Claude-Web', allow: '/' },
       { userAgent: 'anthropic-ai', allow: '/' },
       { userAgent: 'PerplexityBot', allow: '/' },

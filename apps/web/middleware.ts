@@ -9,7 +9,12 @@ import { createClient } from '@/lib/supabase/server';
 const PUBLIC_ROUTES = [
   '/chat', '/', '/login', '/register', '/auth/callback', '/contact', '/careers',
   '/services', '/explore', '/marketplace', '/about', '/terms', '/support', '/unauthorized',
-  '/api/health',
+  '/request', '/privacy',
+  '/api/health', '/api/services/request',
+  // Crawler files must answer 200 to bots that are not logged in.
+  '/robots.txt', '/sitemap.xml', '/rss.xml', '/llms.txt',
+  // Tokenised, no-index proposal links — clients must open them without an account.
+  '/p',
   '/_next', '/favicon.ico',
 ];
 
