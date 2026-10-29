@@ -13,7 +13,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isChatPage = pathname === '/chat';
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Sidebar – fixed, highest z-index */}
       <EnterpriseSidebar isMobileOpen={isMobileOpen} setMobileOpen={setIsMobileOpen} />
 

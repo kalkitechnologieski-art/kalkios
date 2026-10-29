@@ -27,10 +27,11 @@ import {
   ClipboardList,
   ShieldCheck,
   Clock,
-  Star,
   MessageCircle,
 } from 'lucide-react'
 import type { PickerService } from './page'
+import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline'
+import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow'
 
 const MAX_SERVICES = 5
 
@@ -177,14 +178,15 @@ export function RequestForm({
         transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         className="text-center mb-8"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-5">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm text-white/70 font-medium">Request · No payment now</span>
+        <div className="flex justify-center mb-5">
+          <AnimatedEyebrow label="No payment now" icon={<Sparkles className="w-3.5 h-3.5" />} />
         </div>
-        <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight">
-          Tell us what you want to build
-        </h1>
-        <p className="text-white/50 mt-4 text-base md:text-lg max-w-xl mx-auto">
+        <AnimatedHeadline
+          as="h1"
+          text="Tell us what you want to build"
+          className="text-3xl md:text-5xl font-bold text-white leading-tight"
+        />
+        <p className="text-white/60 mt-4 text-base md:text-lg max-w-xl mx-auto">
           Pick your services and share a few details. You get a tailored quote and a free
           consultation within 24 hours — you only pay once you approve the proposal.
         </p>
@@ -425,7 +427,7 @@ function SuccessCard({ requestId, selected }: { requestId: string | null; select
       <div className="mx-auto w-16 h-16 rounded-2xl bg-green-500/15 border border-green-400/30 flex items-center justify-center mb-6">
         <Check className="w-8 h-8 text-green-400" strokeWidth={3} />
       </div>
-      <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">Request received</h1>
+      <AnimatedHeadline as="h1" text="Request received" className="text-2xl md:text-3xl font-bold text-white mb-3" />
       <p className="text-white/60 mb-6">
         Thanks! Our team is reviewing your brief for{' '}
         <span className="text-cyan-300">{selected.length > 0 ? selected.join(', ') : 'your project'}</span>.

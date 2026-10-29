@@ -10,18 +10,15 @@ export interface Citation {
 }
 
 export const INDUSTRY_CITATIONS: Citation[] = [
-  { statement: '70% of B2B buyers complete purchases online without sales interaction', source: 'Gartner', year: 2026 },
-  { statement: 'Businesses using AI chatbots report 40% lower support costs', source: 'McKinsey', year: 2025 },
-  { statement: 'AI-powered lead generation improves conversion by 2.5×', source: 'Forrester', year: 2025 },
-  { statement: '60% of Indian SMEs plan AI adoption within 12 months', source: 'NASSCOM', year: 2026 },
-  { statement: 'AI-driven personalisation lifts basket size by 30%', source: 'Beauty retail case study', year: 2025 },
+  { statement: '67% of B2B buyers prefer a rep-free buying experience', source: 'Gartner Sales Survey', year: 2026 },
+  { statement: 'B2B buyers complete roughly 70% of their purchase research before speaking to a salesperson', source: 'Gartner B2B Buying Journey research', year: 2024 },
 ];
 
 export const KALKI_STATS: Citation[] = [
-  { statement: '500+ businesses served across India', year: 2026 },
-  { statement: '4.8/5 average client rating', year: 2026 },
-  { statement: '30–60 day typical project delivery', year: 2026 },
-  { statement: 'Zero-cost AI infrastructure using browser-native inference', year: 2026 },
+  { statement: 'Written quote with fixed scope and price returned within 24 hours of a brief', year: 2026 },
+  { statement: '₹0 to start — payment only after the scope and delivery date are agreed in writing', year: 2026 },
+  { statement: '30–60 day typical delivery window for website and automation projects', year: 2026 },
+  { statement: 'Indore, Madhya Pradesh based team, IST working hours, support in Hindi and English', year: 2026 },
 ];
 
 export interface GeoBlock {

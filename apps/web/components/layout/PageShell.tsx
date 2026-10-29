@@ -24,7 +24,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        'min-h-screen bg-black',
+        'min-h-screen bg-background text-foreground',
         padded && 'px-4 sm:px-6 lg:px-8',
         !fullWidth && 'max-w-7xl mx-auto',
         className

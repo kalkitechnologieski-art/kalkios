@@ -3,7 +3,9 @@
 // with @id references so LLMs can traverse the graph deterministically.
 // -----------------------------------------------------------------------------
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+import { siteOrigin } from '@/lib/seo/site-url';
+
+const SITE = siteOrigin();
 
 export const ENTITY_IDS = {
   organization: `${SITE}/#organization`,

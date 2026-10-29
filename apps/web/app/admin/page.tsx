@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Users, ShoppingBag, FileText, FolderKanban, TrendingUp, Tag, Gift, Package, UserCheck, Clock, AlertCircle, CheckCircle2, DollarSign, BarChart3, Bell } from 'lucide-react';
+import { Users, ShoppingBag, FileText, FolderKanban, TrendingUp, Tag, Gift, Package, UserCheck, Clock, AlertCircle, CheckCircle2, DollarSign, BarChart3, Bell, Quote, Inbox } from 'lucide-react';
 import { TimelineFeed } from '@/components/timeline/TimelineFeed';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -249,6 +249,8 @@ export default function AdminDashboard() {
           <QuickAction href="/admin/hiring" label="Hiring" icon={UserCheck} color="cyan" />
           <QuickAction href="/admin/projects" label="Projects" icon={FolderKanban} color="purple" />
           <QuickAction href="/admin/users" label="Users" icon={Users} color="green" />
+          <QuickAction href="/admin/testimonials" label="Testimonials" icon={Quote} color="purple" />
+          <QuickAction href="/admin/inquiries" label="Enquiries" icon={Inbox} color="cyan" />
           <QuickAction href="/admin/reports" label="Reports" icon={BarChart3} color="yellow" />
         </div>
       </section>

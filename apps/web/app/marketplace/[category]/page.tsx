@@ -9,14 +9,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { createPublicClient } from '@/lib/supabase/public-client';
+import { fetchAllCategories, fetchServicesByCategory } from '@/lib/services';
 import { getCategoryImageUrl, getServiceImageUrl } from '@/lib/services/service-image';
+import { decodeSegment } from '@/lib/services/href';
 import { buildCategoryMetadata } from '@/lib/seo/enhanced-metadata';
 import { breadcrumbSchema, organizationSchema } from '@/lib/seo/schema';
 import ServiceCard from '@/components/ui/ServiceCard';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline';
+import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 
 type Params = { params: Promise<{ category: string }> };
 
@@ -35,42 +39,30 @@ interface Row {
 }
 
 async function getServicesInCategory(category: string): Promise<Row[]> {
-  const supabase = createPublicClient();
-  // @ts-ignore - runtime table
-  const { data } = await supabase
-    .from('services')
-    .select('id, name, slug, category, description, price, rating, review_count, image_url, target_industries, long_description')
-    .eq('category', category as any)
-    .eq('is_active', true as any)
-    .order('review_count', { ascending: false });
-  return (data ?? []) as Row[];
+  // Single catalog source shared with the homepage and the detail pages, so a
+  // card that renders can never link to a page that 404s.
+  return (await fetchServicesByCategory(category)) as unknown as Row[];
 }
 
 async function getAllCategories(): Promise<string[]> {
-  const supabase = createPublicClient();
-  // @ts-ignore - runtime table
-  const { data } = await supabase
-    .from('services')
-    .select('category')
-    .eq('is_active', true as any);
-  return Array.from(new Set(((data ?? []) as { category: string }[]).map((r) => r.category))).sort();
+  return fetchAllCategories();
 }
 
 export async function generateStaticParams() {
   const categories = await getAllCategories();
-  return categories.map((category) => ({ category: encodeURIComponent(category) }));
+  // Next.js encodes path segments itself — returning pre-encoded values turns
+  // "AI Chatbots" into "AI%2520Chatbots" and the page never matches.
+  return categories.map((category) => ({ category }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const { category: raw } = await params;
-  const category = decodeURIComponent(raw);
+  const category = decodeSegment((await params).category);
   const services = await getServicesInCategory(category);
   return buildCategoryMetadata(category, services.length, undefined);
 }
 
 export default async function CategoryPage({ params }: Params) {
-  const { category: raw } = await params;
-  const category = decodeURIComponent(raw);
+  const category = decodeSegment((await params).category);
   const services = await getServicesInCategory(category);
   if (services.length === 0) notFound();
 
@@ -115,7 +107,7 @@ export default async function CategoryPage({ params }: Params) {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="text-xs text-white/40 mb-4 flex items-center gap-2">
+        <nav aria-label="Breadcrumb" className="text-xs text-white/60 mb-4 flex items-center gap-2">
           <Link href="/" className="hover:text-cyan-300 transition">Home</Link>
           <span>/</span>
           <Link href="/marketplace" className="hover:text-cyan-300 transition">Marketplace</Link>
@@ -130,15 +122,18 @@ export default async function CategoryPage({ params }: Params) {
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
           </div>
           <div className="relative z-10 px-6 py-10 md:px-10 md:py-14 max-w-2xl">
-            <p className="text-xs text-cyan-400/70 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> {count} services
-            </p>
-            <h1 className="text-2xl md:text-4xl font-bold text-white leading-tight">
-              {category} Services in India
-            </h1>
-            <p className="text-white/70 mt-3 text-sm md:text-base leading-relaxed">
+            <div className="mb-3">
+              <AnimatedEyebrow label={`${count} ${count === 1 ? 'service' : 'services'}`} icon={<Sparkles className="w-3.5 h-3.5" />} />
+            </div>
+            <AnimatedHeadline
+              as="h1"
+              text={`${category} Services in India`}
+              className="text-2xl md:text-4xl font-bold text-white leading-tight"
+              stagger={0.04}
+            />
+            <p className="text-white/75 mt-3 text-sm md:text-base leading-relaxed">
               AI-powered {category.toLowerCase()} delivered by KALKI Intelligence for businesses across India.
-              Transparent pricing, {count} proven packages, and a free tailored quote — no payment required to start.
+              Written scope, fixed price and a delivery date — quoted within 24 hours, nothing to pay to start.
             </p>
             <div className="flex flex-wrap gap-3 mt-5">
               <Link href="/request" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 rounded-xl text-white font-semibold text-sm transition shadow-lg shadow-cyan-500/25">
@@ -153,30 +148,35 @@ export default async function CategoryPage({ params }: Params) {
 
         {/* Service grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {services.map((s) => (
-            <ServiceCard
+          {services.map((s, idx) => (
+            <div
               key={s.id}
-              service={{
-                id: s.id,
-                name: s.name,
-                slug: s.slug,
-                category: s.category,
-                description: s.description,
-                price: s.price,
-                rating: s.rating,
-                review_count: s.review_count,
-                image_url: s.image_url,
-                target_industries: s.target_industries ?? [],
-                long_description: s.long_description ?? null,
-              } as never}
-            />
+              className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500"
+              style={{ animationDelay: `${Math.min(idx, 11) * 45}ms`, animationFillMode: 'backwards' }}
+            >
+              <ServiceCard
+                service={{
+                  id: s.id,
+                  name: s.name,
+                  slug: s.slug,
+                  category: s.category,
+                  description: s.description,
+                  price: s.price,
+                  rating: s.rating,
+                  review_count: s.review_count,
+                  image_url: s.image_url,
+                  target_industries: s.target_industries ?? [],
+                  long_description: s.long_description ?? null,
+                } as never}
+              />
+            </div>
           ))}
         </div>
 
         {/* Cross-category internal links */}
         {otherCategories.length > 0 && (
           <section className="mt-12">
-            <h2 className="text-white font-semibold text-lg mb-4">Explore other categories</h2>
+            <AnimatedHeadline as="h2" text="Explore other categories" className="text-white font-semibold text-lg mb-4" inView />
             <div className="flex flex-wrap gap-2">
               {otherCategories.map((c) => (
                 <Link

@@ -3,9 +3,10 @@
 // -----------------------------------------------------------------------------
 
 import type { MetadataRoute } from 'next';
+import { siteOrigin } from '@/lib/seo/site-url';
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+  const baseUrl = siteOrigin();
 
   return {
     rules: [

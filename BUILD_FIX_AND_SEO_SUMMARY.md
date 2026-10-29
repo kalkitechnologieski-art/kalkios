@@ -151,7 +151,7 @@ try {
 {
   "@type": "Organization",
   "name": "KALKI Intelligence",
-  "url": "https://kalkios.com",
+  "url": "https://www.kalki-intelligence.in",
   "areaServed": "India",
   "location": "Indore, Madhya Pradesh, India",
   "numberOfEmployees": "500+",

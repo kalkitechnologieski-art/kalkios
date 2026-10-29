@@ -3,8 +3,9 @@
 // -----------------------------------------------------------------------------
 
 import type { Metadata } from 'next';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 const SITE_NAME = 'KALKI OS';
 const DEFAULT_LOCALE = 'en_IN';
 
@@ -38,7 +39,7 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
   const title = options.title;
   const description = truncateDescription(options.description, 160);
   const keywords = buildKeywordString(options.keywords || []);
-  const ogImage = options.ogImage || `${SITE}/images/og-default.jpg`;
+  const ogImage = options.ogImage || `${SITE}/images/og-default.png`;
 
   return {
     // Core meta tags
@@ -78,7 +79,7 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
           width: 1200,
           height: 630,
           alt: title,
-          type: 'image/jpeg',
+          type: 'image/png',
         },
       ],
       ...(options.publishedTime && {
@@ -141,11 +142,20 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
       'howto-steps': options.howToSteps ? `${options.howToSteps} steps` : '',
     },
 
-    // Verification tags (add your actual verification codes)
-    verification: {
-      google: 'your-google-verification-code',
-      yandex: 'your-yandex-verification-code',
-    },
+    // Site ownership verification is only emitted when a real code exists;
+    // placeholder values make Search Console reject the verification attempt.
+    ...((process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION)
+      ? {
+          verification: {
+            ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+              ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+              : {}),
+            ...(process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION
+              ? { yandex: process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION }
+              : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -213,8 +223,8 @@ export function buildServiceMetadata(service: {
   reviewCount?: number;
 }): Metadata {
   return buildEnhancedMetadata({
-    title: `${service.name} Services in Indore | Starting at ₹${service.price} | ${SITE_NAME}`,
-    description: `Professional ${service.name.toLowerCase()} services by KALKI Intelligence. ${service.description} Serving Indore and all of India. Get quote now!`,
+    title: `${service.name} Services in Indore | From ₹${service.price}`,
+    description: `Professional ${service.name.toLowerCase()} services from KALKI Intelligence, an AI tech company in Indore. ${service.description} Serving Indore and businesses across India.`,
     path: `/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
     keywords: [
       service.name,
@@ -223,7 +233,8 @@ export function buildServiceMetadata(service: {
       `${service.name} India`,
       `${service.name} price`,
       `${service.name} cost`,
-      'affordable',
+      'tech company Indore',
+      'AI tech company India',
       'professional',
       'enterprise',
     ],
@@ -240,15 +251,18 @@ export function buildCategoryMetadata(
   count: number,
   description?: string
 ): Metadata {
+  const solutionLabel = count === 1 ? 'AI-Powered Solution' : 'AI-Powered Solutions';
   return buildEnhancedMetadata({
-    title: `${category} Services in India | ${count} AI-Powered Solutions | ${SITE_NAME}`,
-    description: description || `Browse ${count} professional ${category.toLowerCase()} services. AI-powered solutions for Indian businesses. Starting at ₹499. Free consultation available.`,
+    title: `${category} Services in India | ${count} ${solutionLabel}`,
+    description: description || `Browse ${count} professional ${category.toLowerCase()} services from an Indore-based tech company serving all of India. Transparent INR pricing, written scope, quote within 24 hours.`,
     path: `/marketplace/${encodeURIComponent(category)}`,
     keywords: [
       category,
       `${category} services`,
       `${category} India`,
+      `${category} company Indore`,
       'AI services',
+      'tech company India',
       'digital solutions',
       'business automation',
     ],
@@ -261,29 +275,36 @@ export function buildCategoryMetadata(
  * Build homepage metadata with maximum keyword density
  */
 export function buildHomepageMetadata(): Metadata {
-  return buildEnhancedMetadata({
-    title: 'KALKI OS — Enterprise AI Platform for Indian Businesses | Indore',
-    description:
-      'India\'s leading AI platform: marketplace, AI concierge Siddhi, lead generation SETU. Web development, SEO, chatbots, automation. Based in Indore, serving all India. Start free!',
-    keywords: [
-      'KALKI OS',
-      'KALKI Intelligence',
-      'AI platform India',
-      'AI concierge',
-      'Siddhi chatbot',
-      'SETU lead generation',
-      'web development Indore',
-      'SEO services India',
-      'digital marketing',
-      'enterprise AI',
-      'business automation',
-      'AI services',
-      'startup tools',
-      'SaaS India',
-    ],
-    entities: ['SoftwareApplication', 'Organization', 'LocalBusiness'],
-    brandAuthority: true,
-  });
+  const title = 'AI Tech Company in Indore, India | KALKI OS';
+  return {
+    ...buildEnhancedMetadata({
+      title,
+      description:
+        'KALKI Intelligence is a tech company in Indore building AI-powered websites, SEO, chatbots and business automation for Indian businesses. Transparent INR pricing, written scope, quote within 24 hours.',
+      keywords: [
+        'tech company',
+        'tech company in Indore',
+        'AI tech company India',
+        'technology company India',
+        'KALKI OS',
+        'KALKI Intelligence',
+        'AI platform India',
+        'AI concierge',
+        'Siddhi chatbot',
+        'SETU lead generation',
+        'web development Indore',
+        'SEO services India',
+        'digital marketing',
+        'business automation',
+        'SaaS India',
+      ],
+      entities: ['SoftwareApplication', 'Organization', 'LocalBusiness'],
+      brandAuthority: true,
+    }),
+    // The "/" route re-exports this object, so the root title template never
+    // reaches it; the brand has to be part of the absolute title.
+    title: { absolute: title },
+  };
 }
 
 /**

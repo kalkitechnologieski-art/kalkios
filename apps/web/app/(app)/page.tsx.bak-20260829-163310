@@ -10,24 +10,24 @@ import { fetchServices } from '@/lib/services'
 // METADATA – SEO / GEO / AEO
 // ============================================================
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kalkios.com'),
+  metadataBase: new URL('https://kalki-intelligence.in'),
   title: {
     default: 'KALKI OS – Enterprise AI & Digital Services | India\'s Premier Tech Temple',
     template: '%s | KALKI OS',
   },
   description: 'AI-powered digital marketing, web & app development, social media, and automation services for Indian businesses. Trusted by 500+ clients. Get a free consultation today.',
   keywords: ['AI services India', 'digital marketing agency Indore', 'web development India', 'app development India', 'social media marketing', 'AI automation', 'lead generation', 'business growth', 'Indore', 'Madhya Pradesh'],
-  authors: [{ name: 'KALKI Intelligence', url: 'https://kalkios.com' }],
+  authors: [{ name: 'KALKI Intelligence', url: 'https://kalki-intelligence.in' }],
   creator: 'KALKI Intelligence',
   publisher: 'KALKI Intelligence',
   openGraph: {
     title: 'KALKI OS – AI & Digital Services for Indian Enterprises',
     description: 'Accelerate your business with AI-powered solutions. From web development to viral marketing – we deliver results.',
-    url: 'https://kalkios.com',
+    url: 'https://kalki-intelligence.in',
     siteName: 'KALKI OS – Temple of Technology',
     images: [
       {
-        url: 'https://kalkios.com/images/og-image.jpg',
+        url: 'https://kalki-intelligence.in/images/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'KALKI OS – Temple of Technology',
@@ -40,10 +40,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'KALKI OS – Enterprise AI & Digital Services',
     description: 'India\'s future-built digital solutions. AI chatbots, e-commerce, marketing, and more.',
-    images: ['https://kalkios.com/images/twitter-card.jpg'],
+    images: ['https://kalki-intelligence.in/images/twitter-card.jpg'],
   },
   alternates: {
-    canonical: 'https://kalkios.com',
+    canonical: 'https://kalki-intelligence.in',
   },
   robots: {
     index: true,
@@ -80,8 +80,8 @@ function JsonLd() {
       {
         '@type': 'Organization',
         name: 'KALKI Intelligence',
-        url: 'https://kalkios.com',
-        logo: 'https://kalkios.com/images/logo.svg',
+        url: 'https://kalki-intelligence.in',
+        logo: 'https://kalki-intelligence.in/images/logo.svg',
         description: 'Enterprise AI and digital services provider based in Indore, India.',
         address: {
           '@type': 'PostalAddress',
@@ -106,10 +106,10 @@ function JsonLd() {
       },
       {
         '@type': 'WebSite',
-        url: 'https://kalkios.com',
+        url: 'https://kalki-intelligence.in',
         potentialAction: {
           '@type': 'SearchAction',
-          target: 'https://kalkios.com/search?q={search_term_string}',
+          target: 'https://kalki-intelligence.in/search?q={search_term_string}',
           'query-input': 'required name=search_term_string',
         },
       },

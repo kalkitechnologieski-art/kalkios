@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useUser } from '@/hooks/useAuth';
 
 function AnimatedBrandLabel() {
@@ -57,7 +58,7 @@ function AnimatedBrandLabel() {
           />
 
           <motion.span
-            className="text-[10px] sm:text-xs font-medium tracking-[0.28em] text-white/70 group-hover:text-white/90 transition-colors"
+            className="hidden text-[10px] sm:inline sm:text-xs font-medium tracking-[0.28em] text-white/70 group-hover:text-white/90 transition-colors"
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
@@ -91,7 +92,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-black/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-end px-4 md:px-6">
+    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-black/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-end px-4 md:px-6">
       <button
         onClick={onMenuClick}
         className="p-2 rounded-full hover:bg-white/5 transition group md:hidden absolute left-3 top-1/2 -translate-y-1/2"
@@ -106,6 +107,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <NotificationBell />
         <Link href="/profile">
           <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-bold text-white hover:bg-white/20 transition cursor-pointer shadow-glow">

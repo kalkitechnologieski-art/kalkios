@@ -1,15 +1,21 @@
 // == KALKI B4 EXPERIENCE ==
-import { fetchServiceBySlug } from '@/lib/services';
+import type { Metadata } from 'next';
+import { fetchServiceBySlug, fetchServices, fetchServicesByCategory } from '@/lib/services';
+import { categoryHref, decodeSegment, normKey, serviceHref } from '@/lib/services/href';
 import { getServiceImageUrl } from '@/lib/services/service-image';
-import { createPublicClient } from '@/lib/supabase/public-client';
+import { buildServiceMetadata } from '@/lib/seo/enhanced-metadata';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { LuxuryButton } from '@/components/ui/LuxuryButton';
-import { Star, CheckCircle, Clock, Award, Users, ChevronRight, ArrowRight, FileText } from 'lucide-react';
-import { ReviewList } from '@/components/reviews/ReviewList';
+import { CheckCircle, Clock, Award, Users, ChevronRight, ArrowRight, FileText } from 'lucide-react';
 import { ProductReviewsMount } from './ProductReviewsMount';
 import { ProductSchema } from './ProductSchema';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { fetchTestimonials } from '@/lib/testimonials';
+import { Testimonials } from '@/components/trust/Testimonials';
+import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline';
+import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow';
+import { AnimatedNumber } from '@/components/motion/AnimatedNumber';
 import type { Database } from '@/lib/supabase/types';
 
 type Service = Database['public']['Tables']['services']['Row'] & {
@@ -22,13 +28,42 @@ type PageProps = { params: Promise<{ category: string; slug: string }> };
 
 export const revalidate = 3600;
 
-async function getService(category: string, slug: string): Promise<Service | null> {
-  try {
-    const svc = await fetchServiceBySlug(category, slug);
-    return svc as Service | null;
-  } catch {
-    return null;
+// Prerender every catalog page at build so a product click resolves instantly
+// instead of waiting on a cold, chained database lookup.
+export async function generateStaticParams() {
+  const services = await fetchServices();
+  const seen = new Set<string>();
+  const params: { category: string; slug: string }[] = [];
+  for (const s of services) {
+    const category = String(s.category ?? '').trim();
+    const slug = String(s.slug ?? '').trim();
+    if (!category || !slug) continue;
+    const key = `${normKey(category)}/${normKey(slug)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    params.push({ category, slug });
   }
+  return params;
+}
+
+async function getService(category: string, slug: string): Promise<Service | null> {
+  return (await fetchServiceBySlug(category, slug)) as Service | null;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const routeParams = await params;
+  const service = await getService(
+    decodeSegment(routeParams.category),
+    decodeSegment(routeParams.slug),
+  );
+  if (!service) return {};
+  return buildServiceMetadata({
+    name: service.name,
+    description: service.aeo_summary || service.description || '',
+    slug: service.slug,
+    category: service.category,
+    price: service.price ?? 0,
+  });
 }
 
 interface Related {
@@ -36,28 +71,21 @@ interface Related {
 }
 
 async function getRelatedServices(category: string, excludeId: string): Promise<Related[]> {
-  try {
-    const supabase = createPublicClient();
-    const { data } = await supabase
-      .from('services')
-      // @ts-ignore - runtime table
-      .select('id, name, slug, category, price, image_url')
-      .eq('category', category as any)
-      .eq('is_active', true as any)
-      .neq('id', excludeId as any)
-      .limit(4);
-    return (data ?? []) as Related[];
-  } catch {
-    return [];
-  }
+  const rows = await fetchServicesByCategory(category);
+  return rows
+    .filter((r) => r.id !== excludeId)
+    .slice(0, 4) as unknown as Related[];
 }
 
 export default async function ServiceDetailPage({ params }: PageProps) {
-  const { category, slug } = await params;
-  const decodedCategory = decodeURIComponent(category);
-  const decodedSlug = decodeURIComponent(slug);
+  const routeParams = await params;
+  const category = decodeSegment(routeParams.category);
+  const slug = decodeSegment(routeParams.slug);
 
-  const service = await getService(decodedCategory, decodedSlug);
+  const [service, testimonials] = await Promise.all([
+    getService(category, slug),
+    fetchTestimonials(4),
+  ]);
   if (!service) notFound();
 
   const features = Array.isArray(service.features)
@@ -67,7 +95,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
 
   const aeoSummary = service.aeo_summary ?? service.description ?? '';
 
-  const related = await getRelatedServices(decodedCategory, service.id);
+  const related = await getRelatedServices(service.category, service.id);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -79,7 +107,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         <ChevronRight className="w-4 h-4" />
         <Link href="/marketplace" className="hover:text-white transition">Marketplace</Link>
         <ChevronRight className="w-4 h-4" />
-        <Link href={`/marketplace/${encodeURIComponent(service.category)}`} className="hover:text-white transition">
+        <Link href={categoryHref(service.category)} className="hover:text-white transition">
           {service.category}
         </Link>
         <ChevronRight className="w-4 h-4" />
@@ -90,26 +118,29 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         {/* Hero */}
         <div className="aspect-square bg-gradient-to-br from-cyan-900/20 to-purple-900/20 rounded-2xl flex items-center justify-center relative border border-cyan-500/10 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={getServiceImageUrl(service)} alt={service.name} className="w-full h-full object-cover" />
+          <img src={getServiceImageUrl(service)} alt={service.name} loading="eager" decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-          {service.rating ? (
+          {service.duration_days ? (
             <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-white text-sm font-medium">{service.rating}</span>
-              <span className="text-white/40 text-xs">({service.review_count || 0})</span>
+              <Clock className="w-4 h-4 text-cyan-300" />
+              <span className="text-white text-sm font-medium">Delivered in {service.duration_days} days</span>
             </div>
           ) : null}
         </div>
 
         {/* Details */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-cyan-400/60 uppercase tracking-wider">{service.category}</span>
-            <span className="text-white/20">•</span>
-            <span className="text-xs text-green-400">In stock</span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <AnimatedEyebrow label={service.category} />
+            <span className="text-xs text-green-400/90">Taking new projects</span>
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">{service.name}</h1>
+          <AnimatedHeadline
+            as="h1"
+            text={service.name}
+            className="text-3xl md:text-4xl font-bold text-white leading-tight"
+            delay={0.05}
+          />
 
           {industries.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -122,22 +153,22 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           )}
 
           {aeoSummary && (
-            <p className="text-white/70 text-sm leading-relaxed border-l-2 border-cyan-500/30 pl-3">
+            <p className="text-white/75 text-sm leading-relaxed border-l-2 border-cyan-500/30 pl-3">
               {aeoSummary}
             </p>
           )}
 
           <div className="space-y-1">
             <div className="flex items-end gap-3">
-              <span className="text-sm text-white/40">Starting from</span>
-              <span className="text-3xl font-bold text-white">
-                ₹{(service.price ?? 0).toLocaleString('en-IN')}
+              <span className="text-sm text-white/55">Starting from</span>
+              <span className="text-3xl font-bold text-white tabular-nums">
+                <AnimatedNumber to={service.price ?? 0} prefix="₹" />
               </span>
               {service.duration_days ? (
-                <span className="text-white/40 text-sm">· {service.duration_days} day delivery</span>
+                <span className="text-white/55 text-sm">· {service.duration_days} day delivery</span>
               ) : null}
             </div>
-            <p className="text-xs text-white/30">No payment now — a tailored quote is shared after your brief.</p>
+            <p className="text-xs text-white/50">No payment now — a tailored quote is shared after your brief.</p>
           </div>
 
           {features.length > 0 && (
@@ -145,7 +176,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               <h3 className="text-white font-medium text-sm">What you get</h3>
               <ul className="space-y-1.5">
                 {features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-white/70">
+                  <li key={i} className="flex items-start gap-2 text-sm text-white/75">
                     <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                     {f}
                   </li>
@@ -164,34 +195,40 @@ export default async function ServiceDetailPage({ params }: PageProps) {
                 fullWidth
               />
             </Link>
-            <Link href="/chat" className="text-center text-sm text-cyan-400/70 hover:text-cyan-300 transition flex items-center justify-center gap-1">
+            <Link href="/chat" className="text-center text-sm text-cyan-400/85 hover:text-cyan-300 transition flex items-center justify-center gap-1">
               Not sure? Ask Siddhi AI first <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="flex flex-wrap gap-4 pt-2 text-xs text-white/40">
-            <span className="flex items-center gap-1"><Award className="w-4 h-4 text-cyan-400" /> Trusted service</span>
-            <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-cyan-400" /> Fast delivery</span>
-            <span className="flex items-center gap-1"><Users className="w-4 h-4 text-cyan-400" /> 500+ clients</span>
+          <div className="flex flex-wrap gap-4 pt-2 text-xs text-white/60">
+            <span className="flex items-center gap-1"><Award className="w-4 h-4 text-cyan-400" /> Fixed-scope quote</span>
+            <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-cyan-400" /> Reply within 24 hours</span>
+            <span className="flex items-center gap-1"><Users className="w-4 h-4 text-cyan-400" /> ₹0 to start</span>
           </div>
         </div>
       </div>
 
-      {/* Reviews */}
+      {/* Reviews + proof */}
       <section className="mt-12">
-        <h2 className="text-2xl font-bold text-white mb-4">Customer reviews</h2>
+        <div className="mb-4">
+          <AnimatedEyebrow label="Trust & proof" />
+        </div>
+        <AnimatedHeadline as="h2" text="Customer reviews" className="text-2xl font-bold text-white mb-4" inView />
         <ProductReviewsMount serviceId={service.id} />
+        <div className="mt-6">
+          <Testimonials items={testimonials} compact />
+        </div>
       </section>
 
       {/* FAQ */}
       <div className="mt-12 bg-white/5 border border-cyan-500/10 rounded-xl p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Frequently asked</h2>
+        <AnimatedHeadline as="h2" text="Frequently asked" className="text-xl font-bold text-white mb-4" inView />
         <div className="space-y-4">
           <details className="border-b border-white/5 pb-3">
             <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
               How long does delivery take?
             </summary>
-            <p className="text-white/60 mt-2 text-sm">
+            <p className="text-white/65 mt-2 text-sm">
               Typically {service.duration_days ?? 30} days depending on complexity.
             </p>
           </details>
@@ -199,7 +236,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
               What happens after I request?
             </summary>
-            <p className="text-white/60 mt-2 text-sm">
+            <p className="text-white/65 mt-2 text-sm">
               No payment is taken now. We review your brief, share a tailored quote, and once approved your project appears live on your client dashboard for real-time tracking.
             </p>
           </details>
@@ -207,7 +244,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
               Can I customise this?
             </summary>
-            <p className="text-white/60 mt-2 text-sm">
+            <p className="text-white/65 mt-2 text-sm">
               Absolutely. Reach out via support and we can tailor the service.
             </p>
           </details>
@@ -216,9 +253,9 @@ export default async function ServiceDetailPage({ params }: PageProps) {
 
       {related.length > 0 && (
         <section className="mt-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white">More {service.category} services</h2>
-            <Link href={`/marketplace/${encodeURIComponent(service.category)}`} className="text-sm text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
+          <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+            <AnimatedHeadline as="h2" text={`More ${service.category} services`} className="text-2xl font-bold text-white" inView />
+            <Link href={categoryHref(service.category)} className="text-sm text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
               View all <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -226,7 +263,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             {related.map((r) => (
               <Link
                 key={r.id}
-                href={`/marketplace/${encodeURIComponent(r.category)}/${encodeURIComponent(r.slug)}`}
+                href={serviceHref(r)}
                 className="group bg-white/5 border border-cyan-500/10 hover:border-cyan-500/30 rounded-xl overflow-hidden transition hover:bg-white/10"
               >
                 <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-cyan-900/20 to-purple-900/20">

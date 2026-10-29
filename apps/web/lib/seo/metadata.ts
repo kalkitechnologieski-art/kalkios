@@ -3,8 +3,9 @@
 // -----------------------------------------------------------------------------
 
 import type { Metadata } from 'next';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 const SITE_NAME = 'KALKI OS';
 
 export interface ProductMetaInput {
@@ -80,33 +81,56 @@ export function buildRootMetadata(): Metadata {
     metadataBase: new URL(SITE),
     title: {
       template: `%s | ${SITE_NAME}`,
-      default: `${SITE_NAME} — Temple of Technology`,
+      default: `${SITE_NAME} — AI Tech Company in Indore, India`,
     },
     description:
-      'Enterprise AI platform: marketplace, AI concierge (Siddhi), lead generation (SETU), and digital services for Indian businesses.',
+      'KALKI Intelligence is an AI tech company in Indore: service marketplace, AI concierge (Siddhi), lead generation (SETU), and digital services for Indian businesses.',
     keywords: [
+      'tech company', 'tech company in Indore', 'AI tech company India',
       'AI', 'AI automation', 'digital marketing', 'Indore', 'India',
-      'web development', 'SEO', 'chatbot', 'enterprise AI', 'Siddhi', 'KALKI OS',
+      'web development', 'SEO', 'chatbot', 'Siddhi', 'KALKI OS',
     ],
     authors: [{ name: 'KALKI Intelligence', url: SITE }],
     creator: 'KALKI Intelligence',
     publisher: 'KALKI Intelligence',
     formatDetection: { email: false, address: false, telephone: false },
-    alternates: { canonical: SITE },
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+        { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/icon-48.png', sizes: '48x48', type: 'image/png' },
+        { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/apple-touch-icon.png',
+      shortcut: '/favicon.ico',
+    },
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+      title: SITE_NAME,
+      statusBarStyle: 'default',
+    },
+    // No canonical here: it would leak the homepage URL to every page that does
+    // not set its own, telling Google they are all duplicates of "/".
     openGraph: {
-      title: `${SITE_NAME} — Temple of Technology`,
-      description: 'AI-powered digital services & enterprise solutions.',
+      title: `${SITE_NAME} — AI Tech Company in Indore, India`,
+      description:
+        'KALKI Intelligence is an AI tech company in Indore: websites, SEO, chatbots and business automation for Indian businesses.',
       url: SITE,
       siteName: SITE_NAME,
       locale: 'en_IN',
       type: 'website',
-      images: [{ url: `${SITE}/images/og-image.jpg`, width: 1200, height: 630 }],
+      images: [{ url: `${SITE}/images/og-default.png`, width: 1200, height: 630, type: 'image/png', alt: `${SITE_NAME} — AI Tech Company in Indore, India` }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${SITE_NAME} — Temple of Technology`,
-      description: 'AI-powered digital services & enterprise solutions.',
+      title: `${SITE_NAME} — AI Tech Company in Indore, India`,
+      description:
+        'KALKI Intelligence is an AI tech company in Indore: websites, SEO, chatbots and business automation for Indian businesses.',
       creator: '@kalki_intel',
+      images: [`${SITE}/images/og-default.png`],
     },
     robots: {
       index: true,

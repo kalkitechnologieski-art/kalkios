@@ -5,8 +5,9 @@
 
 import Link from 'next/link';
 import { createPublicClient } from '@/lib/supabase/public-client';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 
 interface Row { name: string; slug: string; category: string }
 

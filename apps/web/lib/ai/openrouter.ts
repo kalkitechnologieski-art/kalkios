@@ -17,7 +17,7 @@ export async function generateChatOpenRouter(
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://www.kalki-intelligence.in',
     },
     body: JSON.stringify({
       model: 'openai/gpt-4o-mini',

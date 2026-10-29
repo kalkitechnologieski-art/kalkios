@@ -38,7 +38,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
-  if (id === 'none') return { title: 'Careers | KALKI OS' }
+  if (id === 'none') return { title: 'Careers', alternates: { canonical: '/careers' } }
 
   const supabase = createPublicClient()
   const { data: job } = await supabase
@@ -49,8 +49,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // @ts-ignore
     .single() as { data: JobPosting | null }
 
-  if (!job) return { title: 'Job Not Found' }
-  return { title: `${job.title} — KALKI OS Careers` }
+  if (!job) return { title: 'Job Not Found', robots: { index: false, follow: true } }
+  return {
+    title: `${job.title} — Careers`,
+    description: `Apply for ${job.title} at KALKI Intelligence, an AI tech company in Indore, Madhya Pradesh.`,
+    alternates: { canonical: `/careers/${id}` },
+  }
 }
 
 async function getJob(id: string): Promise<JobPosting | null> {

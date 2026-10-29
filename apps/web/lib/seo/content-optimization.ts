@@ -103,9 +103,9 @@ export function buildBrandKnowledgePanel(): EntityData {
       CEO: 'KALKI Team',
       Employees: '50-100',
       Industry: 'Artificial Intelligence, Digital Services, SaaS',
-      Website: 'https://kalkios.com',
+      Website: 'https://www.kalki-intelligence.in',
       Phone: '+91-XXX-XXXXXXX',
-      Email: 'contact@kalkios.com',
+      Email: 'contact@kalki-intelligence.in',
     },
     relatedEntities: [
       'Siddhi AI Concierge',

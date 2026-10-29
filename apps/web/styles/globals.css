@@ -1,12 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Light is the product default; <html class="dark"> opts into the neon theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================================
    KALKI OS — Design System Tokens
    ========================================================================== */
 
 @theme {
-  /* Brand Colors: Cyberpunk Black + Neon Cyan/Purple/Pink */
+  /* Dark (neon) values — :root below overrides them for the light theme. */
   --color-background: #000000;
   --color-foreground: #FFFFFF;
   --color-card: #0A0A0A;
@@ -35,30 +38,167 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Shadcn/ui HSL variable aliases for component compatibility */
-@layer base {
-  :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 180 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 260 90% 65%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 5%;
-    --muted-foreground: 0 0% 40%;
-    --accent: 340 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 6%;
-    --input: 0 0% 6%;
-    --ring: 180 100% 50%;
-    --radius: 0.5rem;
-  }
+/* --------------------------------------------------------------------------
+   Light theme (default)
+   The app is written against white/ink utilities (text-white, bg-white/5,
+   border-white/10, bg-black/80 panels). Inverting --color-white and
+   --color-black re-points all ~1000 of those usages at once instead of
+   rewriting every component, and keeps each surface legible in both themes.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --color-white: #0B1220;
+  --color-black: #FFFFFF;
+
+  --color-background: #F2F6FB;
+  --color-foreground: #0B1220;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #0B1220;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #0B1220;
+  --color-primary: #0E7490;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #6D28D9;
+  --color-secondary-foreground: #FFFFFF;
+  --color-muted: #E8EEF7;
+  --color-muted-foreground: #55657D;
+  --color-accent: #DB2777;
+  --color-accent-foreground: #FFFFFF;
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: rgba(11, 18, 32, 0.11);
+  --color-input: rgba(11, 18, 32, 0.14);
+  --color-ring: rgba(14, 116, 144, 0.35);
+
+  /* Neon accents are unreadable on white — deepen the working steps. */
+  --color-cyan-300: #0891B2;
+  --color-cyan-400: #0E7490;
+  --color-cyan-500: #0E7490;
+  --color-cyan-600: #155E75;
+  --color-purple-400: #7C3AED;
+  --color-purple-500: #6D28D9;
+  --color-purple-600: #5B21B6;
+  --color-pink-400: #DB2777;
+  --color-pink-500: #BE185D;
+  --color-green-400: #16A34A;
+  --color-green-500: #15803D;
+  --color-emerald-500: #047857;
+  --color-red-400: #DC2626;
+  --color-red-500: #B91C1C;
+  --color-blue-400: #2563EB;
+  --color-blue-500: #1D4ED8;
+  --color-amber-500: #B45309;
+
+  /* Pale steps headline gradients use — hold them at readable mids. */
+  --color-cyan-200: #0E7490;
+  --color-blue-300: #3B82F6;
+  --color-purple-300: #8B5CF6;
+  --color-pink-300: #EC4899;
+  --color-red-300: #EF4444;
+  --color-green-300: #22C55E;
+  --color-amber-300: #D97706;
+
+  --kalki-ink: #0B1220;
+  --kalki-surface: rgba(255, 255, 255, 0.72);
+  --kalki-surface-strong: rgba(255, 255, 255, 0.92);
+  --kalki-hairline: rgba(11, 18, 32, 0.10);
+  --kalki-hairline-strong: rgba(11, 18, 32, 0.18);
+  --kalki-shadow: rgba(15, 30, 60, 0.10);
+  --kalki-shadow-strong: rgba(15, 30, 60, 0.16);
+  --kalki-glow: rgba(14, 116, 144, 0.14);
+  --kalki-glow-strong: rgba(14, 116, 144, 0.26);
+  --kalki-brand-a: #0891B2;
+  --kalki-brand-b: #7C3AED;
+  --kalki-brand-c: #DB2777;
+  --kalki-grid: rgba(14, 116, 144, 0.07);
+  --kalki-scan: rgba(14, 116, 144, 0.035);
+  --kalki-selection: rgba(14, 116, 144, 0.18);
+  --kalki-scrollbar: rgba(14, 116, 144, 0.28);
+  --kalki-scrollbar-hover: rgba(14, 116, 144, 0.45);
+  --kalki-caret: #0E7490;
+  --kalki-chrome: rgba(255, 255, 255, 0.94);
+  --kalki-scrim: rgba(11, 18, 32, 0.55);
+  --kalki-ambient-a: rgba(8, 145, 178, 0.10);
+  --kalki-ambient-b: rgba(124, 58, 237, 0.07);
+}
+
+/* --------------------------------------------------------------------------
+   Dark theme — restores the neon palette and the original Tailwind steps.
+   -------------------------------------------------------------------------- */
+:root.dark {
+  color-scheme: dark;
+
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  --color-background: #000000;
+  --color-foreground: #FFFFFF;
+  --color-card: #0A0A0A;
+  --color-card-foreground: #FFFFFF;
+  --color-popover: #0A0A0A;
+  --color-popover-foreground: #FFFFFF;
+  --color-primary: #00FFFF;
+  --color-primary-foreground: #000000;
+  --color-secondary: #8B5CF6;
+  --color-secondary-foreground: #FFFFFF;
+  --color-muted: rgba(255, 255, 255, 0.05);
+  --color-muted-foreground: rgba(255, 255, 255, 0.40);
+  --color-accent: #FF0066;
+  --color-accent-foreground: #FFFFFF;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-input: rgba(255, 255, 255, 0.06);
+  --color-ring: rgba(0, 255, 255, 0.30);
+
+  --color-cyan-300: #67E8F9;
+  --color-cyan-400: #22D3EE;
+  --color-cyan-500: #00FFFF;
+  --color-cyan-600: #0891B2;
+  --color-purple-400: #C084FC;
+  --color-purple-500: #8B5CF6;
+  --color-purple-600: #9333EA;
+  --color-pink-400: #F472B6;
+  --color-pink-500: #EC4899;
+  --color-green-400: #4ADE80;
+  --color-green-500: #22C55E;
+  --color-emerald-500: #10B981;
+  --color-red-400: #F87171;
+  --color-red-500: #EF4444;
+  --color-blue-400: #60A5FA;
+  --color-blue-500: #3B82F6;
+  --color-amber-500: #F59E0B;
+  --color-cyan-200: #A5F3FC;
+  --color-blue-300: #93C5FD;
+  --color-purple-300: #D8B4FE;
+  --color-pink-300: #F9A8D4;
+  --color-red-300: #FCA5A5;
+  --color-green-300: #86EFAC;
+  --color-amber-300: #FCD34D;
+
+  --kalki-ink: #FFFFFF;
+  --kalki-surface: rgba(255, 255, 255, 0.04);
+  --kalki-surface-strong: rgba(255, 255, 255, 0.08);
+  --kalki-hairline: rgba(255, 255, 255, 0.06);
+  --kalki-hairline-strong: rgba(255, 255, 255, 0.12);
+  --kalki-shadow: rgba(0, 0, 0, 0.45);
+  --kalki-shadow-strong: rgba(0, 0, 0, 0.6);
+  --kalki-glow: rgba(0, 255, 255, 0.10);
+  --kalki-glow-strong: rgba(0, 255, 255, 0.22);
+  --kalki-brand-a: #00FFFF;
+  --kalki-brand-b: #8B5CF6;
+  --kalki-brand-c: #FF0066;
+  --kalki-grid: rgba(0, 255, 255, 0.03);
+  --kalki-scan: rgba(0, 255, 255, 0.03);
+  --kalki-selection: rgba(0, 255, 255, 0.2);
+  --kalki-scrollbar: rgba(0, 255, 255, 0.2);
+  --kalki-scrollbar-hover: rgba(0, 255, 255, 0.4);
+  --kalki-caret: #67E8F9;
+  --kalki-chrome: rgba(0, 0, 0, 0.95);
+  --kalki-scrim: rgba(0, 0, 0, 0.7);
+  --kalki-ambient-a: rgba(0, 255, 255, 0.06);
+  --kalki-ambient-b: rgba(139, 92, 246, 0.04);
 }
 
 /* Base resets */
@@ -81,58 +221,92 @@ body {
    ========================================================================== */
 
 .glass {
-  background: rgba(255,255,255,0.04);
+  background: var(--kalki-surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--kalki-hairline);
 }
 
 .glass-strong {
-  background: rgba(255,255,255,0.08);
+  background: var(--kalki-surface-strong);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 1px solid var(--kalki-hairline-strong);
+}
+
+/* Opaque elevated panel — the workhorse surface for light-theme cards. */
+.kalki-panel {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 2px var(--kalki-shadow), 0 12px 32px -18px var(--kalki-shadow-strong);
+}
+
+.kalki-card-hover {
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 200ms ease,
+              border-color 200ms ease;
+}
+.kalki-card-hover:hover {
+  transform: translateY(-3px);
+  border-color: var(--kalki-glow-strong);
+  box-shadow: 0 2px 4px var(--kalki-shadow), 0 22px 48px -22px var(--kalki-shadow-strong),
+              0 0 0 1px var(--kalki-glow);
 }
 
 /* ==========================================================================
-   Cyberpunk Effects
+   Brand Effects
    ========================================================================== */
 
+.kalki-ambient {
+  background:
+    radial-gradient(circle at 20% 20%, var(--kalki-ambient-a), transparent 40%),
+    radial-gradient(circle at 80% 80%, var(--kalki-ambient-b), transparent 50%);
+}
+
+/* Hero canvas: brand light leaking over the theme's base surface. */
+.kalki-hero {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(1100px 520px at 12% -12%, var(--kalki-ambient-a), transparent 62%),
+    radial-gradient(900px 480px at 92% 4%, var(--kalki-ambient-b), transparent 60%),
+    linear-gradient(180deg, var(--color-card) 0%, var(--color-background) 58%);
+}
+
 .cyber-gradient {
-  background: linear-gradient(135deg, #00FFFF 0%, #8B5CF6 50%, #FF0066 100%);
+  background: linear-gradient(135deg, var(--kalki-brand-a) 0%, var(--kalki-brand-b) 50%, var(--kalki-brand-c) 100%);
 }
 
 .cyber-text {
-  background: linear-gradient(135deg, #00FFFF 0%, #8B5CF6 50%, #FF0066 100%);
+  background: linear-gradient(135deg, var(--kalki-brand-a) 0%, var(--kalki-brand-b) 50%, var(--kalki-brand-c) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .cyber-text-glow {
-  text-shadow: 0 0 40px rgba(0,255,255,0.3), 0 0 80px rgba(139,92,246,0.2);
+  text-shadow: 0 0 40px var(--kalki-glow), 0 0 80px var(--kalki-glow);
 }
 
 .glow-cyan {
-  box-shadow: 0 0 40px rgba(0,255,255,0.10);
+  box-shadow: 0 0 40px var(--kalki-glow);
 }
 .glow-cyan:hover {
-  box-shadow: 0 0 60px rgba(0,255,255,0.20);
+  box-shadow: 0 0 60px var(--kalki-glow-strong);
 }
 
 .neon-cyan {
-  box-shadow: 0 0 30px rgba(0,255,255,0.15), inset 0 0 30px rgba(0,255,255,0.05);
+  box-shadow: 0 0 30px var(--kalki-glow), inset 0 0 30px var(--kalki-glow);
 }
 .neon-cyan:hover {
-  box-shadow: 0 0 50px rgba(0,255,255,0.25), inset 0 0 40px rgba(0,255,255,0.08);
+  box-shadow: 0 0 50px var(--kalki-glow-strong), inset 0 0 40px var(--kalki-glow-strong);
 }
 
 .neon-purple {
-  box-shadow: 0 0 30px rgba(139,92,246,0.15), inset 0 0 30px rgba(139,92,246,0.05);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.15), inset 0 0 30px rgba(139, 92, 246, 0.05);
 }
 
 .neon-pink {
-  box-shadow: 0 0 30px rgba(255,0,102,0.15), inset 0 0 30px rgba(255,0,102,0.05);
+  box-shadow: 0 0 30px rgba(255, 0, 102, 0.15), inset 0 0 30px rgba(255, 0, 102, 0.05);
 }
 
 /* Scanline overlay */
@@ -152,16 +326,16 @@ body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0,255,255,0.03) 2px,
-    rgba(0,255,255,0.03) 4px
+    var(--kalki-scan) 2px,
+    var(--kalki-scan) 4px
   );
 }
 
 /* Grid background */
 .cyber-grid {
   background-image:
-    linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(var(--kalki-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--kalki-grid) 1px, transparent 1px);
   background-size: 40px 40px;
   background-position: -1px -1px;
 }
@@ -177,7 +351,7 @@ body {
   inset: -2px;
   border-radius: inherit;
   padding: 2px;
-  background: linear-gradient(90deg, #00ffff, #8b5cf6, #ff0066, #00ffff);
+  background: linear-gradient(90deg, var(--kalki-brand-a), var(--kalki-brand-b), var(--kalki-brand-c), var(--kalki-brand-a));
   background-size: 300% 100%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -203,7 +377,7 @@ body {
 }
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px var(--kalki-shadow-strong);
 }
 .hover-lift:active {
   transform: translateY(-1px) scale(0.98);
@@ -213,12 +387,12 @@ body {
   transition: color 150ms ease, text-shadow 150ms ease;
 }
 .hover-cyber:hover {
-  color: #00FFFF;
-  text-shadow: 0 0 20px rgba(0,255,255,0.3);
+  color: var(--color-primary);
+  text-shadow: 0 0 20px var(--kalki-glow-strong);
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 60px rgba(0,255,255,0.25);
+  box-shadow: 0 0 60px var(--kalki-glow-strong);
   transition: box-shadow 0.3s ease;
 }
 
@@ -281,8 +455,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(0,255,255,0.05); }
-  50% { box-shadow: 0 0 50px rgba(0,255,255,0.15); }
+  0%, 100% { box-shadow: 0 0 20px var(--kalki-glow); }
+  50% { box-shadow: 0 0 50px var(--kalki-glow-strong); }
 }
 
 @keyframes float {
@@ -387,18 +561,23 @@ body {
    ========================================================================== */
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0,255,255,0.2);
-  border-radius: 2px;
+  background: var(--kalki-scrollbar);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,255,255,0.4);
+  background: var(--kalki-scrollbar-hover);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kalki-scrollbar) transparent;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -463,7 +642,7 @@ body {
   .chat-input-fixed {
     position: sticky;
     bottom: 0;
-    background: rgba(0,0,0,0.95);
+    background: var(--kalki-chrome);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     z-index: 10;
@@ -493,16 +672,16 @@ body {
 }
 
 .widget-card {
-  background: rgba(255,255,255,0.04);
+  background: var(--kalki-surface);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--kalki-hairline);
   border-radius: 1rem;
   padding: 1.5rem;
   transition: all 0.3s ease;
 }
 .widget-card:hover {
-  border-color: rgba(0,255,255,0.3);
-  box-shadow: 0 0 40px rgba(0,255,255,0.1);
+  border-color: var(--kalki-glow-strong);
+  box-shadow: 0 0 40px var(--kalki-glow);
 }
 
 /* Text size scaling for small screens */
@@ -602,39 +781,40 @@ body {
    ========================================================================== */
 
 .premium-white-text {
-  color: rgba(255,255,255,0.85);
-  transition: color 0.2s ease;
+  color: var(--color-foreground);
+  opacity: 0.86;
+  transition: opacity 0.2s ease;
 }
 .premium-white-text:hover {
-  color: #ffffff;
+  opacity: 1;
 }
 
 .premium-white-border {
-  border-color: rgba(255,255,255,0.08);
+  border-color: var(--kalki-hairline);
 }
 .premium-white-border-hover:hover {
-  border-color: rgba(255,255,255,0.2);
+  border-color: var(--kalki-hairline-strong);
 }
 
 .premium-white-bg {
-  background: rgba(255,255,255,0.04);
+  background: var(--kalki-surface);
 }
 .premium-white-bg-hover:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--kalki-surface-strong);
 }
 
 .premium-white-shadow {
-  box-shadow: 0 0 30px rgba(255,255,255,0.02);
+  box-shadow: 0 1px 3px var(--kalki-shadow);
 }
 .premium-white-shadow-hover:hover {
-  box-shadow: 0 0 40px rgba(255,255,255,0.05);
+  box-shadow: 0 8px 28px var(--kalki-shadow-strong);
 }
 
 .glow-white {
-  box-shadow: 0 0 20px rgba(255,255,255,0.05);
+  box-shadow: 0 0 20px var(--kalki-glow);
 }
 .glow-white-strong {
-  box-shadow: 0 0 40px rgba(255,255,255,0.1);
+  box-shadow: 0 0 40px var(--kalki-glow-strong);
 }
 
 /* ==========================================================================
@@ -643,9 +823,8 @@ body {
 
 /* Focus visible styles for keyboard navigation */
 *:focus-visible {
-  outline: none;
-  ring: 2px solid rgba(6, 182, 212, 0.5);
-  ring-offset: 2px;
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
 button:focus-visible,
@@ -653,8 +832,8 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.5);
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -675,8 +854,8 @@ textarea:focus-visible {
 
 /* Selection styling */
 ::selection {
-  background: rgba(0,255,255,0.2);
-  color: #ffffff;
+  background: var(--kalki-selection);
+  color: var(--color-foreground);
 }
 
 /* Streaming typewriter caret — sits inline after the last revealed glyph. */
@@ -687,11 +866,97 @@ textarea:focus-visible {
   margin-left: 3px;
   vertical-align: -0.15em;
   background: currentColor;
-  color: #67e8f9;
+  color: var(--kalki-caret);
   border-radius: 1px;
   animation: typing-caret-blink 1s steps(2, start) infinite;
 }
 @keyframes typing-caret-blink {
   0%, 55% { opacity: 1; }
   56%, 100% { opacity: 0; }
+}
+
+/* Route progress bar — thin, theme-aware, never blocks content. */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 99999;
+  overflow: hidden;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--kalki-brand-a) 18%, transparent);
+}
+.route-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--kalki-brand-a), var(--kalki-brand-b), transparent);
+  animation: route-progress-sweep 0.9s ease-in-out infinite;
+}
+@keyframes route-progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-progress::after {
+    width: 100%;
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Capability rail — seamless loop of honest capability labels. */
+.kalki-marquee-track {
+  animation-name: kalki-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.kalki-marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.kalki-marquee-mask:hover .kalki-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes kalki-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kalki-marquee-track {
+    animation: none;
+  }
+}
+
+/* Animated headlines — each word rises out of its own mask. */
+.kalki-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.14em;
+}
+.kalki-word-in {
+  display: inline-block;
+  animation: kalki-word-rise 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes kalki-word-rise {
+  from { transform: translate3d(0, 108%, 0); opacity: 0; }
+  to   { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+/* Scroll-triggered variant where the browser supports a progress timeline;
+   everywhere else the time-based reveal above already ran. */
+@supports (animation-timeline: view()) {
+  .kalki-headline--view .kalki-word-in {
+    animation-timeline: view();
+    animation-range: entry 8% entry 44%;
+    animation-delay: 0s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kalki-word-in {
+    animation: none;
+  }
 }

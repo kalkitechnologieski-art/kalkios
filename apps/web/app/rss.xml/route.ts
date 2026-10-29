@@ -4,8 +4,9 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 
 export async function GET() {
   const supabase = await createClient();

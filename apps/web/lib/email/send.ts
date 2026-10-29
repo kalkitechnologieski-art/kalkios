@@ -6,7 +6,7 @@
 import { logger } from '@/lib/utils/logger';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_ADDRESS = process.env.EMAIL_FROM || 'KALKI OS <noreply@kalkios.com>';
+const FROM_ADDRESS = process.env.EMAIL_FROM || 'KALKI OS <noreply@kalki-intelligence.in>';
 
 export interface OrderConfirmationArgs {
   to: string;
@@ -27,7 +27,7 @@ export async function sendOrderConfirmation(args: OrderConfirmationArgs): Promis
   const subject = `Order confirmed · ${args.invoiceNumber}`;
   const html = renderOrderConfirmationHtml(args);
 
-  await send({ to: args.to, subject, html });
+  await sendEmail({ to: args.to, subject, html });
 }
 
 export interface RewardEmailArgs {
@@ -47,7 +47,7 @@ export async function sendRewardEmail(args: RewardEmailArgs): Promise<void> {
       ${args.code ? `<p style="color:#ccc;line-height:1.6">Your code: <strong>${args.code}</strong></p>` : ''}
       <p style="color:#888;font-size:12px;margin-top:24px">KALKI OS · Temple of Technology</p>
     </div>`;
-  await send({ to: args.to, subject, html });
+  await sendEmail({ to: args.to, subject, html });
 }
 
 export interface ServiceRequestArgs {
@@ -69,13 +69,13 @@ export async function sendServiceRequestConfirmation(args: ServiceRequestArgs): 
       <p style="color:#ccc;line-height:1.6">Hi ${args.buyerName},</p>
       <p style="color:#ccc;line-height:1.6">Thanks for your interest in <strong>${args.serviceName}</strong>. No payment was taken — our team will review your brief and send a tailored quote shortly.</p>
       <p style="color:#888;font-size:13px;line-height:1.6">You can track this request live on your dashboard.</p>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'}/client" style="display:inline-block;margin-top:16px;background:#00ffff;color:#000;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">View your dashboard</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kalki-intelligence.in'}/client" style="display:inline-block;margin-top:16px;background:#00ffff;color:#000;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">View your dashboard</a>
       <p style="color:#666;font-size:12px;margin-top:32px">KALKI OS · Temple of Technology</p>
     </div>`;
-  await send({ to: args.to, subject, html });
+  await sendEmail({ to: args.to, subject, html });
 }
 
-async function send(args: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendEmail(args: { to: string; subject: string; html: string }): Promise<void> {
   if (!RESEND_API_KEY) {
     logger.info('[Email] (dev) would send', { to: args.to, subject: args.subject });
     return;
@@ -114,7 +114,7 @@ function renderOrderConfirmationHtml(a: OrderConfirmationArgs): string {
         <tr><td style="padding:6px 0;color:#888">Invoice</td><td>${a.invoiceNumber}</td></tr>
         <tr><td style="padding:6px 0;color:#888">Amount</td><td>₹${a.amount.toLocaleString('en-IN')}</td></tr>
       </table>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com'}/client" style="display:inline-block;background:#00ffff;color:#000;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">View your project</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kalki-intelligence.in'}/client" style="display:inline-block;background:#00ffff;color:#000;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">View your project</a>
       <p style="color:#666;font-size:12px;margin-top:32px">KALKI OS · Temple of Technology</p>
     </div>`;
 }

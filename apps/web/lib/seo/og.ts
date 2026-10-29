@@ -2,7 +2,9 @@
 // OG image URL builder + color palette for dynamic OG rendering.
 // -----------------------------------------------------------------------------
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+import { siteOrigin } from '@/lib/seo/site-url';
+
+const SITE = siteOrigin();
 
 export const OG_PALETTE = {
   bg: '#0a0a0f',

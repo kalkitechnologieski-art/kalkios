@@ -8,9 +8,14 @@ import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/ui/AppLayout';
 import { GlobalLoader } from '@/components/ui/GlobalLoader';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { organizationSchema, localBusinessSchema } from '@/lib/seo/schema';
 import { buildRootMetadata } from '@/lib/seo/metadata';
 import '@/styles/globals.css';
+
+// Applies the stored theme before first paint so a dark-mode visitor never
+// sees a bright flash. Defaults to the light theme when nothing is stored.
+const THEME_BOOTSTRAP_SCRIPT = `try{if(localStorage.getItem('kalki-theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`;
 
 const inter = Inter({
   subsets: ['latin'],
@@ -36,18 +41,26 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#000000',
-  colorScheme: 'dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F2F6FB' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={cn('dark h-full scroll-smooth', inter.variable, mono.variable)}
+      className={cn('h-full scroll-smooth', inter.variable, mono.variable)}
       suppressHydrationWarning
     >
       <head>
+        <script
+          // Runs before paint so a dark-mode visitor never sees a bright flash.
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.supabase.com" />
@@ -75,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body
         className={cn(
-          'min-h-screen-safe bg-black font-sans antialiased',
+          'min-h-screen-safe bg-background text-foreground font-sans antialiased',
           'safe-area-padding safe-area-padding-top',
           'selection:bg-cyan-500/30 selection:text-white',
           'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10',
@@ -83,31 +96,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
         suppressHydrationWarning
       >
-        <GlobalLoader />
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            className: 'glass-strong border-cyan-500/20 text-white',
-            duration: 4000,
-            style: {
-              background: 'rgba(0, 0, 0, 0.92)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(0, 255, 255, 0.15)',
-              color: '#fff',
-            },
-          }}
-          closeButton
-          richColors
-        />
-        <AppLayout>{children}</AppLayout>
+        <ThemeProvider>
+          <GlobalLoader />
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              className: 'border-white/10',
+              duration: 4000,
+              style: {
+                background: 'var(--kalki-chrome)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid var(--kalki-hairline-strong)',
+                color: 'var(--color-foreground)',
+                boxShadow: '0 18px 48px -20px var(--kalki-shadow-strong)',
+              },
+            }}
+            closeButton
+            richColors
+          />
+          <AppLayout>{children}</AppLayout>
 
-        <div
-          className="pointer-events-none fixed inset-0 z-0 opacity-10"
-          style={{
-            background:
-              'radial-gradient(circle at 20% 20%, rgba(0,255,255,0.05), transparent 40%), radial-gradient(circle at 80% 80%, rgba(139,92,246,0.03), transparent 50%)',
-          }}
-        />
+          <div className="kalki-ambient pointer-events-none fixed inset-0 z-0" />
+        </ThemeProvider>
       </body>
     </html>
   );

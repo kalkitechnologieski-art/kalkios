@@ -4,7 +4,9 @@
 // All generators return plain objects safe to JSON.stringify.
 // -----------------------------------------------------------------------------
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+import { siteOrigin } from '@/lib/seo/site-url';
+
+const SITE = siteOrigin();
 const ORG_NAME = 'KALKI Intelligence';
 const ORG_LEGAL_NAME = 'KALKI Intelligence LLP';
 const ORG_LOGO = `${SITE}/images/logo.svg`;
@@ -16,8 +18,6 @@ export interface ProductInput {
   description: string;
   image_url?: string | null;
   price?: number | null;
-  rating?: number | null;
-  review_count?: number | null;
 }
 
 export function productSchema(p: ProductInput) {
@@ -45,16 +45,6 @@ export function productSchema(p: ProductInput) {
         url: SITE,
       },
     },
-    aggregateRating:
-      p.rating && p.review_count
-        ? {
-            '@type': 'AggregateRating',
-            ratingValue: p.rating,
-            reviewCount: p.review_count,
-            bestRating: 5,
-            worstRating: 1,
-          }
-        : undefined,
   };
 }
 
@@ -157,6 +147,9 @@ export function organizationSchema() {
     name: ORG_NAME,
     legalName: ORG_LEGAL_NAME,
     url: SITE,
+    description:
+      'KALKI Intelligence is an AI tech company based in Indore, Madhya Pradesh, building websites, AI automation, lead generation and growth marketing systems for Indian businesses.',
+    keywords: 'tech company, AI tech company India, tech company in Indore, web development, AI automation',
     logo: {
       '@type': 'ImageObject',
       url: ORG_LOGO,
@@ -191,6 +184,15 @@ export function localBusinessSchema() {
     name: ORG_NAME,
     image: ORG_LOGO,
     url: SITE,
+    description:
+      'Tech company in Indore offering AI-assisted web development, SEO, chatbots and business automation for Indian businesses.',
+    knowsAbout: [
+      'Artificial intelligence',
+      'Web development',
+      'SEO and AEO/GEO optimisation',
+      'Lead generation',
+      'Business automation',
+    ],
     telephone: '+91-6261031710',
     priceRange: '₹₹',
     address: {

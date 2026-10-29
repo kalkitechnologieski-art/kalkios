@@ -2,6 +2,10 @@
 // Comprehensive structured data for SEO, AEO, and GEO
 // -----------------------------------------------------------------------------
 
+import { siteOrigin } from '@/lib/seo/site-url';
+
+const SITE = siteOrigin();
+
 export interface StructuredDataOptions {
   url: string;
   title: string;
@@ -27,14 +31,14 @@ export function articleSchema(options: StructuredDataOptions) {
     author: {
       '@type': 'Organization',
       name: options.author || 'KALKI Intelligence',
-      url: 'https://kalkios.com',
+      url: SITE,
     },
     publisher: {
       '@type': 'Organization',
       name: 'KALKI Intelligence',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://kalkios.com/images/logo.svg',
+        url: `${SITE}/images/logo.svg`,
       },
     },
     datePublished: options.publishedTime || new Date().toISOString(),
@@ -46,7 +50,7 @@ export function articleSchema(options: StructuredDataOptions) {
     isPartOf: {
       '@type': 'WebSite',
       name: 'KALKI OS',
-      url: 'https://kalkios.com',
+      url: SITE,
     },
   };
 }
@@ -166,13 +170,13 @@ export function websiteSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'KALKI OS',
-    url: 'https://kalkios.com',
+    url: SITE,
     description: 'Enterprise AI platform for Indian businesses',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://kalkios.com/explore?q={search_term_string}',
+        urlTemplate: `${SITE}/explore?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -210,14 +214,14 @@ export function softwareApplicationSchema() {
       'Invoice automation',
       'Real-time notifications',
     ],
-    screenshot: 'https://kalkios.com/images/platform-screenshot.jpg',
+    screenshot: `${SITE}/images/platform-screenshot.jpg`,
     softwareVersion: '3.0.0',
     datePublished: '2024-01-01',
     dateModified: new Date().toISOString(),
     author: {
       '@type': 'Organization',
       name: 'KALKI Intelligence',
-      url: 'https://kalkios.com',
+      url: SITE,
     },
   };
 }
@@ -262,7 +266,7 @@ export function collectionPageSchema(category: string, services: any[]) {
         item: {
           '@type': 'Product',
           name: service.name,
-          url: `https://kalkios.com/marketplace/${encodeURIComponent(category)}/${encodeURIComponent(service.slug)}`,
+          url: `${SITE}/marketplace/${encodeURIComponent(category)}/${encodeURIComponent(service.slug)}`,
         },
       })),
       numberOfItems: services.length,
@@ -279,8 +283,8 @@ export function enhancedLocalBusinessSchema() {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'KALKI Intelligence',
-    image: 'https://kalkios.com/images/logo.svg',
-    url: 'https://kalkios.com',
+    image: `${SITE}/images/logo.svg`,
+    url: SITE,
     telephone: '+91-XXX-XXXXXXX',
     address: {
       '@type': 'PostalAddress',

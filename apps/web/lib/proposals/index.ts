@@ -305,7 +305,7 @@ export const PANKAJ_ASTROLOGY_PROPOSAL: ProposalDoc = {
     </div>
     <div class="glass">
       <div class="tag">Prepared by</div>
-      <p style="margin-top:8px"><strong>Kalki Intelligence</strong><br>52, Swastik Nagar, MOG Lines, Indore (MP), India<br><a href="mailto:ceo@kalki-intelligence.in">ceo@kalki-intelligence.in</a> · kalki-intelligence.in</p>
+      <p style="margin-top:8px"><strong>Kalki Intelligence</strong><br>51, MOG Lines, Swastik Nagar, Indore (MP), India<br><a href="mailto:ceo@kalki-intelligence.in">ceo@kalki-intelligence.in</a> · kalki-intelligence.in</p>
     </div>
   </div>
 
@@ -347,7 +347,7 @@ export const PANKAJ_ASTROLOGY_PROPOSAL: ProposalDoc = {
   </div>
   <p>The platform is <strong>its own hosting and website surface</strong> — the same deployment that serves users also serves your marketing site, consultant pages and SEO landing pages, which removes a second build and a second bill. We build primarily on <strong>free and open tiers</strong>; your only recurring third-party outlay at launch is <strong>domain, hosting, Razorpay transaction charges and Cloudflare</strong>. Infrastructure spend then scales with your real footfall and downloads — you pay for growth, not for idle capacity.</p>
 
-  <div class="meta">Kalki Intelligence LLP · 52, Swastik Nagar, MOG Lines, Indore (MP) · ceo@kalki-intelligence.in · Page 1 of 3</div>
+  <div class="meta">Kalki Intelligence LLP · 51, MOG Lines, Swastik Nagar, Indore (MP) · ceo@kalki-intelligence.in · Page 1 of 3</div>
 </section>
 
 <!-- ══════════════ PAGE 2 ══════════════ -->
@@ -419,7 +419,7 @@ export const PANKAJ_ASTROLOGY_PROPOSAL: ProposalDoc = {
     </tbody>
   </table>
 
-  <div class="meta">Kalki Intelligence LLP · 52, Swastik Nagar, MOG Lines, Indore (MP) · ceo@kalki-intelligence.in · Page 2 of 3</div>
+  <div class="meta">Kalki Intelligence LLP · 51, MOG Lines, Swastik Nagar, Indore (MP) · ceo@kalki-intelligence.in · Page 2 of 3</div>
 </section>
 
 <!-- ══════════════ PAGE 3 ══════════════ -->
@@ -476,7 +476,7 @@ export const PANKAJ_ASTROLOGY_PROPOSAL: ProposalDoc = {
   <div class="issuerow">
     <div class="glass">
       <p class="lbl" style="color:#67e8f9">Issued by</p>
-      <p style="margin-top:5px"><strong>Kalki Intelligence</strong> — AI &amp; digital services, Indore, Madhya Pradesh · 52, Swastik Nagar, MOG Lines, Indore (MP), India · <a href="mailto:ceo@kalki-intelligence.in">ceo@kalki-intelligence.in</a> · www.kalki-intelligence.in · +91 62610 31710</p>
+      <p style="margin-top:5px"><strong>Kalki Intelligence</strong> — AI &amp; digital services, Indore, Madhya Pradesh · 51, MOG Lines, Swastik Nagar, Indore (MP), India · <a href="mailto:ceo@kalki-intelligence.in">ceo@kalki-intelligence.in</a> · www.kalki-intelligence.in · +91 62610 31710</p>
       <p class="muted" style="margin-top:4px">This document is commercially confidential and issued for the named client only. Electronic and ink signatures carry equal standing.</p>
     </div>
     <div class="seal">
@@ -497,7 +497,7 @@ export const PANKAJ_ASTROLOGY_PROPOSAL: ProposalDoc = {
     </div>
   </div>
 
-  <div class="meta">Kalki Intelligence LLP · 52, Swastik Nagar, MOG Lines, Indore (MP) · ceo@kalki-intelligence.in · Page 3 of 3 · Ref KI/PRPOS/2026/10-01</div>
+  <div class="meta">Kalki Intelligence LLP · 51, MOG Lines, Swastik Nagar, Indore (MP) · ceo@kalki-intelligence.in · Page 3 of 3 · Ref KI/PRPOS/2026/10-01</div>
 </section>
 
 <script>

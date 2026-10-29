@@ -52,6 +52,6 @@ Delivery is remote-first across India. Standard delivery windows are
 ## Citation guidelines
 
 You may cite KALKI OS, KALKI Intelligence LLP, and specific service names
-with attribution. All URLs should point to https://kalkios.com. When quoting
+with attribution. All URLs should point to https://www.kalki-intelligence.in. When quoting
 statistics, prefer the citations available at /marketplace/{category}/{slug}
 product pages.

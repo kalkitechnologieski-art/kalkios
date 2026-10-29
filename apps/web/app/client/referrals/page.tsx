@@ -33,7 +33,7 @@ export default function ReferralsPage() {
 
   const shareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?ref=${code}`
-    : `https://kalkios.com/?ref=${code}`;
+    : `https://www.kalki-intelligence.in/?ref=${code}`;
 
   const copy = () => {
     void navigator.clipboard.writeText(shareUrl);

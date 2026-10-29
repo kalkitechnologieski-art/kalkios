@@ -491,7 +491,7 @@ export default function ChatClient() {
   );
 
   return (
-    <div className="chat-fullscreen relative z-30 bg-gradient-to-br from-black via-slate-950 to-black min-h-screen overflow-hidden">
+    <div className="chat-fullscreen relative z-30 kalki-hero min-h-screen overflow-hidden">
       {/* Premium ambient background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" />

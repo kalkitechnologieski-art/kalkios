@@ -6,8 +6,9 @@
 import { MetadataRoute } from 'next';
 import { createPublicClient } from '@/lib/supabase/public-client';
 import { getServiceImageUrl, getCategoryImageUrl } from '@/lib/services/service-image';
+import { siteOrigin } from '@/lib/seo/site-url';
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 
 interface ServiceRow {
   slug: string;

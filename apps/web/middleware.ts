@@ -10,7 +10,9 @@ const PUBLIC_ROUTES = [
   '/chat', '/', '/login', '/register', '/auth/callback', '/contact', '/careers',
   '/services', '/explore', '/marketplace', '/about', '/terms', '/support', '/unauthorized',
   '/request', '/privacy',
-  '/api/health', '/api/services/request',
+  '/api/health', '/api/services/request', '/api/inquiries', '/api/reviews',
+  // Social cards are fetched by Googlebot and crawlers that have no session.
+  '/api/og',
   // Crawler files must answer 200 to bots that are not logged in.
   '/robots.txt', '/sitemap.xml', '/rss.xml', '/llms.txt',
   // Tokenised, no-index proposal links — clients must open them without an account.
@@ -18,15 +20,33 @@ const PUBLIC_ROUTES = [
   '/_next', '/favicon.ico',
 ];
 
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+function withSecurityHeaders<T extends NextResponse>(response: T): T {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(key, value);
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Files under public/ are world-readable by design; gating them on a session
+  // made every product image 307 to /login for signed-out visitors.
+  const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+  if (lastSegment.includes('.')) return NextResponse.next();
 
   const isPublic = PUBLIC_ROUTES.some((route) => {
     if (route === '/') return pathname === '/';
     return pathname === route || pathname.startsWith(route + '/');
   });
 
-  if (isPublic) return NextResponse.next();
+  if (isPublic) return withSecurityHeaders(NextResponse.next());
 
   let session: { user?: { id: string } } | null = null;
   try {
@@ -76,18 +96,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
 
-    const response = NextResponse.next();
-    
-    // Security headers
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set(
-      'Permissions-Policy',
-      'camera=(), microphone=(), geolocation=()'
-    );
-    
+    const response = withSecurityHeaders(NextResponse.next());
+
     // CORS for API routes
     if (pathname.startsWith('/api/')) {
       const origin = request.headers.get('origin') || '';

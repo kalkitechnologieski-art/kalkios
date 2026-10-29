@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { motion, useInView, useAnimation } from 'framer-motion'
+import { motion, useInView, useAnimation, useReducedMotion } from 'framer-motion'
 
 interface ScrollRevealProps {
   children: React.ReactNode
@@ -20,6 +20,7 @@ export function ScrollReveal({
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-100px' })
   const controls = useAnimation()
+  const reduce = useReducedMotion()
 
   const directions = {
     up: { y: 60, x: 0 },
@@ -29,7 +30,7 @@ export function ScrollReveal({
   }
 
   useEffect(() => {
-    if (isInView) {
+    if (isInView && !reduce) {
       controls.start({
         opacity: 1,
         y: 0,
@@ -37,7 +38,11 @@ export function ScrollReveal({
         transition: { duration, delay, ease: 'easeOut' },
       })
     }
-  }, [isInView, controls, duration, delay])
+  }, [isInView, controls, duration, delay, reduce])
+
+  if (reduce) {
+    return <div className={className}>{children}</div>
+  }
 
   return (
     <motion.div

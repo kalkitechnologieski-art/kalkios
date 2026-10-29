@@ -7,13 +7,14 @@ import type { Database } from '@/lib/supabase/types';
 import { getServiceImageUrl } from '@/lib/services/service-image';
 import { faqSchema, breadcrumbSchema } from '@/lib/seo/schema';
 import { buildFaqs } from '@/lib/aeo/answer-blocks';
+import { siteOrigin } from '@/lib/seo/site-url';
 
 type Service = Database['public']['Tables']['services']['Row'] & {
   aeo_summary?: string | null;
   target_industries?: string[] | null;
 };
 
-const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+const SITE = siteOrigin();
 
 function absoluteImage(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `${SITE}${url}`;
@@ -47,15 +48,6 @@ export function ProductSchema({ service }: { service: Service }) {
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', name: 'KALKI Intelligence', url: SITE },
     },
-    aggregateRating: service.rating
-      ? {
-          '@type': 'AggregateRating',
-          ratingValue: service.rating,
-          reviewCount: service.review_count || 0,
-          bestRating: 5,
-          worstRating: 1,
-        }
-      : undefined,
   };
 
   const faqs = faqSchema(

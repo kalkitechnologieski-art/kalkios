@@ -3,6 +3,14 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import Link from 'next/link'
 import { Briefcase, MapPin, Clock, DollarSign, Users } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Careers at an AI Tech Company in Indore',
+  description:
+    'Open roles at KALKI Intelligence, an AI tech company in Indore: engineering, design, SEO and growth. See current openings and apply.',
+  alternates: { canonical: '/careers' },
+}
 
 interface JobPosting {
   id: string

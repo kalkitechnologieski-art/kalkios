@@ -2,10 +2,10 @@ import Link from 'next/link'
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 
 export const metadata = {
-  title: 'Privacy Policy — KALKI OS',
+  title: 'Privacy Policy',
   description:
     'How KALKI Intelligence LLP collects, uses, and protects your personal data across KALKI OS. India-based, DP Act compliant.',
-  alternates: { canonical: 'https://kalkios.com/privacy' },
+  alternates: { canonical: '/privacy' },
 }
 
 const SECTIONS: { h: string; p: string }[] = [

@@ -1,8 +1,9 @@
 import { ScrollReveal } from '@/components/ui/ScrollReveal'
 
 export const metadata = {
-  title: 'Terms & Conditions — KALKI OS',
+  title: 'Terms & Conditions',
   description: 'Terms and conditions for using KALKI OS services.',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {

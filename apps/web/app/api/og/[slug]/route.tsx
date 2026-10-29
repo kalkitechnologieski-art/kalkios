@@ -15,7 +15,6 @@ interface ServiceRow {
   category: string;
   description: string | null;
   price: number | null;
-  rating: number | null;
 }
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
@@ -28,7 +27,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
     const supabase = (await createClient()) as any;
     const { data } = await supabase
       .from('services')
-      .select('name, category, description, price, rating')
+      .select('name, category, description, price')
       .eq('slug', decoded)
       .single();
     service = (data as ServiceRow) ?? null;
@@ -39,8 +38,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   const name = service?.name ?? 'KALKI OS';
   const category = service?.category ?? 'AI Services';
   const description = truncateForOg(service?.description ?? 'Enterprise AI-powered digital services from KALKI Intelligence', 110);
-  const price = service?.price ? formatPriceINR(service.price) : 'From ₹499';
-  const rating = service?.rating ?? 4.8;
+  const price = service?.price ? formatPriceINR(service.price) : 'Custom quote';
 
   return new ImageResponse(
     (
@@ -107,14 +105,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
               <div style={{ fontSize: '24px', fontWeight: 700, color: OG_PALETTE.accentCyan }}>{price}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '11px', color: OG_PALETTE.textSecondary, letterSpacing: '2px' }}>RATING</div>
+              <div style={{ fontSize: '11px', color: OG_PALETTE.textSecondary, letterSpacing: '2px' }}>WRITTEN QUOTE</div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: OG_PALETTE.accentPurple }}>
-                ★ {rating.toFixed(1)}
+                Within 24 hours
               </div>
             </div>
           </div>
           <div style={{ fontSize: '13px', color: OG_PALETTE.textSecondary, letterSpacing: '1px' }}>
-            kalkios.com
+            www.kalki-intelligence.in
           </div>
         </div>
 

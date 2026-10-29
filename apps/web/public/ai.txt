@@ -20,7 +20,7 @@ documents our policy.
 ## Preferred crawl
 
 Crawl-delay: 1
-Sitemap: https://kalkios.com/sitemap.xml
+Sitemap: https://www.kalki-intelligence.in/sitemap.xml
 
 ## Contact
 

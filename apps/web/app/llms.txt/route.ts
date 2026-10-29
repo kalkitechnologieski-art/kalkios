@@ -4,6 +4,7 @@
 // -----------------------------------------------------------------------------
 
 import { createClient } from '@/lib/supabase/server';
+import { siteOrigin } from '@/lib/seo/site-url';
 
 export const revalidate = 3600;
 
@@ -16,7 +17,7 @@ interface ServiceRow {
 }
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kalkios.com';
+  const baseUrl = siteOrigin();
 
   let services: ServiceRow[] = [];
   try {
@@ -40,9 +41,9 @@ export async function GET() {
   }
 
   const lines: string[] = [];
-  lines.push('# KALKI OS — Enterprise AI Platform');
+  lines.push('# KALKI OS — AI Tech Company in Indore, India');
   lines.push('');
-  lines.push('> KALKI OS is an AI-powered digital services marketplace and enterprise AI platform operated by KALKI Intelligence LLP, based in Indore, India. It offers web development, app development, marketing, design, media, AI automation, and AI chatbots with transparent INR pricing and 30–60 day delivery.');
+  lines.push('> KALKI OS is the product platform of KALKI Intelligence LLP, an AI tech company and digital services marketplace based in Indore, India. It offers web development, app development, marketing, design, media, AI automation, and AI chatbots with transparent INR pricing and 30–60 day delivery.');
   lines.push('');
   lines.push('## Company');
   lines.push('');
@@ -51,18 +52,19 @@ export async function GET() {
   lines.push('- Location: 51, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India');
   lines.push('- Email: team@kalki-intelligence.in');
   lines.push('- Phone: +91-6261031710');
+  lines.push('- Sector: Technology company (AI, software and digital services)');
   lines.push('- Founded: 2025');
   lines.push('- Size: 11–50 employees');
   lines.push(`- Website: ${baseUrl}`);
   lines.push('');
   lines.push('## Pages');
   lines.push('');
-  lines.push(`- [Home](${baseUrl}): Overview of the KALKI OS AI platform and services.`);
+  lines.push(`- [Home](${baseUrl}): Overview of KALKI OS, the AI tech company platform of KALKI Intelligence.`);
   lines.push(`- [Marketplace](${baseUrl}/marketplace): Full catalogue of AI-powered digital services with INR pricing.`);
   lines.push(`- [Request a service](${baseUrl}/request): Free, no-payment intake form to submit a service requirement and get a tailored quote.`);
   lines.push(`- [Siddhi AI chat](${baseUrl}/chat): Conversational AI concierge for queries, automation and lead generation.`);
   lines.push(`- [Explore](${baseUrl}/explore): Search and discover services.`);
-  lines.push(`- [About](${baseUrl}/about): KALKI Intelligence LLP company profile.`);
+  lines.push(`- [About](${baseUrl}/about): KALKI Intelligence LLP — AI tech company profile.`);
   lines.push(`- [Contact](${baseUrl}/contact): Reach the team in Indore, India.`);
   lines.push(`- [Privacy Policy](${baseUrl}/privacy): How personal data is handled (DP Act, 2023).`);
   lines.push(`- [Terms](${baseUrl}/terms): Terms & conditions of service.`);

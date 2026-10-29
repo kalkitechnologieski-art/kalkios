@@ -4,12 +4,20 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Zap, Shield, Globe, Brain, Building2, Users, TrendingUp, Award, Clock, CheckCircle2, Sparkles, Star, MapPin } from 'lucide-react'
+import { ArrowRight, Zap, Shield, Globe, Brain, Building2, TrendingUp, Clock, CheckCircle2, Sparkles, MapPin } from 'lucide-react'
 import { fetchServices } from '@/lib/services'
+import { fetchTestimonials } from '@/lib/testimonials'
 import ServiceCard from '@/components/ui/ServiceCard'
+import { Testimonials } from '@/components/trust/Testimonials'
 import { BannerSlideshow } from '@/components/home/BannerSlideshow'
 import { SiteFooter } from '@/components/layout/SiteFooter'
+import { ScrollReveal } from '@/components/ui/ScrollReveal'
+import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline'
+import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow'
+import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
+import { CapabilityMarquee } from '@/components/motion/CapabilityMarquee'
 import { buildHomepageMetadata } from '@/lib/seo/enhanced-metadata'
+import { siteOrigin } from '@/lib/seo/site-url'
 import { FAQStructuredData } from '@/components/seo/FAQStructuredData'
 import { FAQ_PRESETS } from '@/lib/seo/faq-presets'
 import type { Metadata } from 'next'
@@ -17,8 +25,13 @@ import type { Metadata } from 'next'
 // Generate metadata for homepage (SEO)
 export const metadata: Metadata = buildHomepageMetadata()
 
+// Catalog and testimonials are read at build time; refresh them hourly without
+// waiting on a deploy.
+export const revalidate = 3600
+
 export default async function Homepage() {
   const services = await fetchServices()
+  const testimonials = await fetchTestimonials()
   const featured = services.slice(0, 6)
   const categories = Array.from(new Set(services.map((s) => s.category).filter(Boolean))).sort()
 
@@ -31,18 +44,18 @@ export default async function Homepage() {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: 'KALKI OS',
-          url: 'https://kalkios.com',
-          description: 'India\'s leading AI platform for web development, SEO, and lead generation',
+          url: siteOrigin(),
+          description: 'KALKI OS by KALKI Intelligence, a tech company in Indore: AI-assisted web development, SEO and lead generation services for Indian businesses.',
           potentialAction: {
             '@type': 'SearchAction',
-            target: 'https://kalkios.com/explore?q={search_term_string}',
+            target: `${siteOrigin()}/explore?q={search_term_string}`,
             'query-input': 'required name=search_term_string',
           },
         }) }}
       />
 
       {/* Hero Section - AEO Optimized with Question Format */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-slate-950 to-black px-4">
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden kalki-hero px-4">
         {/* Animated background effects */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" />
@@ -52,23 +65,27 @@ export default async function Homepage() {
         <div className="relative z-10 text-center max-w-5xl mx-auto">
           {/* Brand badge */}
           <div className="flex justify-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm text-white/70 font-medium">KALKI Intelligence</span>
-            </div>
+            <AnimatedEyebrow label="KALKI Intelligence" icon={<Sparkles className="w-3.5 h-3.5" />} />
           </div>
 
           {/* Main headline - SEO keyword rich + AEO question format */}
-          <h1 className="text-5xl sm:text-6xl md:text-8xl font-bold bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent font-mono leading-tight tracking-tight">
-            Best AI Platform for Indian Businesses
-          </h1>
-          
-          <p className="text-cyan-400/70 text-lg sm:text-xl md:text-2xl mt-4 md:mt-6 font-light max-w-3xl mx-auto">
-            Web Development, SEO & Lead Generation Services in Indore, Madhya Pradesh
-          </p>
-          
-          <p className="text-white/50 text-sm sm:text-base mt-3 max-w-2xl mx-auto">
-            Serving 500+ businesses across India with AI-powered solutions starting at ₹499
+          <AnimatedHeadline
+            as="h1"
+            text="AI Tech Company for Indian Businesses"
+            className="text-5xl sm:text-6xl md:text-8xl font-bold text-white font-mono leading-[1.05] tracking-tight"
+            delay={0.1}
+          />
+
+          <AnimatedHeadline
+            as="p"
+            text="Web Development, SEO & Lead Generation Services in Indore, Madhya Pradesh"
+            className="text-cyan-400/85 text-lg sm:text-xl md:text-2xl mt-4 md:mt-6 font-light max-w-3xl mx-auto"
+            delay={0.42}
+            stagger={0.03}
+          />
+
+          <p className="text-white/65 text-sm sm:text-base mt-3 max-w-2xl mx-auto">
+            Websites, AI automation and growth marketing for Indian businesses. Quote in 24 hours — ₹0 to start.
           </p>
 
           {/* CTA buttons with structured intent */}
@@ -88,26 +105,28 @@ export default async function Homepage() {
             </Link>
           </div>
 
-          {/* Stats bar - E-E-A-T signals */}
-          <div className="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-xs md:text-sm text-white/40">
+          {/* Stats bar - verifiable commitments, not invented metrics */}
+          <div className="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-xs md:text-sm text-white/55">
             <div className="flex flex-col items-center gap-1">
-              <Users className="w-5 h-5 text-cyan-400/60" />
-              <span className="font-semibold text-white/70">500+</span>
-              <span>Clients Served Across India</span>
+              <Clock className="w-5 h-5 text-cyan-400/80" />
+              <span className="font-semibold text-white">
+                <AnimatedNumber to={24} suffix=" hours" />
+              </span>
+              <span>Quote turnaround</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <Clock className="w-5 h-5 text-purple-400/60" />
-              <span className="font-semibold text-white/70">30-60 Days</span>
-              <span>Fast Project Delivery</span>
+              <Shield className="w-5 h-5 text-purple-400/80" />
+              <span className="font-semibold text-white">₹0 to start</span>
+              <span>Approve the quote first</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <Award className="w-5 h-5 text-pink-400/60" />
-              <span className="font-semibold text-white/70">4.8/5 Rating</span>
-              <span>Client Satisfaction</span>
+              <CheckCircle2 className="w-5 h-5 text-pink-400/80" />
+              <span className="font-semibold text-white">Fixed scope</span>
+              <span>Every deliverable in writing</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <MapPin className="w-5 h-5 text-green-400/60" />
-              <span className="font-semibold text-white/70">🇮🇳 Indore, MP</span>
+              <MapPin className="w-5 h-5 text-green-400/80" />
+              <span className="font-semibold text-white">🇮🇳 Indore, MP</span>
               <span>Made in India, Serving Nationally</span>
             </div>
           </div>
@@ -121,31 +140,65 @@ export default async function Homepage() {
 
       {/* Trust Bar */}
       <section className="py-6 md:py-8 border-y border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent">
-        <div className="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-6 md:gap-10 lg:gap-14 text-xs md:text-sm text-white/50">
+        <div className="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-6 md:gap-10 lg:gap-14 text-xs md:text-sm text-white/60">
           <span className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-cyan-400/60" />
-            Trusted by 500+ Indian businesses
+            <Shield className="w-4 h-4 text-cyan-400/80" />
+            Fixed-scope quotes, ₹0 to start
           </span>
           <span className="flex items-center gap-2">
-            <Brain className="w-4 h-4 text-yellow-400/60" />
-            AI-powered automation
+            <Brain className="w-4 h-4 text-yellow-400/80" />
+            AI-assisted, human-delivered
           </span>
           <span className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-purple-400/60" />
-            Enterprise-grade quality
+            <Building2 className="w-4 h-4 text-purple-400/80" />
+            Indore-based team, IST working hours
           </span>
           <span className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-green-400/60" />
-            24/7 Hindi & English support
+            <Globe className="w-4 h-4 text-green-400/80" />
+            Hindi &amp; English support
           </span>
         </div>
+        {categories.length > 0 && (
+          <div className="max-w-6xl mx-auto px-4 mt-6">
+            <CapabilityMarquee items={categories.slice(0, 12)} durationSec={38} />
+          </div>
+        )}
+      </section>
+
+      {/* Social proof */}
+      <section className="max-w-7xl mx-auto px-4 py-12 md:py-16" id="testimonials">
+        <div className="text-center mb-8 md:mb-10">
+          <div className="flex justify-center mb-4">
+            <AnimatedEyebrow label={testimonials.length > 0 ? 'Client voices' : 'Our guarantees'} />
+          </div>
+          <AnimatedHeadline
+            as="h2"
+            text={testimonials.length > 0 ? 'What clients say' : 'Why you can trust the quote'}
+            className="text-2xl md:text-4xl font-bold text-white font-mono"
+            inView
+          />
+          <p className="text-white/50 text-base md:text-lg mt-3 max-w-2xl mx-auto">
+            {testimonials.length > 0
+              ? 'Reviews from projects delivered for Indian businesses.'
+              : 'Everything below is something you can hold us to before you spend a rupee.'}
+          </p>
+        </div>
+        <Testimonials items={testimonials} />
       </section>
 
       {/* Features Showcase - Entity-based content for GEO */}
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="text-center mb-10 md:mb-14">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono">Why Choose KALKI OS for Your Business?</h2>
-          <p className="text-cyan-400/50 text-base md:text-lg mt-3 max-w-2xl mx-auto">Enterprise-grade AI solutions built specifically for Indian businesses, startups, and enterprises</p>
+          <div className="flex justify-center mb-4">
+            <AnimatedEyebrow label="Why KALKI OS" />
+          </div>
+          <AnimatedHeadline
+            as="h2"
+            text="Why Choose KALKI OS for Your Business?"
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono"
+            inView
+          />
+          <p className="text-cyan-400/70 text-base md:text-lg mt-3 max-w-2xl mx-auto">AI-assisted delivery, human accountability — built for Indian businesses, startups, and enterprises</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -153,7 +206,7 @@ export default async function Homepage() {
             {
               icon: Brain,
               title: 'AI-Powered Business Automation',
-              desc: 'Siddhi AI concierge handles customer queries 24/7, SETU generates verified B2B leads through intelligent web scraping, and smart workflows automate your operations. Reduce manual work by 80%.',
+              desc: 'Siddhi AI concierge answers customer queries around the clock, SETU surfaces verified B2B leads from public sources, and workflows take the repeated steps off your team. We time-save the tasks you list, and show you which ones.',
               color: 'cyan',
               keywords: ['AI automation', 'business automation', 'AI concierge', 'lead generation'],
             },
@@ -166,22 +219,22 @@ export default async function Homepage() {
             },
             {
               icon: Shield,
-              title: 'Enterprise Security & GDPR Compliance',
-              desc: 'Bank-grade AES-256 encryption, Row Level Security policies, GDPR-compliant data handling, and regular security audits protect your business data 24/7. ISO 27001 standards.',
+              title: 'Security you can ask us about',
+              desc: 'Data lives in Supabase with Postgres Row Level Security, so a user can only read their own rows. Secrets stay in server environment variables and never reach the browser. Access is per-project and logged.',
               color: 'purple',
-              keywords: ['enterprise security', 'GDPR compliant', 'data protection', 'encryption'],
+              keywords: ['row level security', 'data protection', 'environment secrets'],
             },
             {
               icon: Globe,
-              title: 'Scalable Cloud Infrastructure',
-              desc: 'From solo entrepreneurs to Fortune 500 companies, our cloud-native platform scales with your business. AWS, Google Cloud, Azure integration. Pay only for what you use.',
+              title: 'Infrastructure that grows with you',
+              desc: 'Built on Next.js and Postgres from day one, so a launch-week site and a high-traffic catalog run on the same stack. Hosting, CDN and database tiers scale without a rewrite — you pay for the traffic you actually get.',
               color: 'green',
-              keywords: ['cloud infrastructure', 'scalable platform', 'AWS', 'startup solutions'],
+              keywords: ['scalable platform', 'Next.js', 'Postgres', 'startup solutions'],
             },
             {
               icon: TrendingUp,
-              title: 'Proven 3x ROI in 6 Months',
-              desc: 'Average 3x return on investment within 6 months. Data-driven SEO optimization, conversion rate improvement, and automated lead nurturing ensure continuous business growth.',
+              title: 'Growth work you can measure',
+              desc: 'SEO, conversion and lead-nurturing work ships with the numbers attached — rankings, enquiries and traffic sources, reported to you in writing so you can see what the spend returned.',
               color: 'pink',
               keywords: ['ROI', 'business growth', 'conversion optimization', 'lead nurturing'],
             },
@@ -204,16 +257,17 @@ export default async function Homepage() {
             }
             
             return (
-              <div
-                key={idx}
-                className={`group relative p-6 md:p-8 rounded-2xl bg-gradient-to-br ${colorMap[feature.color]} border backdrop-blur-sm hover:scale-105 transition-all duration-300`}
-              >
-                <div className="mb-4 inline-flex p-3 rounded-xl bg-white/5">
-                  <Icon className="w-6 h-6 md:w-7 md:h-7 text-white/80" />
+              <ScrollReveal key={idx} direction="up" delay={idx * 0.07} className="h-full">
+                <div
+                  className={`group relative h-full p-6 md:p-8 rounded-2xl bg-gradient-to-br ${colorMap[feature.color]} border backdrop-blur-sm hover:scale-105 transition-all duration-300`}
+                >
+                  <div className="mb-4 inline-flex p-3 rounded-xl bg-white/5">
+                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white/80" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">{feature.title}</h3>
+                  <p className="text-white/65 text-sm md:text-base leading-relaxed">{feature.desc}</p>
                 </div>
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2">{feature.title}</h3>
-                <p className="text-white/60 text-sm md:text-base leading-relaxed">{feature.desc}</p>
-              </div>
+              </ScrollReveal>
             )
           })}
         </div>
@@ -222,8 +276,16 @@ export default async function Homepage() {
       {/* Services Overview - Product Schema */}
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="text-center mb-10 md:mb-14">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono">Top AI-Powered Digital Services in India</h2>
-          <p className="text-cyan-400/50 text-base md:text-lg mt-3 max-w-2xl mx-auto">Discover our most popular web development, SEO, and automation solutions for Indian businesses</p>
+          <div className="flex justify-center mb-4">
+            <AnimatedEyebrow label="What we deliver" icon={<Zap className="w-3.5 h-3.5" />} />
+          </div>
+          <AnimatedHeadline
+            as="h2"
+            text="AI-Powered Digital Services for India"
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono"
+            inView
+          />
+          <p className="text-cyan-400/70 text-base md:text-lg mt-3 max-w-2xl mx-auto">Web development, SEO and automation engagements with a written scope, a fixed price and a delivery date.</p>
         </div>
         <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 gap-4"><div className="animate-pulse bg-white/5 rounded-xl h-48" /></div>}>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -238,7 +300,7 @@ export default async function Homepage() {
           <Link href="/marketplace">
             <button className="group px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-white hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 backdrop-blur-sm">
               <span className="flex items-center gap-2">
-                View All 50+ Services
+                {`View all ${services.length} services`}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </button>
@@ -250,8 +312,16 @@ export default async function Homepage() {
       {categories.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
           <div className="text-center mb-8 md:mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-white font-mono">Browse Services by Category</h2>
-            <p className="text-cyan-400/50 text-sm md:text-base mt-2 max-w-2xl mx-auto">
+            <div className="flex justify-center mb-4">
+              <AnimatedEyebrow label="Find it faster" />
+            </div>
+            <AnimatedHeadline
+              as="h2"
+              text="Browse Services by Category"
+              className="text-2xl md:text-3xl font-bold text-white font-mono"
+              inView
+            />
+            <p className="text-cyan-400/70 text-sm md:text-base mt-2 max-w-2xl mx-auto">
               Jump straight to the {categories.length} service categories KALKI OS delivers for Indian businesses.
             </p>
           </div>
@@ -273,11 +343,15 @@ export default async function Homepage() {
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Leading AI & Web Development Company in Indore, Madhya Pradesh
-            </h2>
-            <p className="text-white/60 mb-6">
-              Based in the heart of Indore's tech hub, KALKI Intelligence serves businesses across Madhya Pradesh and all of India. Our local presence means personalized service, face-to-face consultations, and deep understanding of Indian market dynamics.
+            <AnimatedHeadline
+              as="h2"
+              text="AI & Web Development Tech Company in Indore, Madhya Pradesh"
+              className="text-3xl font-bold text-white mb-4"
+              inView
+              stagger={0.035}
+            />
+            <p className="text-white/70 mb-6">
+              KALKI Intelligence is a tech company based in the heart of Indore's tech hub, serving businesses across Madhya Pradesh and all of India. Our local presence means personalized service, face-to-face consultations, and a deep understanding of Indian market dynamics.
             </p>
             <ul className="space-y-3 mb-6">
               <li className="flex items-start gap-2 text-white/70">
@@ -294,7 +368,7 @@ export default async function Homepage() {
               </li>
               <li className="flex items-start gap-2 text-white/70">
                 <CheckCircle2 className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <span>Affordable pricing in INR starting at ₹499 - No hidden fees</span>
+                <span>Transparent INR pricing on every service page - No hidden fees</span>
               </li>
             </ul>
             <Link href="/contact">
@@ -321,12 +395,20 @@ export default async function Homepage() {
       <section className="relative py-16 md:py-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 via-purple-900/20 to-pink-900/20" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono mb-4">Ready to Transform Your Business with AI?</h2>
-          <p className="text-white/60 text-base md:text-lg mb-8 max-w-2xl mx-auto">Join 500+ Indian businesses already using KALKI OS. Get started today with a free consultation.</p>
+          <div className="flex justify-center mb-5">
+            <AnimatedEyebrow label="Next step" icon={<Sparkles className="w-3.5 h-3.5" />} />
+          </div>
+          <AnimatedHeadline
+            as="h2"
+            text="Ready to Grow Your Business with AI?"
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono mb-4"
+            inView
+          />
+          <p className="text-white/65 text-base md:text-lg mb-8 max-w-2xl mx-auto">Send us the brief — you get a written scope, a fixed price and a delivery date back within 24 hours. Nothing to pay to start.</p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/register">
+            <Link href="/request">
               <button className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-purple-600 rounded-xl font-semibold text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105">
-                Start Free 14-Day Trial
+                Get a written quote
               </button>
             </Link>
             <Link href="/chat">
@@ -335,7 +417,7 @@ export default async function Homepage() {
               </button>
             </Link>
           </div>
-          <p className="text-white/40 text-sm mt-4">✓ No credit card required &nbsp; ✓ Free consultation &nbsp; ✓ Cancel anytime</p>
+          <p className="text-white/55 text-sm mt-4">✓ No payment to enquire &nbsp; ✓ Written quote in 24 hours &nbsp; ✓ You approve before work starts</p>
         </div>
       </section>
 

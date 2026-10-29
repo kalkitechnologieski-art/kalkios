@@ -42,8 +42,6 @@ export function ServiceSchema({ service }: { service: Service }) {
       description: service.aeo_summary ?? service.description ?? '',
       image_url: service.image_url,
       price: service.price,
-      rating: service.rating,
-      review_count: service.review_count,
     }),
     faqSchema(faqs),
     breadcrumbSchema([

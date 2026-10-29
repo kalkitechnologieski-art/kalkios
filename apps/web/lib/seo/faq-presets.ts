@@ -10,24 +10,29 @@ export interface FAQItem {
 export const FAQ_PRESETS = {
   aiServices: [
     {
-      question: 'What is KALKI OS and how does it work?',
+      question: 'What is KALKI OS and who runs it?',
       answer:
-        'KALKI OS is an enterprise AI platform that combines a service marketplace, AI concierge (Siddhi), lead generation engine (SETU), and project management tools. It helps Indian businesses automate workflows, generate leads, and manage digital services—all in one place.',
+        'KALKI OS is the platform of KALKI Intelligence, a tech company based in Indore, Madhya Pradesh. It brings together a service marketplace, an AI concierge (Siddhi), a lead generation engine (SETU) and project management tools, so Indian businesses can buy websites, automation and marketing from one place.',
+    },
+    {
+      question: 'Who is KALKI Intelligence?',
+      answer:
+        'KALKI Intelligence LLP is an AI tech company in Indore, Madhya Pradesh, founded in 2025. It builds websites, AI chatbots, SEO and lead generation systems for businesses across India, and gives every project a written scope and fixed price before work starts.',
     },
     {
       question: 'How much do KALKI services cost?',
       answer:
-        'Our services start at just ₹499 for basic packages. Enterprise solutions are custom-priced based on your requirements. We offer transparent pricing with no hidden fees, and all services include free consultation.',
+        'Each service page lists its own starting price in INR, and most projects are quoted individually. Submit the request form and you get a written scope and fixed price within 24 hours. Nothing is charged until you accept that quote, and there are no hidden fees.',
     },
     {
       question: 'Is KALKI OS suitable for small businesses?',
       answer:
-        'Absolutely! KALKI OS is designed for businesses of all sizes—from startups to enterprises. Our modular approach means you can start with a single service and scale as you grow. Many of our clients begin with lead generation or chatbot integration.',
+        'Yes. KALKI OS is designed for businesses of all sizes—from startups to enterprises. The modular approach means you can start with a single service, such as lead generation or chatbot integration, and scale as you grow.',
     },
     {
       question: 'How quickly can I get started?',
       answer:
-        'You can sign up and start using KALKI OS in under 5 minutes. Our AI concierge Siddhi guides you through the setup process, and most services can be deployed within 24-48 hours.',
+        'Set up takes minutes and our AI concierge Siddhi guides you through it. After you accept a quote, most digital services are delivered in 30–60 days, with a live project timeline you can follow from your dashboard.',
     },
     {
       question: 'Do you provide support in Hindi?',
