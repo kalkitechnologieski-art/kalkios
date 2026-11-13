@@ -7,6 +7,19 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // Apex → www. `has.value` is compiled as ^value$, so the dot is escaped
+  // and only the bare host matches (not www, not *.vercel.app). Next.js
+  // appends the original query string when the destination has none.
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'kalki-intelligence\\.in' }],
+        destination: 'https://www.kalki-intelligence.in/:path*',
+        permanent: true,
+      },
+    ];
+  },
   turbopack: {},
   images: {
     remotePatterns: [
