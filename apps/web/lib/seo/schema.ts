@@ -171,7 +171,6 @@ export function organizationSchema() {
     sameAs: [
       `${SITE}`,
       'https://www.linkedin.com/company/kalki-intelligence',
-      'https://twitter.com/kalki_intel',
     ],
   };
 }
