@@ -40,12 +40,14 @@ export default async function Homepage() {
       {/* JSON-LD Structured Data for Search Engines */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'WebSite',
+          '@id': 'https://www.kalki-intelligence.in/#website',
           name: 'KALKI OS',
           url: siteOrigin(),
           description: 'KALKI OS by KALKI Intelligence, a tech company in Indore: AI-assisted web development, SEO and lead generation services for Indian businesses.',
+          publisher: { '@id': 'https://www.kalki-intelligence.in/#organization' },
           potentialAction: {
             '@type': 'SearchAction',
             target: `${siteOrigin()}/explore?q={search_term_string}`,
