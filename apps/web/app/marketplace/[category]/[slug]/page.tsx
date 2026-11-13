@@ -26,6 +26,20 @@ type Service = Database['public']['Tables']['services']['Row'] & {
 
 type PageProps = { params: Promise<{ category: string; slug: string }> };
 
+// public.services row enterprise-seo supplies the lead, price, and schema
+// description. These strings replace that copy on this page only.
+const ENTERPRISE_SEO_SLUG = 'enterprise-seo';
+const ENTERPRISE_SEO_LEAD =
+  'Enterprise SEO support covering competitor analysis, on-page SEO, link building and monthly reporting. Your written quote confirms the fixed scope and price before any work begins.';
+const ENTERPRISE_SEO_ADVANCE =
+  '₹0 advance — no payment is needed to share your brief. This does not mean the work is free; listed prices are starting figures pending a written quote.';
+const ENTERPRISE_SEO_META =
+  'Enterprise SEO from KALKI Intelligence: competitor analysis, on-page SEO, link building and monthly reporting. Starting from ₹49,999, written quote.';
+
+function isEnterpriseSeo(slug: string): boolean {
+  return slug === ENTERPRISE_SEO_SLUG;
+}
+
 export const revalidate = 3600;
 
 // Prerender every catalog page at build so a product click resolves instantly
@@ -57,13 +71,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     decodeSegment(routeParams.slug),
   );
   if (!service) return {};
-  return buildServiceMetadata({
+  const metadata = buildServiceMetadata({
     name: service.name,
-    description: service.aeo_summary || service.description || '',
+    description: isEnterpriseSeo(service.slug)
+      ? ENTERPRISE_SEO_LEAD
+      : service.aeo_summary || service.description || '',
     slug: service.slug,
     category: service.category,
-    price: service.price ?? 0,
+    price: isEnterpriseSeo(service.slug) ? 49999 : service.price ?? 0,
   });
+  if (!isEnterpriseSeo(service.slug)) return metadata;
+  return {
+    ...metadata,
+    description: ENTERPRISE_SEO_META,
+    openGraph: metadata.openGraph
+      ? { ...metadata.openGraph, description: ENTERPRISE_SEO_META }
+      : metadata.openGraph,
+    twitter: metadata.twitter
+      ? { ...metadata.twitter, description: ENTERPRISE_SEO_META }
+      : metadata.twitter,
+  };
 }
 
 interface Related {
@@ -88,18 +115,31 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   ]);
   if (!service) notFound();
 
-  const features = Array.isArray(service.features)
+  const enterprise = isEnterpriseSeo(service.slug);
+  const features = (Array.isArray(service.features)
     ? (service.features as unknown[]).filter((f): f is string => typeof f === 'string')
-    : [];
+    : []
+  ).filter((f) => !enterprise || !/rank #1|proven strategy/i.test(f));
   const industries = service.target_industries ?? [];
+  const shown: Service = enterprise
+    ? {
+        ...service,
+        aeo_summary: ENTERPRISE_SEO_LEAD,
+        description: ENTERPRISE_SEO_LEAD,
+        price: 49999,
+        features: features as Service['features'],
+      }
+    : service;
 
-  const aeoSummary = service.aeo_summary ?? service.description ?? '';
+  const aeoSummary = enterprise
+    ? ENTERPRISE_SEO_LEAD
+    : service.aeo_summary ?? service.description ?? '';
 
   const related = await getRelatedServices(service.category, service.id);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <ProductSchema service={service} />
+      <ProductSchema service={shown} />
 
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-sm text-white/40 mb-6">
@@ -162,13 +202,21 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             <div className="flex items-end gap-3">
               <span className="text-sm text-white/55">Starting from</span>
               <span className="text-3xl font-bold text-white tabular-nums">
-                <AnimatedNumber to={service.price ?? 0} prefix="₹" />
+                {enterprise ? (
+                  '₹49,999'
+                ) : (
+                  <AnimatedNumber to={service.price ?? 0} prefix="₹" />
+                )}
               </span>
               {service.duration_days ? (
                 <span className="text-white/55 text-sm">· {service.duration_days} day delivery</span>
               ) : null}
             </div>
-            <p className="text-xs text-white/50">No payment now — a tailored quote is shared after your brief.</p>
+            <p className="text-xs text-white/50">
+              {enterprise
+                ? ENTERPRISE_SEO_ADVANCE
+                : 'No payment now — a tailored quote is shared after your brief.'}
+            </p>
           </div>
 
           {features.length > 0 && (
