@@ -162,7 +162,7 @@ export function organizationSchema() {
     telephone: '+91-6261031710',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: '51, MOG Lines, Swastik Nagar',
+      streetAddress: '52, MOG Lines, Swastik Nagar',
       addressLocality: 'Indore',
       addressRegion: 'Madhya Pradesh',
       postalCode: '452002',
@@ -196,7 +196,7 @@ export function localBusinessSchema() {
     priceRange: '₹₹',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: '51, MOG Lines, Swastik Nagar',
+      streetAddress: '52, MOG Lines, Swastik Nagar',
       addressLocality: 'Indore',
       addressRegion: 'Madhya Pradesh',
       postalCode: '452002',

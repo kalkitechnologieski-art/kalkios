@@ -7,7 +7,7 @@ import { ContactFormClient } from './ContactFormClient'
 
 export const metadata: Metadata = {
   title: 'Contact an AI Tech Company in Indore',
-  description: 'Talk to KALKI Intelligence, an AI tech company in Indore, about a website, automation or growth project. Written quote within 24 hours, ₹0 to start. 51, MOG Lines, Swastik Nagar, Indore.',
+  description: 'Talk to KALKI Intelligence, an AI tech company in Indore, about a website, automation or growth project. Written quote within 24 hours, ₹0 to start. 52, MOG Lines, Swastik Nagar, Indore.',
   alternates: { canonical: '/contact' },
 }
 
@@ -44,7 +44,7 @@ export default function ContactPage() {
                 <div>
                   <p className="text-white/60 text-sm font-mono leading-relaxed">
                     KALKI Intelligence<br />
-                    51, MOG Lines, Swastik Nagar,<br />
+                    52, MOG Lines, Swastik Nagar,<br />
                     Indore, Madhya Pradesh 452002<br />
                     India
                   </p>

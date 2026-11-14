@@ -57,6 +57,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     images: [absImage(getCategoryImageUrl(category))],
   }));
 
+  const nichePages: MetadataRoute.Sitemap = [
+    { category: 'Web Development', slug: 'astrology-website-development' },
+    { category: 'Marketing', slug: 'seo-for-astrologers' },
+  ].map(({ category, slug }) => ({
+    url: `${SITE}/marketplace/${encodeURIComponent(category)}/${encodeURIComponent(slug)}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
+
   const servicePages: MetadataRoute.Sitemap = services.map((service) => ({
     url: `${SITE}/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
     lastModified: service.updated_at || now,
@@ -65,5 +75,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     images: [absImage(getServiceImageUrl(service))],
   }));
 
-  return [...corePages, ...categoryPages, ...servicePages];
+  return [...corePages, ...categoryPages, ...nichePages, ...servicePages];
 }

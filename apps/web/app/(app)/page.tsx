@@ -373,14 +373,36 @@ export default async function Homepage() {
                 <span>Transparent INR pricing on every service page - No hidden fees</span>
               </li>
             </ul>
+            <div className="mb-6 text-white/70 text-sm leading-relaxed">
+              <p className="text-white font-semibold">KALKI INTELLIGENCE</p>
+              <p>52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002</p>
+              <p>
+                Phone{' '}
+                <a href="tel:+916261031710" className="text-cyan-300 hover:text-cyan-200">
+                  062610 31710
+                </a>
+              </p>
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=KALKI+INTELLIGENCE+52+MOG+Lines+Swastik+Nagar+Indore"
+                className="text-cyan-300 hover:text-cyan-200"
+              >
+                View on Google Maps
+              </a>
+            </div>
             <Link href="/contact">
               <button className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 rounded-xl font-semibold text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all">
                 Schedule Free Consultation in Indore
               </button>
             </Link>
           </div>
-          <div className="aspect-square bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-2xl flex items-center justify-center">
-            <MapPin className="w-32 h-32 text-cyan-400/30" />
+          <div className="aspect-square bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-2xl overflow-hidden">
+            <iframe
+              title="Map of KALKI INTELLIGENCE, 52 MOG Lines, Swastik Nagar, Indore"
+              src="https://www.google.com/maps?q=KALKI+INTELLIGENCE,+52+MOG+Lines,+Swastik+Nagar,+Indore+452002&output=embed"
+              loading="lazy"
+              className="w-full h-full border-0"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </div>
       </section>
