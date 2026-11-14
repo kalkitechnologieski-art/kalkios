@@ -10,6 +10,7 @@ import { LuxuryButton } from '@/components/ui/LuxuryButton';
 import { CheckCircle, Clock, Award, Users, ChevronRight, ArrowRight, FileText } from 'lucide-react';
 import { ProductReviewsMount } from './ProductReviewsMount';
 import { ProductSchema } from './ProductSchema';
+import { findNichePage, nicheMetadata, NicheServicePage } from './NicheServicePage';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { fetchTestimonials } from '@/lib/testimonials';
 import { Testimonials } from '@/components/trust/Testimonials';
@@ -66,6 +67,8 @@ async function getService(category: string, slug: string): Promise<Service | nul
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const routeParams = await params;
+  const niche = findNichePage(routeParams.category, routeParams.slug);
+  if (niche) return nicheMetadata(niche);
   const service = await getService(
     decodeSegment(routeParams.category),
     decodeSegment(routeParams.slug),
@@ -108,6 +111,8 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const routeParams = await params;
   const category = decodeSegment(routeParams.category);
   const slug = decodeSegment(routeParams.slug);
+  const niche = findNichePage(category, slug);
+  if (niche) return <NicheServicePage page={niche} />;
 
   const [service, testimonials] = await Promise.all([
     getService(category, slug),
