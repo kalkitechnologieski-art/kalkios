@@ -50,10 +50,6 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
     // Canonical URL to prevent duplicate content
     alternates: {
       canonical: url,
-      languages: {
-        'en-IN': url,
-        'hi-IN': `${url}?lang=hi`,
-      },
     },
 
     // Authorship and E-E-A-T signals
