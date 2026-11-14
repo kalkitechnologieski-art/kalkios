@@ -198,7 +198,7 @@ export function findNichePage(category: string, slug: string): NichePage | null 
 export function nicheMetadata(page: NichePage): Metadata {
   const canonical = canonicalNicheUrl(page);
   return {
-    title: page.title,
+    title: { absolute: page.title },
     description: page.description,
     alternates: { canonical },
     openGraph: { title: page.title, description: page.description, url: canonical },
