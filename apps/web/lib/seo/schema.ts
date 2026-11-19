@@ -11,6 +11,22 @@ const SITE = siteOrigin();
 const ORG_NAME = 'KALKI Intelligence';
 const ORG_LEGAL_NAME = 'KALKI Intelligence LLP';
 const ORG_LOGO = `${SITE}/images/logo.svg`;
+const FOUNDER_LINKEDIN = 'https://www.linkedin.com/in/nikhil-singh-8a4338298';
+const COMPANY_LINKEDIN = 'https://www.linkedin.com/company/kalki-intelligence';
+
+export function founderSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': `${SITE}/#founder`,
+    name: 'Nikhil Singh',
+    jobTitle: 'Founder & CEO',
+    email: 'ceo@kalki-intelligence.in',
+    url: `${SITE}/about`,
+    worksFor: { '@id': `${SITE}/#organization` },
+    sameAs: [FOUNDER_LINKEDIN],
+  };
+}
 
 export interface ProductInput {
   name: string;
@@ -160,12 +176,7 @@ export function organizationSchema() {
       height: 512,
     },
     foundingDate: '2025-01-01',
-    founder: {
-      '@type': 'Person',
-      name: 'Nikhil Singh',
-      jobTitle: 'Founder',
-      email: 'ceo@kalki-intelligence.in',
-    },
+    founder: { '@id': `${SITE}/#founder` },
     knowsAbout: [
       'Custom AI agent development',
       'AI chatbot development',
@@ -209,10 +220,7 @@ export function organizationSchema() {
       postalCode: '452002',
       addressCountry: 'IN',
     },
-    sameAs: [
-      `${SITE}`,
-      'https://www.linkedin.com/company/kalki-intelligence',
-    ],
+    sameAs: [COMPANY_LINKEDIN],
   };
 }
 

@@ -31,6 +31,8 @@ export async function GET() {
   lines.push('- Email: team@kalki-intelligence.in');
   lines.push('- Phone: +91-6261031710');
   lines.push('- Founded: 2025');
+  lines.push('- Founder & CEO: Nikhil Singh (https://www.linkedin.com/in/nikhil-singh-8a4338298)');
+  lines.push('- Company LinkedIn: https://www.linkedin.com/company/kalki-intelligence');
   lines.push(`- Website: ${baseUrl}`);
   lines.push('- Principles: written scope, fixed pricing, ₹0 advance, AI-assisted and human-accountable');
   lines.push('');

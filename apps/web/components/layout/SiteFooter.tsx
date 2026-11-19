@@ -120,7 +120,7 @@ export async function SiteFooter() {
 
         <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40">
           <p>© {new Date().getFullYear()} KALKI Intelligence LLP · Temple of technology</p>
-          <p>Office: 52, MOG Lines, Swastik Nagar, Indore 452002 · Clients worldwide · <a href="mailto:team@kalki-intelligence.in" className="hover:text-cyan-300 transition">team@kalki-intelligence.in</a></p>
+          <p>Office: 52, MOG Lines, Swastik Nagar, Indore 452002 · Clients worldwide · <a href="mailto:team@kalki-intelligence.in" className="hover:text-cyan-300 transition">team@kalki-intelligence.in</a> · <a href="https://www.linkedin.com/company/kalki-intelligence" className="hover:text-cyan-300 transition" rel="noopener noreferrer">LinkedIn</a></p>
         </div>
       </div>
     </footer>

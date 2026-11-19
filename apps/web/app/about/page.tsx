@@ -77,14 +77,29 @@ export default async function AboutPage() {
             ['Brand', 'KALKI Intelligence'],
             ['Tagline', 'Temple of technology'],
             ['Established', '2025'],
-            ['Founder', 'Nikhil Singh'],
+            ['Founder & CEO', 'Nikhil Singh'],
             ['Office', '52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India'],
             ['Delivery', 'Remote, worldwide'],
             ['Commercial terms', 'Written scope, fixed price, ₹0 advance'],
           ].map(([term, detail]) => (
             <div key={term} className="bg-white/5 border border-white/10 rounded-xl p-4">
               <dt className="text-cyan-300/80 text-xs uppercase tracking-wider">{term}</dt>
-              <dd className="text-white/80 mt-1">{detail}</dd>
+              <dd className="text-white/80 mt-1">
+                {term === 'Founder & CEO' ? (
+                  <>
+                    Nikhil Singh{' '}
+                    <a
+                      href="https://www.linkedin.com/in/nikhil-singh-8a4338298"
+                      className="text-cyan-300 hover:text-cyan-200"
+                      rel="noopener noreferrer"
+                    >
+                      LinkedIn
+                    </a>
+                  </>
+                ) : (
+                  detail
+                )}
+              </dd>
             </div>
           ))}
         </dl>
@@ -93,11 +108,11 @@ export default async function AboutPage() {
             questions={[
               {
                 question: 'When was KALKI Intelligence established?',
-                answer: 'KALKI Intelligence LLP was established in 2025. The founder is Nikhil Singh. The office is in Indore, and delivery is worldwide.',
+                answer: 'KALKI Intelligence LLP was established in 2025. Nikhil Singh is Founder & CEO. The office is in Indore, and delivery is worldwide.',
               },
               {
-                question: 'Who is the founder?',
-                answer: 'Nikhil Singh is the founder. Project mail goes to ceo@kalki-intelligence.in. The company mail is team@kalki-intelligence.in.',
+                question: 'Who is the Founder & CEO?',
+                answer: 'Nikhil Singh is Founder & CEO. Project mail goes to ceo@kalki-intelligence.in. The company mail is team@kalki-intelligence.in.',
               },
               {
                 question: 'Does the quote promise a ranking or an AI citation?',
