@@ -17,7 +17,7 @@ export const FAQ_PRESETS = {
     {
       question: 'Who do you work with?',
       answer:
-        'Two groups. Astrologers, vastu consultants and other spiritual practitioners, with services such as astrology websites, SEO for astrologers, vastu websites and marketing, YouTube production and a horoscope API. And businesses in every other industry, using the same catalog of websites, apps, automation and marketing.',
+        'Businesses in every industry. The catalog is grouped by the job: AI, commerce, marketing, data, cloud, security, and design. Industry hubs cover clinics, real estate, education, restaurants, finance, legal, hospitality, and manufacturing. Astrology and vastu are one of those hubs, not the whole company.',
     },
     {
       question: 'Do you guarantee rankings, views, or AI citations?',

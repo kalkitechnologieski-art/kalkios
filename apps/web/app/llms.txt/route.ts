@@ -40,6 +40,7 @@ export async function GET() {
   lines.push('');
   lines.push(`- [Home](${baseUrl}): AI and development partner for astrologers and businesses in every industry.`);
   lines.push(`- [Marketplace](${baseUrl}/marketplace): Service catalog with INR starting prices.`);
+  lines.push(`- [Industries](${baseUrl}/industries): Hubs for clinics, commerce, finance, hospitality, manufacturing, and other verticals. Astrology and vastu are one hub.`);
   lines.push(`- [Notes](${baseUrl}/insights): Explanatory articles. Not case studies.`);
   lines.push(`- [Full context](${baseUrl}/llms-full.txt): Longer description of the offer, the prices, and the boundaries.`);
   lines.push(`- [Request a service](${baseUrl}/request): Brief form. No payment to start. Written quote within 24 hours.`);

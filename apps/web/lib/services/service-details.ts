@@ -1,4 +1,5 @@
 import { serviceHref } from '@/lib/services/href'
+import { getPhase3Service, INDUSTRY_HUBS, PHASE3_SERVICES, type Phase3Service } from '@/lib/services/phase3-services'
 
 export interface ServiceFacts {
   name: string
@@ -602,7 +603,62 @@ const DETAILS: Record<string, Omit<ServicePageContent, 'faqs'> & { faqs?: Servic
   },
 }
 
+const EXISTING_LINKS: Record<string, { category: string; label: string }> = {
+  'custom-ai-development': { category: 'AI', label: 'Custom AI agent development' },
+  'ai-chatbot-development': { category: 'AI', label: 'AI chatbot development' },
+  'nlp-sentiment-analysis': { category: 'AI', label: 'NLP and sentiment analysis' },
+  'landing-page-5-pages': { category: 'Web Development', label: 'Landing page (5 pages)' },
+  'ecommerce-website-development': { category: 'Development', label: 'Ecommerce website development' },
+  'mobile-app-development': { category: 'Development', label: 'Mobile app development' },
+  'devops-automation': { category: 'Development', label: 'DevOps automation' },
+  'cloud-migration': { category: 'Development', label: 'Cloud migration' },
+  'standard-admin-dashboard': { category: 'Development', label: 'Standard admin dashboard' },
+  'ui-ux-design': { category: 'Development', label: 'UI/UX design' },
+  'simple-business-app': { category: 'App Development', label: 'Simple business app' },
+  'whatsapp-business-api-setup': { category: 'AI Automation', label: 'WhatsApp API integration' },
+  'email-marketing-automation': { category: 'Marketing', label: 'Email marketing automation' },
+  'ppc-google-ads': { category: 'Marketing', label: 'PPC and Google Ads' },
+  'custom-software-development': { category: 'Development', label: 'Custom software development' },
+}
+
+function linkForSlug(slug: string): PageLink | null {
+  const phase = PHASE3_SERVICES.find((row) => row.slug === slug)
+  if (phase) return { href: serviceHref({ category: phase.category, slug }), label: phase.name }
+  const known = EXISTING_LINKS[slug]
+  if (!known) return null
+  return { href: serviceHref({ category: known.category, slug }), label: known.label }
+}
+
+function contentFromPhase3(row: Phase3Service): ServicePageContent {
+  const hub = INDUSTRY_HUBS.find((item) => item.serviceSlugs.includes(row.slug))
+  const links = [
+    ...row.related.map(linkForSlug).filter((item): item is PageLink => item !== null),
+    ...(hub ? [{ href: `/industries/${hub.slug}`, label: hub.name }] : []),
+    { href: '/industries', label: 'Industries' },
+    { href: '/contact', label: 'Contact' },
+  ]
+  return {
+    sections: [
+      { heading: 'What this is', paragraphs: [row.lede] },
+      { heading: 'Who it is for', paragraphs: [row.audience] },
+      { heading: 'What the quote does not include', paragraphs: [row.notIncluded] },
+    ],
+    deliverables: row.features,
+    prerequisites: row.prerequisites,
+    process: [],
+    faqs: [
+      { question: `What is ${row.name}?`, answer: row.lede },
+      { question: 'What does the starting price mean?', answer: `${row.name} starts at ₹${row.price.toLocaleString('en-IN')}. That is a floor. The written quote is the price, and nothing is charged to receive it.` },
+      { question: 'What is not included?', answer: row.notIncluded },
+      { question: 'Do you promise a business result?', answer: 'No. The quote lists the work. It does not promise revenue, rankings, leads, uptime, or citations.' },
+    ],
+    links,
+  }
+}
+
 export function buildServicePageContent(service: ServiceFacts): ServicePageContent {
+  const phase = getPhase3Service(service.slug)
+  if (phase) return contentFromPhase3(phase)
   const fromCatalog = featureList(service.features)
   const custom = DETAILS[service.slug]
   const deliverables = fromCatalog.length ? fromCatalog : custom?.deliverables ?? []

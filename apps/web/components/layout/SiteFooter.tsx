@@ -40,6 +40,7 @@ const COMPANY = [
   { label: 'Careers', href: '/careers' },
   { label: 'Support', href: '/support' },
   { label: 'Marketplace', href: '/marketplace' },
+  { label: 'Industries', href: '/industries' },
 ];
 
 const LEGAL = [

@@ -1,4 +1,5 @@
 import type { Database } from '@/lib/supabase/types'
+import { PHASE3_SERVICES, phase3Image } from '@/lib/services/phase3-services'
 
 export type CatalogService = Database['public']['Tables']['services']['Row'] & {
   target_industries?: string[]
@@ -39,7 +40,7 @@ function service(
 
 // Starting prices follow a published catalog price for the closest existing
 // package. Each figure is a floor pending a written quote, not a case result.
-export const CATALOG_ADDITIONS: CatalogService[] = [
+const CORE_ADDITIONS: CatalogService[] = [
   service({
     name: 'Astrology Website Development',
     slug: 'astrology-website-development',
@@ -303,4 +304,23 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     meta_description:
       'Astrology app development worldwide. From ₹12,000, written scope, ₹0 advance. Store approval is the store’s decision.',
   }),
+]
+
+export const CATALOG_ADDITIONS: CatalogService[] = [
+  ...CORE_ADDITIONS,
+  ...PHASE3_SERVICES.map((row) => service({
+    name: row.name,
+    slug: row.slug,
+    category: row.category,
+    sub_category: 'Demand catalog',
+    description: row.lede,
+    long_description: row.notIncluded,
+    price: row.price,
+    duration_days: row.days,
+    features: row.features,
+    image_url: phase3Image(row.category),
+    meta_title: row.name,
+    meta_description: row.lede.length > 155 ? `${row.lede.slice(0, 152)}...` : row.lede,
+    target_industries: ['All industries'],
+  })),
 ]
