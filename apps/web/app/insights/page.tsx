@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { INSIGHTS } from '@/lib/content/insights'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { CONTENT_UPDATED } from '@/lib/seo/content-date'
-import { siteOrigin } from '@/lib/seo/site-url'
+import { languageAlternates, siteOrigin } from '@/lib/seo/site-url'
 
 export const revalidate = 3600
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'Notes on Astrology, Vastu and AI Development',
   description:
     'Short, sourced notes from KALKI Intelligence on astrology websites, SEO, WhatsApp API setup, omnichannel CRM, AEO/GEO and YouTube production. No invented results.',
-  alternates: { canonical: '/insights' },
+  alternates: languageAlternates('/insights'),
 }
 
 export default function InsightsIndexPage() {

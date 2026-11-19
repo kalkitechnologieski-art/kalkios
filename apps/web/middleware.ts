@@ -70,7 +70,13 @@ export async function middleware(request: NextRequest) {
     return pathname === route || pathname.startsWith(route + '/');
   });
 
-  if (isPublic) return withSecurityHeaders(NextResponse.next());
+  // Only account and admin areas require a session. Any other unknown URL
+  // must reach Next.js so it can answer 404 instead of a login redirect.
+  const PRIVATE_PREFIXES = ['/admin', '/employee', '/client', '/dashboard', '/settings', '/profile', '/cart', '/checkout'];
+  const needsSession = PRIVATE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'))
+    || (pathname.startsWith('/api/') && !isPublic);
+
+  if (!needsSession) return withSecurityHeaders(NextResponse.next());
 
   let session: { user?: { id: string } } | null = null;
   try {

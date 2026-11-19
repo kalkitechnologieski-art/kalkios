@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 
 import type { Metadata } from 'next';
-import { siteOrigin } from '@/lib/seo/site-url';
+import { languageAlternates, siteOrigin } from '@/lib/seo/site-url';
 import { categoryHref, normKey, serviceHref } from '@/lib/services/href';
 
 const SITE = siteOrigin();
@@ -49,9 +49,7 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
     keywords,
     
     // Canonical URL to prevent duplicate content
-    alternates: {
-      canonical: url,
-    },
+    alternates: languageAlternates(url),
 
     // Authorship and E-E-A-T signals
     authors: [{ name: options.author || 'KALKI Intelligence', url: SITE }],

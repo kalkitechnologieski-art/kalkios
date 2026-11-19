@@ -433,6 +433,173 @@ const DETAILS: Record<string, Omit<ServicePageContent, 'faqs'> & { faqs?: Servic
       { href: '/contact', label: 'Contact' },
     ],
   },
+  'custom-ai-development': {
+    sections: [
+      {
+        heading: 'What hiring an AI developer means here',
+        paragraphs: [
+          'Custom AI agent development is a written list of what the agent does, which systems it may call, and what a person still approves. It is not a promise of unnamed staff hours. If the quote is a block of days, the quote says how many days and what those days produce.',
+          'The starting price is the figure on this page. KALKI Intelligence publishes it as a floor for a scoped agent, not as a day rate you can multiply in your head.',
+        ],
+      },
+      {
+        heading: 'What is in the scope',
+        paragraphs: [
+          'A typical scope names the job of the agent, the data it may read, the action it may take, and how a person reviews the result. A chatbot that only answers questions is the separate AI chatbot service. A workflow in n8n is the separate n8n service. Those are different pages so the price matches the job.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The task the agent should perform, and the task it must not perform.',
+      'Access to the systems it needs, or a decision that those connections are out of scope.',
+      'The person who approves the quote and the person who reviews the agent’s output.',
+    ],
+    process: [],
+    links: [
+      link('AI', 'ai-chatbot-development', 'AI chatbot development'),
+      link('AI Automation', 'n8n-workflow-automation', 'n8n workflow automation'),
+      link('AI Automation', 'ai-chatbot-automation', 'AI automation services'),
+      { href: '/insights/how-to-hire-an-ai-developer', label: 'How to hire an AI developer' },
+      { href: '/about', label: 'Facts about KALKI Intelligence' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  'ai-chatbot-development': {
+    sections: [
+      {
+        heading: 'What this chatbot is',
+        paragraphs: [
+          'AI chatbot development is a custom bot for the channels the quote names: a site widget, an app, or another channel written down. The starting point is a list of questions it may answer and the point where it hands the conversation to a person.',
+          'A WhatsApp-only bot is a separate page, WhatsApp Chatbot for Business, from ₹5,999. The WhatsApp Business API connection is a third page, from ₹14,999. Buying this custom bot does not buy those two.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The questions the bot should answer, and the questions it should refuse.',
+      'The channel. If it is WhatsApp, say so, and we will point the quote at the WhatsApp pages if that is the smaller fit.',
+      'Sample answers you are willing to stand behind. We will not invent a client story for the bot to repeat.',
+    ],
+    process: [],
+    links: [
+      link('AI Chatbots', 'whatsapp-chatbot-for-business', 'WhatsApp chatbot for business'),
+      link('AI Automation', 'whatsapp-business-api-setup', 'WhatsApp API integration'),
+      link('AI', 'custom-ai-development', 'Custom AI agent development'),
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  'ai-horoscope-kundali-api': {
+    sections: [
+      {
+        heading: 'What kundali software development means here',
+        paragraphs: [
+          'This service is an API: daily horoscope, kundli generation, compatibility matching, and muhurta, for a website or app you already have or that we scope separately. It is described as white-label ready. The published starting price is ₹29,999.',
+          'It is not an astrology website and it is not an astrology app. Those are separate products, from ₹5,000 and ₹12,000. The API is added only when the quote names it.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The calculations you want: horoscope, kundli, compatibility, muhurta, or a subset.',
+      'The site or app that will call the API, or a decision to scope that product as well.',
+      'The language of any text the API returns, if text is in scope.',
+    ],
+    process: [],
+    links: [
+      link('Web Development', 'astrology-website-development', 'Astrology website development'),
+      link('App Development', 'astrology-app-development', 'Astrology app development'),
+      { href: '/insights/what-kundali-software-includes', label: 'What kundali software includes' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  'whatsapp-chatbot-for-business': {
+    sections: [
+      {
+        heading: 'The bot, not the API',
+        paragraphs: [
+          'A WhatsApp chatbot for business is the set of replies named in the quote, on one WhatsApp number. The starting price is ₹5,999, the same floor as AI chatbot automation, because the job is the conversation, not the Meta connection.',
+          'If the number is not already on the WhatsApp Business API, that connection is the WhatsApp API integration service, from ₹14,999. Meta approves the account and the templates. That approval is not something either service can promise.',
+        ],
+      },
+      {
+        heading: 'How this differs from a custom bot',
+        paragraphs: [
+          'AI chatbot development is the custom bot when the channel is not only WhatsApp, or when the logic is larger than a defined reply flow. Use this page when the brief is WhatsApp replies. Use the other page when the brief is a bot you will also put on a site or an app.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The flows: what the person asks, and what the bot may reply.',
+      'The WhatsApp number, and whether it is already on the Business API.',
+      'A person who will take over when the bot cannot answer.',
+    ],
+    process: [],
+    links: [
+      link('AI Automation', 'whatsapp-business-api-setup', 'WhatsApp API integration'),
+      link('AI', 'ai-chatbot-development', 'AI chatbot development'),
+      link('Development', 'omnichannel-dm-crm', 'Unified inbox and omnichannel CRM'),
+      { href: '/insights/whatsapp-chatbot-versus-the-api', label: 'WhatsApp chatbot versus the API' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  'n8n-workflow-automation': {
+    sections: [
+      {
+        heading: 'What the n8n work is',
+        paragraphs: [
+          'n8n automation here means the workflows named in the quote, built in n8n, connecting the apps the quote names. The starting price is ₹14,999, the same floor as the published email-automation setup. The listed duration is 21 days.',
+          'KALKI Intelligence is not an n8n partner. We do not sell n8n licences, and a badge is not part of the delivery. If the quote names a different tool, this is the wrong page. General lead and booking automation is the AI automation service, from ₹5,999.',
+        ],
+      },
+      {
+        heading: 'What you still operate',
+        paragraphs: [
+          'You keep the n8n account, the app credentials, and the decision about where it is hosted. We hand over a runbook that says what each workflow does and how to turn it off. A workflow that is not in the quote is a new quote.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The steps, in order, and the apps at each step.',
+      'An n8n account, or a decision that creating one is part of the quote.',
+      'Credentials you are willing to store in that account.',
+    ],
+    process: [],
+    links: [
+      link('AI Automation', 'ai-chatbot-automation', 'AI automation services'),
+      link('Marketing', 'email-marketing-automation', 'Email marketing automation'),
+      link('AI', 'custom-ai-development', 'Custom AI agent development'),
+      { href: '/insights/what-an-n8n-automation-scope-includes', label: 'What an n8n scope includes' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
+  'astrology-app-development': {
+    sections: [
+      {
+        heading: 'What the app includes',
+        paragraphs: [
+          'Astrology app development starts from the same floor as the simple business app, ₹12,000. The quote names the screens. A usual first set is a home screen, a services screen, and a way to request a consultation. iOS, Android, or both is a line in the quote.',
+          'Kundli generation is not inside ₹12,000. That is the kundali software API, from ₹29,999. A website is the five-page package, from ₹5,000. Store listing is included only when the quote says so. Apple and Google decide whether a build is approved.',
+        ],
+      },
+    ],
+    deliverables: [],
+    prerequisites: [
+      'The screens and the language.',
+      'Whether the first release is iOS, Android, or both.',
+      'Whether kundli tools or a website are in this quote or a later one.',
+    ],
+    process: [],
+    links: [
+      link('App Development', 'simple-business-app', 'Simple business app'),
+      link('Web Development', 'astrology-website-development', 'Astrology website development'),
+      link('AI Automation', 'ai-horoscope-kundali-api', 'Kundali software'),
+      { href: '/insights/astrology-app-or-website', label: 'App or website for a practice' },
+      { href: '/contact', label: 'Contact' },
+    ],
+  },
 }
 
 export function buildServicePageContent(service: ServiceFacts): ServicePageContent {

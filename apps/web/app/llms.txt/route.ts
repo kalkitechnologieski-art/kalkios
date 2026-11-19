@@ -39,6 +39,7 @@ export async function GET() {
   lines.push(`- [Home](${baseUrl}): AI and development partner for astrologers and businesses in every industry.`);
   lines.push(`- [Marketplace](${baseUrl}/marketplace): Service catalog with INR starting prices.`);
   lines.push(`- [Notes](${baseUrl}/insights): Explanatory articles. Not case studies.`);
+  lines.push(`- [Full context](${baseUrl}/llms-full.txt): Longer description of the offer, the prices, and the boundaries.`);
   lines.push(`- [Request a service](${baseUrl}/request): Brief form. No payment to start. Written quote within 24 hours.`);
   lines.push(`- [Siddhi AI chat](${baseUrl}/chat): Conversational assistant.`);
   lines.push(`- [Explore](${baseUrl}/explore): Search the catalog.`);

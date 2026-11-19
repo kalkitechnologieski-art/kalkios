@@ -30,6 +30,8 @@ export default function robots(): MetadataRoute.Robots {
       // ─── Search engines with a polite crawl budget ──────────
       { userAgent: ['Googlebot', 'Googlebot-Image'], allow: ['/', '/images/'], crawlDelay: 1 },
       { userAgent: 'Bingbot', allow: '/', crawlDelay: 2 },
+      { userAgent: 'Applebot', allow: '/' },
+      { userAgent: 'DuckAssistBot', allow: '/' },
       // ─── AI crawlers — allowed on public content ────────────
       { userAgent: 'GPTBot', allow: '/', disallow: ['/api/', '/admin/', '/employee/', '/client/', '/p/'] },
       { userAgent: 'OAI-SearchBot', allow: '/' },

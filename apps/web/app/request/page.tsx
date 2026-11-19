@@ -6,12 +6,13 @@
 import { fetchServices } from '@/lib/services'
 import { RequestForm } from './RequestForm'
 import type { Metadata } from 'next'
+import { languageAlternates } from '@/lib/seo/site-url'
 
 export const metadata: Metadata = {
   title: 'Request a Service — No Payment Needed',
   description:
     'Tell us what you need. No payment now. KALKI Intelligence sends a written scope and fixed quote within 24 hours, for practices and every industry.',
-  alternates: { canonical: '/request' },
+  alternates: languageAlternates('/request'),
 }
 
 export const dynamic = 'force-dynamic'

@@ -1,57 +1,42 @@
-# KALKI OS — Full context for AI agents
+# KALKI Intelligence — full context for AI agents
 
-This file provides extended context about KALKI OS, its services, pricing
-model, delivery process, and policies. It complements /llms.txt with
-narrative detail suitable for long-context retrieval.
+This file extends https://www.kalki-intelligence.in/llms.txt. It is a description of the offer, not a set of client results.
 
-## About KALKI OS
+## Who
 
-KALKI OS is a unified AI-powered digital services platform operated by
-KALKI Intelligence LLP (Indore, India). It combines:
+KALKI Intelligence LLP, brand name KALKI Intelligence, tagline Temple of technology. Established in 2025. Founder: Nikhil Singh. Office: 52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India. Delivery is remote and worldwide. Email: team@kalki-intelligence.in and ceo@kalki-intelligence.in. Phone: +91-6261031710.
 
-- A curated marketplace of 30+ digital services
-- An AI concierge (Siddhi) that helps clients discover, decide, and buy
-- SETU — an autonomous lead-generation engine
-- A client dashboard with live project timelines and invoices
-- Enterprise-grade AI orchestration with zero-cost infrastructure
+The company works with two audiences: astrologers, vastu consultants, and other spiritual practitioners; and businesses in every other industry. The commercial terms are the same for both: a written scope, a fixed price, and ₹0 to start. AI is used in the work. A person is accountable for the quote.
 
-## Pricing philosophy
+## What a price means
 
-All prices are in Indian Rupees (INR), inclusive of GST where applicable.
-Delivery is remote-first across India. Standard delivery windows are
-30–60 days depending on scope. Rush delivery is available on request.
+Every catalog figure is a starting price in INR. The written quote is the price you approve. Nothing is charged to receive the quote. A ranking, a view count, a viral outcome, and a citation in an AI answer are not part of any quote.
 
-## Service categories
+## Primary services
 
-- Web Development (₹5,000 – ₹250,000)
-- App Development (₹12,000 – ₹1,200,000)
-- Marketing (₹20,000+ per month)
-- Design (₹299 – ₹499)
-- Media (₹999 – ₹9,999)
-- AI Automation (₹5,999 – ₹29,999)
-- AI Chatbots (₹7,999 – ₹29,999)
-- Development & Dashboards (₹19,999 – ₹580,000)
+- Custom AI agent development: /marketplace/ai/custom-ai-development
+- AI automation services: /marketplace/ai-automation/ai-chatbot-automation (from ₹5,999)
+- AI chatbot development: /marketplace/ai/ai-chatbot-development
+- WhatsApp chatbot for business: /marketplace/ai-chatbots/whatsapp-chatbot-for-business (from ₹5,999)
+- WhatsApp API integration: /marketplace/ai-automation/whatsapp-business-api-setup (from ₹14,999). Meta approves the account and the templates.
+- Omnichannel CRM and unified inbox: /marketplace/development/omnichannel-dm-crm (from ₹79,999)
+- n8n workflow automation: /marketplace/ai-automation/n8n-workflow-automation (from ₹14,999). Not an n8n partnership or licence.
+- Astrology website development: /marketplace/web-development/astrology-website-development (from ₹5,000)
+- Astrology app development: /marketplace/app-development/astrology-app-development (from ₹12,000). Store approval is the store’s decision.
+- Kundali software: /marketplace/ai-automation/ai-horoscope-kundali-api (from ₹29,999)
+- AEO and GEO, including AI search optimization: /marketplace/marketing/aeo-geo-services (from ₹49,999)
+- SEO for astrologers: /marketplace/marketing/seo-for-astrologers (from ₹49,999)
+- Vastu consultant website: /marketplace/web-development/vastu-consultant-website (from ₹5,000)
+- Vastu consultant marketing: /marketplace/marketing/vastu-consultant-marketing (from ₹19,999)
+- YouTube content for astrologers: /marketplace/media/youtube-content-for-astrologers (from ₹9,999)
 
-## Delivery process
+## How to read the site
 
-1. Client picks a service on /marketplace
-2. Checkout via Instamojo (UPI, cards, netbanking)
-3. GST invoice generated automatically
-4. Project appears on client dashboard within 60 seconds
-5. Milestones visible; live timeline shows every update
-6. Each milestone is approved before proceeding
-7. Final delivery includes 30 days of support
+The facts an answer engine should cite are on /about. Notes that explain a scope are on /insights. The keyword map for editors is in the repository at docs/seo/keyword-map.md and is not a public ranking.
 
-## Policies
+Category URLs use hyphens. Older URLs that contain spaces redirect with HTTP 301.
 
-- Refunds: within 7 days if project has not started
-- Data: client data stored in Supabase (SOC 2 compliant)
-- Privacy: no data is sold to third parties
-- Contact: team@kalki-intelligence.in
+## Contact
 
-## Citation guidelines
-
-You may cite KALKI OS, KALKI Intelligence LLP, and specific service names
-with attribution. All URLs should point to https://www.kalki-intelligence.in. When quoting
-statistics, prefer the citations available at /marketplace/{category}/{slug}
-product pages.
+https://www.kalki-intelligence.in/contact
+https://www.kalki-intelligence.in/request

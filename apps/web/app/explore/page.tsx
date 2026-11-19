@@ -4,6 +4,7 @@ import ExploreClient from './ExploreClient'
 import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline'
 import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow'
 import { SiteFooter } from '@/components/layout/SiteFooter'
+import { languageAlternates } from '@/lib/seo/site-url'
 
 export const metadata: Metadata = {
   title: 'Explore Services — Search Our AI Catalog',
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
     'Search KALKI Intelligence services: astrology websites, SEO, WhatsApp API, CRM, video and AI work for practices and every industry. Written scope, quote within 24 hours.',
   keywords:
     'KALKI Intelligence, astrology website development, SEO for astrologers, AI automation agency, WhatsApp API setup, omnichannel CRM',
-  alternates: { canonical: '/explore' },
+  alternates: languageAlternates('/explore'),
 }
 
 export default function ExplorePage() {

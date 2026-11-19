@@ -287,6 +287,239 @@ export const INSIGHTS: InsightArticle[] = [
       svc('Web Development', 'astrology-website-development', 'Astrology website development'),
     ],
   },
+  {
+    slug: 'how-to-hire-an-ai-developer',
+    title: 'How to hire an AI developer without buying unnamed hours',
+    description:
+      'Hiring an AI developer should start with the task, the data, and what a person still approves. KALKI Intelligence quotes custom agents from the price on that service page.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'Hire an AI developer by writing the job first: what the agent may do, what it must not do, and who reviews the output. KALKI Intelligence treats custom AI agent development as that written scope. The starting price is the figure on the service page, not a day rate. You pay nothing to receive the quote.',
+          'A chatbot that answers a fixed list of questions is a smaller product. A workflow in n8n is a different product. Putting all three on one page would hide the price. They are separate so you can buy one.',
+        ],
+      },
+      {
+        heading: 'What to send',
+        paragraphs: [
+          'Send one task, the systems it needs, and an example of a good result and a bad result. If you do not have the example, say so. The quote can include writing the acceptance checks. It cannot include a claim that the agent will replace a team, because that is not a deliverable we can point at.',
+        ],
+      },
+      {
+        heading: 'What “best AI developer” usually hides',
+        paragraphs: [
+          'A page that ranks vendors is only honest if it shows the method and the sources. This one does not rank anyone, including KALKI Intelligence. The useful comparison is the written list: task, data, human review, price, and date. If a proposal does not have those five, you do not yet know what you are buying.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is the starting price a day rate?',
+        answer: 'No. The figure on the custom AI development page is a floor for a scoped agent. The quote states the price for your brief.',
+      },
+      {
+        question: 'Do you staff a developer into our team?',
+        answer: 'Only if the quote says so, with the days and the output written down. The default offer is a scoped build, not unnamed hours.',
+      },
+    ],
+    links: [
+      svc('AI', 'custom-ai-development', 'Custom AI agent development'),
+      svc('AI', 'ai-chatbot-development', 'AI chatbot development'),
+      svc('AI Automation', 'n8n-workflow-automation', 'n8n workflow automation'),
+    ],
+  },
+  {
+    slug: 'whatsapp-chatbot-versus-the-api',
+    title: 'WhatsApp chatbot versus WhatsApp API setup',
+    description:
+      'A WhatsApp chatbot is the replies, from ₹5,999. WhatsApp API integration is the Meta connection, from ₹14,999. They are different quotes.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'A WhatsApp chatbot for business is the conversation: the questions and the replies, from ₹5,999. WhatsApp API integration is the connection of that number to the WhatsApp Business API, from ₹14,999. You need the second only if the number is not already connected. Meta approves the account and the templates. Neither quote can promise that approval.',
+        ],
+      },
+      {
+        heading: 'Which brief is which',
+        paragraphs: [
+          'If you can already send template messages from a provider and you want replies for appointment questions, buy the chatbot. If you have a phone number and no API, buy the API setup, and add the chatbot only if you also want automated replies. A shared inbox for WhatsApp, Instagram, and Messenger is a third product, the omnichannel CRM, from ₹79,999.',
+          'A custom bot that also lives on a website is AI chatbot development, not this WhatsApp page. The first paragraph of each service page says which job it is.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Does the chatbot price include the API?',
+        answer: 'No. The chatbot starts at ₹5,999. The API connection starts at ₹14,999. The quote lists the one you need, or both.',
+      },
+      {
+        question: 'Can you guarantee WhatsApp will approve the templates?',
+        answer: 'No. We prepare the setup and the template list. Meta approves or refuses them.',
+      },
+    ],
+    links: [
+      svc('AI Chatbots', 'whatsapp-chatbot-for-business', 'WhatsApp chatbot for business'),
+      svc('AI Automation', 'whatsapp-business-api-setup', 'WhatsApp API integration'),
+      svc('Development', 'omnichannel-dm-crm', 'Omnichannel CRM'),
+    ],
+  },
+  {
+    slug: 'what-kundali-software-includes',
+    title: 'What kundali software development includes',
+    description:
+      'Kundali software at KALKI Intelligence is an API for horoscope, kundli, compatibility, and muhurta. From ₹29,999. A website or app is separate.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'Kundali software development on this site is the AI Horoscope and Kundali API: daily horoscope, kundli generation, compatibility matching, and muhurta, built to be called by a website or an app. The published starting price is ₹29,999. It is described as white-label ready. The quote names which of those four calls you want.',
+          'The API does not include the website, from ₹5,000, or the app, from ₹12,000. Those products can call the API when the same quote, or a later quote, says so.',
+        ],
+      },
+      {
+        heading: 'What to decide first',
+        paragraphs: [
+          'Decide the calculations, the language of any text, and where the API will be called. If you do not have a site or an app yet, say that in the brief. We will not describe a finished kundli product we have not scoped, and this article does not claim one has already shipped.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is ₹29,999 the website as well?',
+        answer: 'No. That figure is the API floor. The astrology website starts at ₹5,000 and the astrology app at ₹12,000.',
+      },
+      {
+        question: 'Which calculations can be in the quote?',
+        answer: 'Daily horoscope, kundli generation, compatibility matching, and muhurta. The quote can include a subset.',
+      },
+    ],
+    links: [
+      svc('AI Automation', 'ai-horoscope-kundali-api', 'Kundali software and horoscope API'),
+      svc('Web Development', 'astrology-website-development', 'Astrology website development'),
+      svc('App Development', 'astrology-app-development', 'Astrology app development'),
+    ],
+  },
+  {
+    slug: 'astrology-app-or-website',
+    title: 'Astrology app or astrology website: which quote to start with',
+    description:
+      'Start with a website at ₹5,000 when people find you in a browser. Start with an app at ₹12,000 when the brief is a home screen. Kundli tools are a third line.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'Choose the astrology website, from ₹5,000, when the brief is pages in a browser: home, services, and a way to request a consultation. Choose the astrology app, from ₹12,000, when the brief is screens on a phone and the quote says iOS, Android, or both. Choose both only when the quote lists both. Kundli generation is neither of those prices. It is the API, from ₹29,999.',
+        ],
+      },
+      {
+        heading: 'What neither price includes',
+        paragraphs: [
+          'Store approval is Apple’s or Google’s decision. The app quote includes a store listing only when it says so. The website quote includes hosting only when it says so. Hindi or English is a line in the quote, not an assumption. A vastu consultancy uses the same split: a site from ₹5,000, and marketing from ₹19,999 if the brief is content rather than an app.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Can one quote include the site and the app?',
+        answer: 'Yes. They stay separate lines so each price is visible. The quote names both.',
+      },
+      {
+        question: 'Does the app price include kundli charts?',
+        answer: 'No. Charts and horoscope calls are the kundali API, from ₹29,999, if the quote adds that line.',
+      },
+    ],
+    links: [
+      svc('App Development', 'astrology-app-development', 'Astrology app development'),
+      svc('Web Development', 'astrology-website-development', 'Astrology website development'),
+      svc('AI Automation', 'ai-horoscope-kundali-api', 'Kundali software'),
+    ],
+  },
+  {
+    slug: 'what-to-ask-an-aeo-agency',
+    title: 'What to ask an AEO agency before you buy AI search optimization',
+    description:
+      'Ask what will change on the page, whether the FAQ schema matches the visible FAQ, and whether a citation is promised. KALKI Intelligence does not promise citations.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'An AEO agency should be able to show the page that will change, the question it answers in the first sentences, and the FAQ whose visible text is the same text in the structured data. GEO, or generative engine optimization, should be a consistent description of who you are. AI search optimization is those two jobs together on this site, from ₹49,999. A citation in ChatGPT, Perplexity, or Google AI Overviews is not included.',
+        ],
+      },
+      {
+        heading: 'Questions that expose a weak offer',
+        paragraphs: [
+          'Ask which pages are in the quote. Ask whether the schema mentions a checkout step the page does not have. Ask what the monthly report contains if nobody cites you. A useful report lists the edits. A report that promises a mention in an AI product is selling a decision that product makes, not the work.',
+          'This is not a ranking of agencies. KALKI Intelligence is one vendor with that boundary written down. Enterprise SEO, with links and a ranking report that still does not promise a position, is a different URL at the same starting price.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Will AI search optimization make an assistant recommend us?',
+        answer: 'That is not a deliverable. The deliverable is the pages, the matching FAQs and schema, and a written description of the business.',
+      },
+      {
+        question: 'Is this the same as SEO?',
+        answer: 'No. SEO here is analysis, on-page work, links, and a report. AEO and GEO are the answer structure and the entity facts. A quote can include one or both.',
+      },
+    ],
+    links: [
+      svc('Marketing', 'aeo-geo-services', 'AEO and GEO services'),
+      svc('Marketing', 'enterprise-seo', 'Enterprise SEO'),
+      { href: '/about', label: 'Facts about KALKI Intelligence' },
+    ],
+  },
+  {
+    slug: 'what-an-n8n-automation-scope-includes',
+    title: 'What an n8n automation scope includes',
+    description:
+      'An n8n scope is the workflows, the apps, and a runbook. From ₹14,999. KALKI Intelligence does not sell n8n licences or a partner badge.',
+    datePublished: PUBLISHED,
+    dateModified: PUBLISHED,
+    sections: [
+      {
+        heading: 'The short answer',
+        paragraphs: [
+          'An n8n automation scope names each workflow, the apps it touches, and how you turn it off. KALKI Intelligence quotes that work from ₹14,999, the same floor as email-automation setup, with a listed duration of 21 days. We are not an n8n partner. The licence, if n8n charges one for your hosting, is yours.',
+        ],
+      },
+      {
+        heading: 'What to have ready',
+        paragraphs: [
+          'Write the steps in order. Name the account that will own the n8n instance. Say which credentials we may store. If a step needs an AI model, say what the model may see. General booking automation that is not an n8n workflow belongs on the AI automation page, from ₹5,999, not here.',
+          'A workflow that messages clients on WhatsApp still needs the WhatsApp API if the number is not connected. That connection is a separate line. The n8n quote does not silently include it.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Are you an n8n partner?',
+        answer: 'No. The delivery is the workflows in the quote and a runbook. A partner badge is not part of the offer.',
+      },
+      {
+        question: 'What does ₹14,999 buy?',
+        answer: 'It is the starting price for the workflows named in the quote. The written quote is the price you approve. Nothing is paid to receive it.',
+      },
+    ],
+    links: [
+      svc('AI Automation', 'n8n-workflow-automation', 'n8n workflow automation'),
+      svc('AI Automation', 'ai-chatbot-automation', 'AI automation services'),
+      svc('AI Automation', 'whatsapp-business-api-setup', 'WhatsApp API integration'),
+    ],
+  },
 ]
 
 export function findInsight(slug: string): InsightArticle | null {

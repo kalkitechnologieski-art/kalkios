@@ -4,6 +4,17 @@
 // back to the real domain.
 const PROD_ORIGIN = 'https://www.kalki-intelligence.in';
 
+export function languageAlternates(canonical: string): {
+  canonical: string
+  languages: { en: string; 'x-default': string }
+} {
+  const origin = siteOrigin()
+  const url = canonical.startsWith('http')
+    ? canonical
+    : `${origin}${canonical.startsWith('/') ? canonical : `/${canonical}`}`
+  return { canonical: url, languages: { en: url, 'x-default': url } }
+}
+
 export function siteOrigin(): string {
   const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (!raw) return PROD_ORIGIN;

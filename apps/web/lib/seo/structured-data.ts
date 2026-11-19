@@ -201,11 +201,6 @@ export function softwareApplicationSchema() {
       price: '0',
       priceCurrency: 'INR',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      reviewCount: '127',
-    },
     featureList: [
       'AI-powered chatbot (Siddhi)',
       'Lead generation engine (SETU)',
