@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Database } from '@/lib/supabase/types'
+import { serviceHref } from '@/lib/services/href'
 
 type Service = Database['public']['Tables']['services']['Row'] & {
   target_industries?: string[]
@@ -21,7 +22,7 @@ export default function GlitchCard({ service }: GlitchCardProps) {
 
   return (
     <Link
-      href={`/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`}
+      href={serviceHref(service)}
       className="block no-underline"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

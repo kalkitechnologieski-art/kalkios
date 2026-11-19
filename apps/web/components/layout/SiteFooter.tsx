@@ -4,36 +4,34 @@
 // -----------------------------------------------------------------------------
 
 import Link from 'next/link';
-import { createPublicClient } from '@/lib/supabase/public-client';
-import { siteOrigin } from '@/lib/seo/site-url';
+import { fetchAllCategories } from '@/lib/services';
+import { categoryHref, serviceHref } from '@/lib/services/href';
 
-const SITE = siteOrigin();
+const PRACTICES: { label: string; href: string }[] = [
+  { label: 'Astrology websites', href: serviceHref({ category: 'Web Development', slug: 'astrology-website-development' }) },
+  { label: 'SEO for astrologers', href: serviceHref({ category: 'Marketing', slug: 'seo-for-astrologers' }) },
+  { label: 'Vastu websites', href: serviceHref({ category: 'Web Development', slug: 'vastu-consultant-website' }) },
+  { label: 'Vastu marketing', href: serviceHref({ category: 'Marketing', slug: 'vastu-consultant-marketing' }) },
+  { label: 'WhatsApp API setup', href: serviceHref({ category: 'AI Automation', slug: 'whatsapp-business-api-setup' }) },
+  { label: 'Omnichannel CRM', href: serviceHref({ category: 'Development', slug: 'omnichannel-dm-crm' }) },
+  { label: 'AEO and GEO', href: serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' }) },
+  { label: 'YouTube for astrologers', href: serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' }) },
+  { label: 'Notes', href: '/insights' },
+];
 
-interface Row { name: string; slug: string; category: string }
-
-async function getFooterData(): Promise<{ categories: string[]; popular: Row[] }> {
+async function getFooterData(): Promise<{ categories: string[] }> {
   try {
-    const supabase = createPublicClient();
-    // @ts-ignore - runtime table
-    const { data } = await supabase
-      .from('services')
-      .select('name, slug, category, review_count')
-      .eq('is_active', true as any)
-      .order('review_count', { ascending: false })
-      .limit(60);
-    const rows = (data ?? []) as Row[];
-    const categories = Array.from(new Set(rows.map((r) => r.category))).sort();
-    return { categories, popular: rows.slice(0, 8) };
+    return { categories: await fetchAllCategories() };
   } catch {
     return {
       categories: ['Web Development', 'App Development', 'Marketing', 'Design', 'Media', 'AI Automation', 'AI Chatbots', 'Development'],
-      popular: [],
     };
   }
 }
 
 const COMPANY = [
-  { label: 'About KALKI', href: '/about' },
+  { label: 'About KALKI Intelligence', href: '/about' },
+  { label: 'Notes', href: '/insights' },
   { label: 'Contact', href: '/contact' },
   { label: 'Careers', href: '/careers' },
   { label: 'Support', href: '/support' },
@@ -48,7 +46,7 @@ const LEGAL = [
 ];
 
 export async function SiteFooter() {
-  const { categories, popular } = await getFooterData();
+  const { categories } = await getFooterData();
 
   return (
     <footer className="mt-16 border-t border-white/10 pt-12 pb-8">
@@ -60,7 +58,7 @@ export async function SiteFooter() {
             <ul className="space-y-2">
               {categories.map((c) => (
                 <li key={c}>
-                  <Link href={`/marketplace/${encodeURIComponent(c)}`} className="text-white/50 hover:text-cyan-300 text-sm transition">
+                  <Link href={categoryHref(c)} className="text-white/50 hover:text-cyan-300 text-sm transition">
                     {c} Services
                   </Link>
                 </li>
@@ -68,21 +66,16 @@ export async function SiteFooter() {
             </ul>
           </nav>
 
-          {/* Popular services */}
-          {popular.length > 0 && (
-            <nav aria-label="Popular services">
-              <h3 className="text-white/80 font-semibold text-sm mb-3 uppercase tracking-wider">Popular</h3>
-              <ul className="space-y-2">
-                {popular.map((p) => (
-                  <li key={`${p.category}-${p.slug}`}>
-                    <Link href={`/marketplace/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`} className="text-white/50 hover:text-cyan-300 text-sm transition line-clamp-1">
-                      {p.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
+          <nav aria-label="Practices and industries">
+            <h3 className="text-white/80 font-semibold text-sm mb-3 uppercase tracking-wider">Practices</h3>
+            <ul className="space-y-2">
+              {PRACTICES.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-white/50 hover:text-cyan-300 text-sm transition">{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
           {/* Company */}
           <nav aria-label="Company">
@@ -121,8 +114,8 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <p>© {new Date().getFullYear()} KALKI Intelligence LLP · AI &amp; digital services, Indore (MP), India</p>
-          <p>Serving businesses across India · <a href={`mailto:team@kalki-intelligence.in`} className="hover:text-cyan-300 transition">team@kalki-intelligence.in</a></p>
+          <p>© {new Date().getFullYear()} KALKI Intelligence LLP · Temple of technology</p>
+          <p>Office: 52, MOG Lines, Swastik Nagar, Indore 452002 · Clients worldwide · <a href="mailto:team@kalki-intelligence.in" className="hover:text-cyan-300 transition">team@kalki-intelligence.in</a></p>
         </div>
       </div>
     </footer>

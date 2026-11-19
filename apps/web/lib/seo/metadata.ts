@@ -4,9 +4,10 @@
 
 import type { Metadata } from 'next';
 import { siteOrigin } from '@/lib/seo/site-url';
+import { categoryHref, serviceHref } from '@/lib/services/href';
 
 const SITE = siteOrigin();
-const SITE_NAME = 'KALKI OS';
+const SITE_NAME = 'KALKI Intelligence';
 
 export interface ProductMetaInput {
   name: string;
@@ -20,9 +21,9 @@ export interface ProductMetaInput {
 }
 
 export function buildProductMetadata(p: ProductMetaInput): Metadata {
-  const canonical = p.canonicalUrl ?? `${SITE}/marketplace/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`;
-  const title = p.seoTitle ?? `${p.name} — ${SITE_NAME}`;
-  const description = p.seoDescription ?? p.description ?? 'AI-powered service by KALKI OS.';
+  const canonical = p.canonicalUrl ?? `${SITE}${serviceHref({ category: p.category, slug: p.slug })}`;
+  const title = p.seoTitle ?? p.name;
+  const description = p.seoDescription ?? p.description ?? `Service by ${SITE_NAME}. Written scope, fixed price, ₹0 advance.`;
   const ogImage = p.ogImage ?? `${SITE}/api/og/${encodeURIComponent(p.slug)}`;
 
   return {
@@ -59,8 +60,8 @@ export function buildProductMetadata(p: ProductMetaInput): Metadata {
 
 export function buildCategoryMetadata(category: string, count: number): Metadata {
   const title = `${category} Services — ${SITE_NAME}`;
-  const description = `Browse ${count} AI-powered ${category} services from KALKI Intelligence. Starting at ₹499. Indore-based team, serving all of India.`;
-  const canonical = `${SITE}/marketplace?category=${encodeURIComponent(category)}`;
+  const description = `Browse ${count} ${category} services from KALKI Intelligence for astrologers, spiritual practitioners and every industry. Written scope, quote within 24 hours.`;
+  const canonical = `${SITE}${categoryHref(category)}`;
 
   return {
     title,
@@ -81,14 +82,15 @@ export function buildRootMetadata(): Metadata {
     metadataBase: new URL(SITE),
     title: {
       template: `%s | ${SITE_NAME}`,
-      default: `${SITE_NAME} — AI Tech Company in Indore, India`,
+      default: `${SITE_NAME} — AI & Development Partner`,
     },
     description:
-      'KALKI Intelligence is an AI tech company in Indore: service marketplace, AI concierge (Siddhi), lead generation (SETU), and digital services for Indian businesses.',
+      'KALKI Intelligence is an AI and development tech partner for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Written scope, fixed price, ₹0 advance.',
     keywords: [
-      'tech company', 'tech company in Indore', 'AI tech company India',
-      'AI', 'AI automation', 'digital marketing', 'Indore', 'India',
-      'web development', 'SEO', 'chatbot', 'Siddhi', 'KALKI OS',
+      'KALKI Intelligence', 'AI development company', 'AI automation agency',
+      'astrology website development', 'SEO for astrologers', 'vastu consultant marketing',
+      'WhatsApp API setup', 'omnichannel CRM development', 'AEO', 'GEO',
+      'AI automation for astrologers', 'web development', 'SEO',
     ],
     authors: [{ name: 'KALKI Intelligence', url: SITE }],
     creator: 'KALKI Intelligence',
@@ -115,20 +117,20 @@ export function buildRootMetadata(): Metadata {
     // No canonical here: it would leak the homepage URL to every page that does
     // not set its own, telling Google they are all duplicates of "/".
     openGraph: {
-      title: `${SITE_NAME} — AI Tech Company in Indore, India`,
+      title: `${SITE_NAME} — AI & Development Partner`,
       description:
-        'KALKI Intelligence is an AI tech company in Indore: websites, SEO, chatbots and business automation for Indian businesses.',
+        'AI and development for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Written scope, fixed price, ₹0 advance.',
       url: SITE,
       siteName: SITE_NAME,
       locale: 'en_IN',
       type: 'website',
-      images: [{ url: `${SITE}/images/og-default.png`, width: 1200, height: 630, type: 'image/png', alt: `${SITE_NAME} — AI Tech Company in Indore, India` }],
+      images: [{ url: `${SITE}/images/og-default.png`, width: 1200, height: 630, type: 'image/png', alt: `${SITE_NAME} — Temple of technology` }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${SITE_NAME} — AI Tech Company in Indore, India`,
+      title: `${SITE_NAME} — AI & Development Partner`,
       description:
-        'KALKI Intelligence is an AI tech company in Indore: websites, SEO, chatbots and business automation for Indian businesses.',
+        'AI and development for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Written scope, fixed price, ₹0 advance.',
       creator: '@kalki_intel',
       images: [`${SITE}/images/og-default.png`],
     },

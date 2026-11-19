@@ -8,9 +8,9 @@ import { SiteFooter } from '@/components/layout/SiteFooter'
 export const metadata: Metadata = {
   title: 'Explore Services — Search Our AI Catalog',
   description:
-    'Search every service offered by KALKI Intelligence, an AI tech company in Indore: websites, SEO, chatbots, automation, design and marketing. Fixed INR prices, written scope, quote within 24 hours.',
+    'Search KALKI Intelligence services: astrology websites, SEO, WhatsApp API, CRM, video and AI work for practices and every industry. Written scope, quote within 24 hours.',
   keywords:
-    'explore AI services, tech company Indore, web development services, AI chatbot services, SEO services India, KALKI OS',
+    'KALKI Intelligence, astrology website development, SEO for astrologers, AI automation agency, WhatsApp API setup, omnichannel CRM',
   alternates: { canonical: '/explore' },
 }
 
@@ -28,7 +28,7 @@ export default function ExplorePage() {
               className="text-3xl font-bold text-white"
             />
             <p className="text-white/65 text-sm mt-1">
-              Search the full catalog of KALKI Intelligence, an AI tech company in Indore serving businesses across India.
+              Search the catalog: astrologers, vastu consultants, spiritual practitioners, and businesses in every industry.
             </p>
           </div>
         </div>

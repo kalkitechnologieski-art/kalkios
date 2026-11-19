@@ -64,7 +64,7 @@ export function MarketplaceBrowser({ services, online }: Props) {
           />
           <p className="text-white/55 text-sm mt-2">
             <span className="text-cyan-400/90 font-semibold tabular-nums">{filtered.length}</span>
-            <span className="text-white/35"> / {services.length}</span> services shown — every one quoted in writing within 24 hours.
+            <span className="text-white/35"> / {services.length}</span> services — for astrologers, vastu consultants and every industry. Each one is quoted in writing.
           </p>
         </div>
         <div className="relative w-full md:w-64">

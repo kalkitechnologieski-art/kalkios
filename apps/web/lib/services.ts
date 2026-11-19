@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------------
 
 import { createPublicClient } from '@/lib/supabase/public-client'
-import { normKey, serviceHref, categoryHref } from '@/lib/services/href'
+import { normKey, serviceHref, categoryHref, decodeSegment } from '@/lib/services/href'
+import { CATALOG_ADDITIONS } from '@/lib/services/catalog-additions'
+import { publicCopy } from '@/lib/seo/public-copy'
 import servicesData from '@/lib/mock/services.json'
-import type { Database } from '@/lib/supabase/types'
+import type { Database, Json } from '@/lib/supabase/types'
 
 type Service = Database['public']['Tables']['services']['Row'] & {
   target_industries?: string[]
@@ -34,9 +36,45 @@ function supabaseConfigured(): boolean {
 
 const MOCK = servicesData as unknown as Service[]
 
+function sanitizeRow(row: Service): Service {
+  const extra = row as Service & { aeo_summary?: string | null }
+  let features = row.features
+  if (Array.isArray(row.features)) {
+    const cleaned: Json[] = []
+    for (const item of row.features) {
+      if (typeof item !== 'string') {
+        if (item !== undefined) cleaned.push(item)
+        continue
+      }
+      const text = publicCopy(item)
+      if (text) cleaned.push(text)
+    }
+    features = cleaned
+  }
+  const next: Service = {
+    ...row,
+    description: row.description ? publicCopy(row.description) : row.description,
+    meta_description: row.meta_description ? publicCopy(row.meta_description) : row.meta_description,
+    long_description: row.long_description ? publicCopy(row.long_description) : row.long_description,
+    features,
+  }
+  if (extra.aeo_summary) {
+    ;(next as Service & { aeo_summary?: string | null }).aeo_summary = publicCopy(extra.aeo_summary)
+  }
+  return next
+}
+
+function withCatalog(rows: Service[]): Service[] {
+  const seen = new Set(rows.map((row) => norm(row.slug)))
+  const extras = (CATALOG_ADDITIONS as Service[]).filter((row) => !seen.has(norm(row.slug)))
+  return [...rows, ...extras]
+    .map(sanitizeRow)
+    .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+}
+
 function fromMock(): Service[] {
   isSupabaseAvailable = false
-  return MOCK
+  return withCatalog(MOCK)
 }
 
 export async function checkSupabaseConnection(): Promise<boolean> {
@@ -76,9 +114,9 @@ export async function fetchServices(): Promise<Service[]> {
     isSupabaseAvailable = true
     if (rows.length === 0) {
       console.warn('[catalog] no live services in database, using offline catalog')
-      return MOCK
+      return withCatalog(MOCK)
     }
-    return rows
+    return withCatalog(rows)
   } catch (err) {
     console.warn('[catalog] unreachable database, using offline catalog:', err)
     return fromMock()
@@ -125,10 +163,10 @@ export async function fetchServiceBySlug(category: string, slug: string): Promis
         if (bySlug.length > 0) {
           isSupabaseAvailable = true
           const exact = bySlug.find((r) => norm(r.category) === wantedCategory)
-          if (exact) return exact
+          if (exact) return sanitizeRow(exact)
           // The URL pairs a real slug with a stale category: serve it, the
           // canonical link is derived from the row itself.
-          if (wantedCategory) return bySlug[0]
+          if (wantedCategory) return sanitizeRow(bySlug[0])
         }
 
         const byName = rows.find(
@@ -136,7 +174,7 @@ export async function fetchServiceBySlug(category: string, slug: string): Promis
         )
         if (byName) {
           isSupabaseAvailable = true
-          return byName
+          return sanitizeRow(byName)
         }
 
         if (bySlug.length > 0 || rows.length > 0) {
@@ -151,9 +189,17 @@ export async function fetchServiceBySlug(category: string, slug: string): Promis
     }
   }
 
-  const offline = MOCK.find((s) => isSameKey(s.slug, slug) && isSameKey(s.category, category))
-    ?? MOCK.find((s) => isSameKey(s.slug, slug))
+  const pool = withCatalog(MOCK)
+  const offline = pool.find((s) => isSameKey(s.slug, slug) && isSameKey(s.category, category))
+    ?? pool.find((s) => isSameKey(s.slug, slug))
   return offline ?? null
+}
+
+export async function resolveCategoryName(segment: string): Promise<string | null> {
+  const wanted = norm(decodeSegment(segment))
+  if (!wanted) return null
+  const categories = await fetchAllCategories()
+  return categories.find((category) => norm(category) === wanted) ?? null
 }
 
 // Canonical URL segments for a service row.

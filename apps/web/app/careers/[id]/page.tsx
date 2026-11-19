@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!job) return { title: 'Job Not Found', robots: { index: false, follow: true } }
   return {
     title: `${job.title} — Careers`,
-    description: `Apply for ${job.title} at KALKI Intelligence, an AI tech company in Indore, Madhya Pradesh.`,
+    description: `Apply for ${job.title} at KALKI Intelligence. The studio is in Indore and works with clients worldwide.`,
     alternates: { canonical: `/careers/${id}` },
   }
 }

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------------
 
 import { siteOrigin } from '@/lib/seo/site-url';
+import { serviceHref } from '@/lib/services/href';
 
 const SITE = siteOrigin();
 const ORG_NAME = 'KALKI Intelligence';
@@ -33,7 +34,7 @@ export function productSchema(p: ProductInput) {
     category: p.category,
     offers: {
       '@type': 'Offer',
-      url: `${SITE}/marketplace/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`,
+      url: `${SITE}${serviceHref({ category: p.category, slug: p.slug })}`,
       priceCurrency: 'INR',
       price: p.price ?? 0,
       priceValidUntil: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
@@ -148,8 +149,10 @@ export function organizationSchema() {
     legalName: ORG_LEGAL_NAME,
     url: SITE,
     description:
-      'KALKI Intelligence is an AI tech company based in Indore, Madhya Pradesh, building websites, AI automation, lead generation and growth marketing systems for Indian businesses.',
-    keywords: 'tech company, AI tech company India, tech company in Indore, web development, AI automation',
+      'KALKI Intelligence is an AI and development tech partner for astrologers, vastu consultants, other spiritual practitioners, and businesses in every industry. The studio is in Indore. Delivery is worldwide. Written scope, fixed price, ₹0 advance.',
+    slogan: 'Temple of technology',
+    keywords: 'KALKI Intelligence, AI development company, AI automation agency, astrology website development, SEO for astrologers, vastu consultant marketing, AEO, GEO, WhatsApp Business API',
+    areaServed: { '@type': 'Place', name: 'Worldwide' },
     logo: {
       '@type': 'ImageObject',
       url: ORG_LOGO,
@@ -184,11 +187,16 @@ export function localBusinessSchema() {
     image: ORG_LOGO,
     url: SITE,
     description:
-      'Tech company in Indore offering AI-assisted web development, SEO, chatbots and business automation for Indian businesses.',
+      'KALKI Intelligence, Temple of technology. AI and development for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Studio in Indore, delivery worldwide.',
     knowsAbout: [
       'Artificial intelligence',
       'Web development',
-      'SEO and AEO/GEO optimisation',
+      'Astrology website development',
+      'Vastu consultant websites and marketing',
+      'SEO for astrologers',
+      'AEO and GEO',
+      'WhatsApp Business API',
+      'Omnichannel CRM',
       'Lead generation',
       'Business automation',
     ],
@@ -216,8 +224,8 @@ export function localBusinessSchema() {
       },
     ],
     areaServed: {
-      '@type': 'Country',
-      name: 'India',
+      '@type': 'Place',
+      name: 'Worldwide',
     },
   };
 }
@@ -242,8 +250,9 @@ export function articleSchema(a: ArticleInput) {
     datePublished: a.datePublished,
     dateModified: a.dateModified ?? a.datePublished,
     author: {
-      '@type': 'Person',
-      name: a.authorName ?? 'KALKI Intelligence',
+      '@type': 'Organization',
+      name: a.authorName ?? ORG_NAME,
+      url: SITE,
     },
     publisher: {
       '@type': 'Organization',

@@ -9,9 +9,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { fetchAllCategories, fetchServicesByCategory } from '@/lib/services';
+import { fetchAllCategories, fetchServicesByCategory, resolveCategoryName } from '@/lib/services';
 import { getCategoryImageUrl, getServiceImageUrl } from '@/lib/services/service-image';
-import { decodeSegment } from '@/lib/services/href';
+import { categoryHref, categorySlug, serviceHref } from '@/lib/services/href';
 import { buildCategoryMetadata } from '@/lib/seo/enhanced-metadata';
 import { breadcrumbSchema, organizationSchema } from '@/lib/seo/schema';
 import ServiceCard from '@/components/ui/ServiceCard';
@@ -50,19 +50,19 @@ async function getAllCategories(): Promise<string[]> {
 
 export async function generateStaticParams() {
   const categories = await getAllCategories();
-  // Next.js encodes path segments itself — returning pre-encoded values turns
-  // "AI Chatbots" into "AI%2520Chatbots" and the page never matches.
-  return categories.map((category) => ({ category }));
+  return categories.map((category) => ({ category: categorySlug(category) }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const category = decodeSegment((await params).category);
+  const category = await resolveCategoryName((await params).category);
+  if (!category) return {};
   const services = await getServicesInCategory(category);
   return buildCategoryMetadata(category, services.length, undefined);
 }
 
 export default async function CategoryPage({ params }: Params) {
-  const category = decodeSegment((await params).category);
+  const category = await resolveCategoryName((await params).category);
+  if (!category) notFound();
   const services = await getServicesInCategory(category);
   if (services.length === 0) notFound();
 
@@ -76,17 +76,17 @@ export default async function CategoryPage({ params }: Params) {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    '@id': `${SITE}/marketplace/${encodeURIComponent(category)}#collection`,
-    name: `${category} Services — KALKI OS`,
-    description: `${count} AI-powered ${category.toLowerCase()} services by KALKI Intelligence, serving businesses across India from Indore.`,
-    url: `${SITE}/marketplace/${encodeURIComponent(category)}`,
+    '@id': `${SITE}${categoryHref(category)}#collection`,
+    name: `${category} Services — KALKI Intelligence`,
+    description: `${count} ${category.toLowerCase()} services by KALKI Intelligence for astrologers, spiritual practitioners and businesses worldwide.`,
+    url: `${SITE}${categoryHref(category)}`,
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: count,
       itemListElement: services.map((s, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `${SITE}/marketplace/${encodeURIComponent(category)}/${encodeURIComponent(s.slug)}`,
+        url: `${SITE}${serviceHref(s)}`,
         name: s.name,
         image: abs(getServiceImageUrl(s)),
       })),
@@ -96,7 +96,7 @@ export default async function CategoryPage({ params }: Params) {
   const crumbs = breadcrumbSchema([
     { name: 'Home', url: `${SITE}/` },
     { name: 'Marketplace', url: `${SITE}/marketplace` },
-    { name: category, url: `${SITE}/marketplace/${encodeURIComponent(category)}` },
+    { name: category, url: `${SITE}${categoryHref(category)}` },
   ]);
 
   return (
@@ -118,7 +118,7 @@ export default async function CategoryPage({ params }: Params) {
         {/* Hero */}
         <header className="relative overflow-hidden rounded-2xl border border-cyan-500/10 mb-8">
           <div className="absolute inset-0">
-            <Image src={heroImage} alt={`${category} services by KALKI OS`} width={1200} height={480} priority className="w-full h-full object-cover opacity-40" />
+            <Image src={heroImage} alt={`${category} services by KALKI Intelligence`} width={1200} height={480} priority className="w-full h-full object-cover opacity-40" />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
           </div>
           <div className="relative z-10 px-6 py-10 md:px-10 md:py-14 max-w-2xl">
@@ -127,12 +127,12 @@ export default async function CategoryPage({ params }: Params) {
             </div>
             <AnimatedHeadline
               as="h1"
-              text={`${category} Services in India`}
+              text={`${category} Services`}
               className="text-2xl md:text-4xl font-bold text-white leading-tight"
               stagger={0.04}
             />
             <p className="text-white/75 mt-3 text-sm md:text-base leading-relaxed">
-              AI-powered {category.toLowerCase()} delivered by KALKI Intelligence for businesses across India.
+              {category} from KALKI Intelligence for astrologers, vastu consultants, other spiritual practitioners, and businesses in every industry.
               Written scope, fixed price and a delivery date — quoted within 24 hours, nothing to pay to start.
             </p>
             <div className="flex flex-wrap gap-3 mt-5">
@@ -181,7 +181,7 @@ export default async function CategoryPage({ params }: Params) {
               {otherCategories.map((c) => (
                 <Link
                   key={c}
-                  href={`/marketplace/${encodeURIComponent(c)}`}
+                  href={categoryHref(c)}
                   className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-cyan-500/10 hover:border-cyan-500/30 text-sm text-white/70 hover:text-cyan-300 transition"
                 >
                   {c} Services

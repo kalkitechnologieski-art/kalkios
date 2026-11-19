@@ -1,78 +1,62 @@
-// == KALKI B5 LAUNCH ==
-// llms.txt — a machine-readable catalogue for AI agents.
-// Spec: https://llmstxt.org
-// -----------------------------------------------------------------------------
-
-import { createClient } from '@/lib/supabase/server';
+import { fetchServices } from '@/lib/services';
+import { categoryHref, serviceHref } from '@/lib/services/href';
+import { INSIGHTS } from '@/lib/content/insights';
 import { siteOrigin } from '@/lib/seo/site-url';
 
 export const revalidate = 3600;
 
-interface ServiceRow {
-  name: string;
-  slug: string;
-  category: string;
-  description: string | null;
-  price: number | null;
-}
-
 export async function GET() {
   const baseUrl = siteOrigin();
+  const services = await fetchServices();
 
-  let services: ServiceRow[] = [];
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createClient()) as any;
-    const { data } = await supabase
-      .from('services')
-      .select('name, slug, category, description, price')
-      .eq('is_active', true)
-      .order('category');
-    services = (data ?? []) as ServiceRow[];
-  } catch {
-    services = [];
-  }
-
-  const groupedByCategory = new Map<string, ServiceRow[]>();
-  for (const s of services) {
-    const list = groupedByCategory.get(s.category) ?? [];
-    list.push(s);
-    groupedByCategory.set(s.category, list);
+  const groupedByCategory = new Map<string, typeof services>();
+  for (const service of services) {
+    const list = groupedByCategory.get(service.category) ?? [];
+    list.push(service);
+    groupedByCategory.set(service.category, list);
   }
 
   const lines: string[] = [];
-  lines.push('# KALKI OS — AI Tech Company in Indore, India');
+  lines.push('# KALKI Intelligence — Temple of technology');
   lines.push('');
-  lines.push('> KALKI OS is the product platform of KALKI Intelligence LLP, an AI tech company and digital services marketplace based in Indore, India. It offers web development, app development, marketing, design, media, AI automation, and AI chatbots with transparent INR pricing and 30–60 day delivery.');
+  lines.push('> KALKI Intelligence LLP is an AI and development tech partner for astrologers, vastu consultants, other spiritual practitioners, and businesses in every industry. Delivery is worldwide from a studio in Indore. Every project has a written scope, a fixed price and ₹0 advance. AI is used in the work, and a person is accountable for the quote. Rankings, view counts and AI citations are not promised.');
   lines.push('');
   lines.push('## Company');
   lines.push('');
-  lines.push('- Name: KALKI Intelligence LLP');
+  lines.push('- Name: KALKI Intelligence');
   lines.push('- Legal: KALKI Intelligence LLP');
-  lines.push('- Location: 51, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India');
+  lines.push('- Tagline: Temple of technology');
+  lines.push('- Office: 52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India');
+  lines.push('- Service area: Worldwide');
   lines.push('- Email: team@kalki-intelligence.in');
   lines.push('- Phone: +91-6261031710');
-  lines.push('- Sector: Technology company (AI, software and digital services)');
   lines.push('- Founded: 2025');
-  lines.push('- Size: 11–50 employees');
   lines.push(`- Website: ${baseUrl}`);
+  lines.push('- Principles: written scope, fixed pricing, ₹0 advance, AI-assisted and human-accountable');
   lines.push('');
   lines.push('## Pages');
   lines.push('');
-  lines.push(`- [Home](${baseUrl}): Overview of KALKI OS, the AI tech company platform of KALKI Intelligence.`);
-  lines.push(`- [Marketplace](${baseUrl}/marketplace): Full catalogue of AI-powered digital services with INR pricing.`);
-  lines.push(`- [Request a service](${baseUrl}/request): Free, no-payment intake form to submit a service requirement and get a tailored quote.`);
-  lines.push(`- [Siddhi AI chat](${baseUrl}/chat): Conversational AI concierge for queries, automation and lead generation.`);
-  lines.push(`- [Explore](${baseUrl}/explore): Search and discover services.`);
-  lines.push(`- [About](${baseUrl}/about): KALKI Intelligence LLP — AI tech company profile.`);
-  lines.push(`- [Contact](${baseUrl}/contact): Reach the team in Indore, India.`);
-  lines.push(`- [Privacy Policy](${baseUrl}/privacy): How personal data is handled (DP Act, 2023).`);
-  lines.push(`- [Terms](${baseUrl}/terms): Terms & conditions of service.`);
+  lines.push(`- [Home](${baseUrl}): AI and development partner for astrologers and businesses in every industry.`);
+  lines.push(`- [Marketplace](${baseUrl}/marketplace): Service catalog with INR starting prices.`);
+  lines.push(`- [Notes](${baseUrl}/insights): Explanatory articles. Not case studies.`);
+  lines.push(`- [Request a service](${baseUrl}/request): Brief form. No payment to start. Written quote within 24 hours.`);
+  lines.push(`- [Siddhi AI chat](${baseUrl}/chat): Conversational assistant.`);
+  lines.push(`- [Explore](${baseUrl}/explore): Search the catalog.`);
+  lines.push(`- [About](${baseUrl}/about): Who the studio works with, and what it will not claim.`);
+  lines.push(`- [Contact](${baseUrl}/contact): Office address and the brief form.`);
+  lines.push(`- [Privacy Policy](${baseUrl}/privacy): How personal data is handled.`);
+  lines.push(`- [Terms](${baseUrl}/terms): Terms of service.`);
+  lines.push('');
+  lines.push('## Notes');
+  lines.push('');
+  for (const article of INSIGHTS) {
+    lines.push(`- [${article.title}](${baseUrl}/insights/${article.slug}): ${article.description}`);
+  }
   lines.push('');
   lines.push('## Categories');
   lines.push('');
   for (const [category, list] of groupedByCategory) {
-    lines.push(`- [${category}](${baseUrl}/marketplace/${encodeURIComponent(category)}): ${list.length} service${list.length === 1 ? '' : 's'}.`);
+    lines.push(`- [${category}](${baseUrl}${categoryHref(category)}): ${list.length} service${list.length === 1 ? '' : 's'}.`);
   }
   lines.push('');
   lines.push('## Services');
@@ -80,31 +64,27 @@ export async function GET() {
   for (const [category, list] of groupedByCategory) {
     lines.push(`### ${category}`);
     lines.push('');
-    for (const s of list) {
-      const price = s.price ? ` (from ₹${s.price.toLocaleString('en-IN')})` : '';
-      const url = `${baseUrl}/marketplace/${encodeURIComponent(s.category)}/${encodeURIComponent(s.slug)}`;
-      const desc = (s.description ?? '').replace(/\s+/g, ' ').trim();
-      lines.push(`- [${s.name}](${url})${price}: ${desc}`);
+    for (const service of list) {
+      const price = service.price ? ` (from ₹${Number(service.price).toLocaleString('en-IN')})` : '';
+      const url = `${baseUrl}${serviceHref(service)}`;
+      const desc = (service.description ?? '').replace(/\s+/g, ' ').trim();
+      lines.push(`- [${service.name}](${url})${price}: ${desc}`);
     }
     lines.push('');
   }
 
-  lines.push('## Capabilities');
+  lines.push('## Boundaries');
   lines.push('');
-  lines.push('- AI concierge (Siddhi): chat, deep reasoning, web search, image and video generation, lead generation (SETU), voice input/output');
-  lines.push('- Enterprise-grade AI orchestration with automatic model fallback (device → Z.AI → Groq → OpenRouter)');
-  lines.push('- Client dashboard with live project timeline, invoices, and referral rewards');
-  lines.push('- SEO, AEO, and GEO-optimized product pages with JSON-LD structured data');
+  lines.push('- A search engagement does not include a promised position on Google.');
+  lines.push('- No view, subscriber, or viral guarantee.');
+  lines.push('- No fabricated reviews, client counts, or case studies.');
+  lines.push('- A listed price is a starting figure. The written quote is the price.');
   lines.push('');
   lines.push('## Contact');
   lines.push('');
   lines.push(`- Website: ${baseUrl}`);
   lines.push('- Email: team@kalki-intelligence.in');
   lines.push('- Chat: /chat');
-  lines.push('');
-  lines.push('## Licence');
-  lines.push('');
-  lines.push('All services are commercial. Content on this site may be cited with attribution to KALKI Intelligence LLP.');
   lines.push('');
 
   return new Response(lines.join('\n'), {

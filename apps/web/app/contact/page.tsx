@@ -6,8 +6,8 @@ import { MapPin, Mail, Phone, Clock, Building } from 'lucide-react'
 import { ContactFormClient } from './ContactFormClient'
 
 export const metadata: Metadata = {
-  title: 'Contact an AI Tech Company in Indore',
-  description: 'Talk to KALKI Intelligence, an AI tech company in Indore, about a website, automation or growth project. Written quote within 24 hours, ₹0 to start. 52, MOG Lines, Swastik Nagar, Indore.',
+  title: 'Contact KALKI Intelligence',
+  description: 'Contact KALKI Intelligence about a website, automation or marketing project. Written quote within 24 hours, ₹0 to start. Office: 52, MOG Lines, Swastik Nagar, Indore.',
   alternates: { canonical: '/contact' },
 }
 
