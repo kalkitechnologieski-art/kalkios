@@ -38,7 +38,7 @@ export default async function Homepage() {
     'saas-mvp-development',
     'voice-ai-agent-development',
     'shopify-store-development',
-    'rag-application-development',
+    'rag-chatbot-development',
     'meta-ads-management',
     'clinic-booking-website',
     'whatsapp-commerce-catalog',

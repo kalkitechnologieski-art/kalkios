@@ -30,9 +30,34 @@ export const SERVICE_META: Record<string, { title: string; description: string }
       'Social marketing for astrologers and other businesses. From ₹20,000. Reported in writing. No view or viral promise.',
   },
   'landing-page-5-pages': {
-    title: 'Business Website Development',
+    title: 'Landing Page Design',
     description:
-      'Five-page websites for astrologers, vastu consultants and every industry. From ₹5,000. Written scope, ₹0 advance.',
+      'Landing page design: the pages named in the quote, usually five. From ₹5,000. Written scope, ₹0 advance. KALKI Intelligence.',
+  },
+  'ppc-google-ads': {
+    title: 'Google Ads Management',
+    description:
+      'Google Ads management for the campaigns named in the quote. From ₹24,999. No ranking or lead-count promise. Written quote, ₹0 advance.',
+  },
+  'mobile-app-development': {
+    title: 'Mobile App Development (Flutter / React Native)',
+    description:
+      'Mobile app development in Flutter or React Native, as the quote names. From ₹1,99,999. Store approval is the store’s decision.',
+  },
+  'premium-logo-design': {
+    title: 'Logo & Brand Identity Design',
+    description:
+      'Logo and brand identity design: the concepts and files named in the quote. Starting price on the page. Written scope, ₹0 advance.',
+  },
+  'ui-ux-design': {
+    title: 'UI/UX Design',
+    description:
+      'UI/UX design for the screens named in the quote. From ₹39,999. A build of those screens is a separate quote. KALKI Intelligence.',
+  },
+  'email-marketing-automation': {
+    title: 'Email Marketing Automation',
+    description:
+      'Email marketing automation for the messages and triggers named in the quote. From ₹14,999. No open-rate or revenue promise.',
   },
   'content-marketing': {
     title: 'Content Marketing Services',

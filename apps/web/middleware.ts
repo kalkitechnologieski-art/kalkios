@@ -34,6 +34,37 @@ function withSecurityHeaders<T extends NextResponse>(response: T): T {
   return response;
 }
 
+// Slugs replaced after they were published. The new URL is the page that
+// now owns the query. Category on the old URL is ignored.
+const RETIRED_SERVICE: Record<string, string> = {
+  'rag-application-development': '/marketplace/ai/rag-chatbot-development',
+  'custom-api-integration': '/marketplace/development/api-integration-services',
+  'ai-meeting-notes-setup': '/marketplace/ai/ai-knowledge-base-development',
+  'multimodal-ai-application': '/marketplace/ai/llm-application-integration',
+  'whatsapp-broadcast-operations': '/marketplace/ai-automation/whatsapp-commerce-catalog',
+  'agentic-storefront-setup': '/marketplace/web-development/shopify-store-development',
+  'cold-email-system': '/marketplace/marketing/lead-generation-services',
+  'lifecycle-marketing-automation': '/marketplace/marketing/email-marketing-automation',
+  'product-analytics-implementation': '/marketplace/marketing/marketing-analytics-setup',
+  'data-quality-setup': '/marketplace/development/data-pipeline-development',
+  'cloud-cost-review': '/marketplace/development/cloud-landing-zone',
+  'ux-audit': '/marketplace/development/ui-ux-design',
+  'mobile-app-ui-design': '/marketplace/development/ui-ux-design',
+  'hr-onboarding-portal': '/marketplace/development/standard-admin-dashboard',
+}
+
+function retiredServicePath(pathname: string): string | null {
+  const parts = pathname.split('/')
+  if (parts[1] !== 'marketplace' || !parts[3]) return null
+  let slug = parts[3]
+  try {
+    slug = decodeURIComponent(parts[3])
+  } catch {
+    slug = parts[3]
+  }
+  return RETIRED_SERVICE[normKey(slug)] ?? null
+}
+
 function canonicalMarketplacePath(pathname: string): string | null {
   const parts = pathname.split('/');
   if (parts[1] !== 'marketplace' || !parts[2]) return null;
@@ -52,6 +83,13 @@ function canonicalMarketplacePath(pathname: string): string | null {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  const retired = retiredServicePath(pathname);
+  if (retired) {
+    const url = request.nextUrl.clone();
+    url.pathname = retired;
+    return withSecurityHeaders(NextResponse.redirect(url, 301));
+  }
 
   const canonical = canonicalMarketplacePath(pathname);
   if (canonical) {
