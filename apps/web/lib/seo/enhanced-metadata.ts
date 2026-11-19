@@ -275,12 +275,12 @@ export function buildCategoryMetadata(
  * Build homepage metadata with maximum keyword density
  */
 export function buildHomepageMetadata(): Metadata {
-  const title = 'AI & Development Partner for Astrologers | KALKI Intelligence';
+  const title = 'AI Development Company for Every Industry | KALKI Intelligence';
   return {
     ...buildEnhancedMetadata({
       title,
       description:
-        'AI and development partner for astrologers, vastu consultants and every industry. Written scope, fixed price, ₹0 advance. KALKI Intelligence.',
+        'AI development, automation, commerce, data, and marketing for businesses in every industry. Written scope, fixed price, ₹0 advance.',
       keywords: [
         'KALKI Intelligence',
         'AI development company',

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowRight, Zap, Shield, Globe, Brain, Building2, TrendingUp, Clock, CheckCircle2, Sparkles, MapPin } from 'lucide-react'
 import { fetchServices } from '@/lib/services'
 import { categoryHref, serviceHref } from '@/lib/services/href'
+import { INDUSTRY_HUBS } from '@/lib/services/phase3-services'
 import { fetchTestimonials } from '@/lib/testimonials'
 import ServiceCard from '@/components/ui/ServiceCard'
 import { Testimonials } from '@/components/trust/Testimonials'
@@ -34,14 +35,14 @@ export default async function Homepage() {
   const services = await fetchServices()
   const testimonials = await fetchTestimonials()
   const prioritySlugs = [
-    'astrology-website-development',
-    'seo-for-astrologers',
-    'vastu-consultant-website',
-    'vastu-consultant-marketing',
-    'whatsapp-business-api-setup',
-    'omnichannel-dm-crm',
-    'aeo-geo-services',
-    'youtube-content-for-astrologers',
+    'saas-mvp-development',
+    'voice-ai-agent-development',
+    'shopify-store-development',
+    'rag-application-development',
+    'meta-ads-management',
+    'clinic-booking-website',
+    'whatsapp-commerce-catalog',
+    'business-intelligence-dashboard',
   ]
   const featured = prioritySlugs
     .map((slug) => services.find((service) => service.slug === slug))
@@ -60,7 +61,7 @@ export default async function Homepage() {
           '@id': 'https://www.kalki-intelligence.in/#website',
           name: 'KALKI Intelligence',
           url: siteOrigin(),
-          description: 'KALKI Intelligence is an AI and development tech partner for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Studio in Indore. Delivery worldwide.',
+          description: 'KALKI Intelligence is an AI and development company for businesses in every industry. Studio in Indore. Delivery worldwide.',
           publisher: { '@id': 'https://www.kalki-intelligence.in/#organization' },
           potentialAction: {
             '@type': 'SearchAction',
@@ -86,14 +87,14 @@ export default async function Homepage() {
 
           <AnimatedHeadline
             as="h1"
-            text="AI and development tech partner for astrologers and every industry"
+            text="AI and development partner for businesses in every industry"
             className="text-4xl sm:text-5xl md:text-7xl font-bold text-white font-mono leading-[1.05] tracking-tight"
             delay={0.1}
           />
 
           <AnimatedHeadline
             as="p"
-            text="KALKI Intelligence builds for vastu consultants, spiritual practitioners, and businesses in any field"
+            text="Websites, products, automation, data, and marketing. One catalog, chosen by the job."
             className="text-cyan-400/85 text-lg sm:text-xl md:text-2xl mt-4 md:mt-6 font-light max-w-3xl mx-auto"
             delay={0.42}
             stagger={0.03}
@@ -353,6 +354,20 @@ export default async function Homepage() {
           </div>
         </section>
       )}
+
+      <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+        <div className="text-center mb-8">
+          <AnimatedHeadline as="h2" text="Browse by industry" className="text-2xl md:text-3xl font-bold text-white font-mono" inView />
+          <p className="text-cyan-400/70 text-sm mt-2 max-w-2xl mx-auto">Each hub is a different deliverable. Astrology and vastu are one hub.</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {INDUSTRY_HUBS.map((hub) => (
+            <Link key={hub.slug} href={`/industries/${hub.slug}`} className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white/70 hover:text-cyan-200">
+              {hub.name}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
         <div className="grid md:grid-cols-2 gap-12 items-start">
