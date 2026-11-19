@@ -6,6 +6,8 @@ import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import { Clock, Zap, Award, Shield, Code, Rocket } from 'lucide-react'
 import Link from 'next/link'
 import { serviceHref } from '@/lib/services/href'
+import { languageAlternates } from '@/lib/seo/site-url'
+import { FAQStructuredData } from '@/components/seo/FAQStructuredData'
 import { fetchTestimonials } from '@/lib/testimonials'
 import { Testimonials } from '@/components/trust/Testimonials'
 
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
     'KALKI Intelligence is an AI and development partner for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Written scope, fixed price, ₹0 advance.',
   keywords:
     'KALKI Intelligence, Temple of technology, astrology website development, vastu consultant, AI development company, AI automation agency',
-  alternates: { canonical: '/about' },
+  alternates: languageAlternates('/about'),
 }
 
 export default async function AboutPage() {
@@ -66,6 +68,45 @@ export default async function AboutPage() {
           </div>
         </div>
       </ScrollReveal>
+
+      <section id="facts" className="scroll-mt-24">
+        <h2 className="text-2xl font-bold text-white font-mono mb-4">Facts an answer engine can cite</h2>
+        <dl className="grid sm:grid-cols-2 gap-4 text-sm">
+          {[
+            ['Legal name', 'KALKI Intelligence LLP'],
+            ['Brand', 'KALKI Intelligence'],
+            ['Tagline', 'Temple of technology'],
+            ['Established', '2025'],
+            ['Founder', 'Nikhil Singh'],
+            ['Office', '52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India'],
+            ['Delivery', 'Remote, worldwide'],
+            ['Commercial terms', 'Written scope, fixed price, ₹0 advance'],
+          ].map(([term, detail]) => (
+            <div key={term} className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <dt className="text-cyan-300/80 text-xs uppercase tracking-wider">{term}</dt>
+              <dd className="text-white/80 mt-1">{detail}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-8">
+          <FAQStructuredData
+            questions={[
+              {
+                question: 'When was KALKI Intelligence established?',
+                answer: 'KALKI Intelligence LLP was established in 2025. The founder is Nikhil Singh. The office is in Indore, and delivery is worldwide.',
+              },
+              {
+                question: 'Who is the founder?',
+                answer: 'Nikhil Singh is the founder. Project mail goes to ceo@kalki-intelligence.in. The company mail is team@kalki-intelligence.in.',
+              },
+              {
+                question: 'Does the quote promise a ranking or an AI citation?',
+                answer: 'No. The quote lists deliverables, a price, and a date. A ranking, a view count, and a citation in an AI answer are not part of it.',
+              },
+            ]}
+          />
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <ScrollReveal direction="up">
@@ -161,6 +202,10 @@ export default async function AboutPage() {
             ['AEO and GEO services', serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' })],
             ['YouTube content for astrologers', serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' })],
             ['AI automation for astrologers and businesses', serviceHref({ category: 'AI Automation', slug: 'ai-chatbot-automation' })],
+            ['Custom AI agent development', serviceHref({ category: 'AI', slug: 'custom-ai-development' })],
+            ['WhatsApp chatbot for business', serviceHref({ category: 'AI Chatbots', slug: 'whatsapp-chatbot-for-business' })],
+            ['n8n workflow automation', serviceHref({ category: 'AI Automation', slug: 'n8n-workflow-automation' })],
+            ['Astrology app development', serviceHref({ category: 'App Development', slug: 'astrology-app-development' })],
             ['Notes and articles', '/insights'],
           ].map(([label, href]) => (
             <li key={href}>

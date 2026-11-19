@@ -377,6 +377,10 @@ export default async function Homepage() {
                 ['Omnichannel DM CRM', serviceHref({ category: 'Development', slug: 'omnichannel-dm-crm' })],
                 ['AEO and GEO services', serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' })],
                 ['YouTube content for astrologers', serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' })],
+                ['Custom AI agent development', serviceHref({ category: 'AI', slug: 'custom-ai-development' })],
+                ['WhatsApp chatbot for business', serviceHref({ category: 'AI Chatbots', slug: 'whatsapp-chatbot-for-business' })],
+                ['n8n workflow automation', serviceHref({ category: 'AI Automation', slug: 'n8n-workflow-automation' })],
+                ['Astrology app development', serviceHref({ category: 'App Development', slug: 'astrology-app-development' })],
                 ['Notes and articles', '/insights'],
               ].map(([label, href]) => (
                 <li key={href}>

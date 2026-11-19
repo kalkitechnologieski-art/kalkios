@@ -81,7 +81,7 @@ export function buildEEATSignals(context: {
 <!-- E-E-A-T Signals -->
 <meta name="author" content="${context.author || 'KALKI Intelligence'}" />
 <meta name="credentials" content="${context.credentials?.join(', ') || ''}" />
-<meta name="experience" content="${context.experience || '5+ years in AI and digital services'}" />
+<meta name="experience" content="${context.experience || 'Studio established in 2025. Delivery is remote and worldwide.'}" />
 <meta name="last-reviewed" content="${context.lastUpdated || new Date().toISOString()}" />
 <meta name="sources" content="${context.sources?.join(', ') || ''}" />
 <!-- End E-E-A-T -->
@@ -99,13 +99,13 @@ export function buildBrandKnowledgePanel(): EntityData {
       'KALKI Intelligence is a leading enterprise AI platform based in Indore, India, providing comprehensive digital services including web development, SEO, AI chatbots, lead generation, and business automation solutions.',
     attributes: {
       Founded: '2025',
+      Founder: 'Nikhil Singh',
       Headquarters: 'Indore, Madhya Pradesh, India',
-      CEO: 'KALKI Team',
-      Employees: '50-100',
-      Industry: 'Artificial Intelligence, Digital Services, SaaS',
+      'Service area': 'Worldwide',
+      Industry: 'Artificial Intelligence, Digital Services',
       Website: 'https://www.kalki-intelligence.in',
-      Phone: '+91-XXX-XXXXXXX',
-      Email: 'contact@kalki-intelligence.in',
+      Phone: '+91-6261031710',
+      Email: 'team@kalki-intelligence.in',
     },
     relatedEntities: [
       'Siddhi AI Concierge',

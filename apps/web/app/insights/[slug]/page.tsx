@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { findInsight, INSIGHTS } from '@/lib/content/insights'
 import { articleSchema, breadcrumbSchema, faqSchema } from '@/lib/seo/schema'
 import { SiteFooter } from '@/components/layout/SiteFooter'
-import { siteOrigin } from '@/lib/seo/site-url'
+import { languageAlternates, siteOrigin } from '@/lib/seo/site-url'
 
 type Params = { params: Promise<{ slug: string }> }
 
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return {
     title: article.title,
     description: article.description,
-    alternates: { canonical },
+    alternates: languageAlternates(canonical),
     openGraph: {
       title: article.title,
       description: article.description,

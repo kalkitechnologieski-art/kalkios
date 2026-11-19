@@ -1,13 +1,13 @@
 export const SERVICE_META: Record<string, { title: string; description: string }> = {
   'ai-chatbot-automation': {
-    title: 'AI Automation for Astrologers and Businesses',
+    title: 'AI Automation Services',
     description:
-      'AI automation agency service for astrologers and businesses worldwide. Booking and lead questions from ₹5,999. Written quote, ₹0 advance.',
+      'AI automation services for astrologers and businesses worldwide. Booking and lead questions from ₹5,999. Written quote, ₹0 advance.',
   },
   'ai-horoscope-kundali-api': {
-    title: 'AI Horoscope and Kundali API',
+    title: 'Kundali Software Development',
     description:
-      'Horoscope, kundali, compatibility and muhurta APIs for a website or app. From ₹29,999. Written scope from KALKI Intelligence.',
+      'Kundali software and horoscope API: kundli, compatibility and muhurta. From ₹29,999. A website or app is a separate quote.',
   },
   'ai-chatbot-development': {
     title: 'AI Chatbot Development',
@@ -15,9 +15,9 @@ export const SERVICE_META: Record<string, { title: string; description: string }
       'AI chatbot development for astrologers, spiritual practices and other businesses. Written scope, fixed price, ₹0 advance. KALKI Intelligence.',
   },
   'custom-ai-development': {
-    title: 'AI Development Company Services',
+    title: 'Custom AI Agent Development',
     description:
-      'AI development company work for practices and businesses worldwide. Written scope, fixed price, ₹0 advance. KALKI Intelligence.',
+      'Hire an AI developer for a scoped agent. AI development company work for practices and every industry. Written quote, ₹0 advance.',
   },
   'enterprise-seo': {
     title: 'Enterprise SEO Services',

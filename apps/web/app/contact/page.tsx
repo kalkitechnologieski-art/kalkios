@@ -4,11 +4,12 @@ import { AnimatedHeadline } from '@/components/motion/AnimatedHeadline'
 import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow'
 import { MapPin, Mail, Phone, Clock, Building } from 'lucide-react'
 import { ContactFormClient } from './ContactFormClient'
+import { languageAlternates } from '@/lib/seo/site-url'
 
 export const metadata: Metadata = {
   title: 'Contact KALKI Intelligence',
   description: 'Contact KALKI Intelligence about a website, automation or marketing project. Written quote within 24 hours, ₹0 to start. Office: 52, MOG Lines, Swastik Nagar, Indore.',
-  alternates: { canonical: '/contact' },
+  alternates: languageAlternates('/contact'),
 }
 
 export default function ContactPage() {

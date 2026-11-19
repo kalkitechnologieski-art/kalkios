@@ -159,7 +159,7 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     image_url: '/images/services/digital-marketing.jpg',
     meta_title: 'AEO and GEO Services',
     meta_description:
-      'AEO and GEO services for AI search visibility. From ₹49,999. Pages and schema only. No citation promise. KALKI Intelligence.',
+      'AEO agency and GEO services for AI search optimization. From ₹49,999. Pages and schema only. No citation promise.',
   }),
   service({
     name: 'WhatsApp Business API Setup',
@@ -183,7 +183,7 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     image_url: '/images/services/ai-automation.jpg',
     meta_title: 'WhatsApp Business API Setup',
     meta_description:
-      'WhatsApp Business API setup and integration worldwide. From ₹14,999, written scope, ₹0 advance. Meta approval is separate. KALKI Intelligence.',
+      'WhatsApp API integration service worldwide. From ₹14,999, written scope, ₹0 advance. Meta approval is separate. KALKI Intelligence.',
   }),
   service({
     name: 'Omnichannel DM CRM Development',
@@ -191,7 +191,7 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     category: 'Development',
     sub_category: 'CRM',
     description:
-      'One inbox and CRM for the messaging channels named in the quote, including WhatsApp, Instagram and Facebook Messenger. From ₹79,999.',
+      'Omnichannel CRM and unified inbox development for the channels named in the quote, including WhatsApp, Instagram and Facebook Messenger. From ₹79,999.',
     long_description:
       'A shared inbox with a contact record and a status. It is not a chatbot. Automated replies are a separate service and are quoted only when the brief includes them.',
     price: 79999,
@@ -206,9 +206,9 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     ],
     target_industries: ['Astrology', 'Vastu', 'All industries'],
     image_url: '/images/services/software-development.jpg',
-    meta_title: 'Omnichannel DM CRM Development',
+    meta_title: 'Omnichannel CRM and Unified Inbox',
     meta_description:
-      'Omnichannel CRM development: one inbox for WhatsApp, Instagram and Messenger. From ₹79,999, written scope, ₹0 advance. KALKI Intelligence.',
+      'Omnichannel CRM development and unified inbox software for WhatsApp, Instagram and Messenger. From ₹79,999. KALKI Intelligence.',
   }),
   service({
     name: 'YouTube Content for Astrologers',
@@ -233,5 +233,74 @@ export const CATALOG_ADDITIONS: CatalogService[] = [
     meta_title: 'YouTube Content for Astrologers',
     meta_description:
       'YouTube content for astrologers worldwide. Scripts, edits and titles from ₹9,999. No view or viral promise. KALKI Intelligence.',
+  }),
+  service({
+    name: 'WhatsApp Chatbot for Business',
+    slug: 'whatsapp-chatbot-for-business',
+    category: 'AI Chatbots',
+    sub_category: 'Messaging',
+    description:
+      'A chatbot that replies on WhatsApp for the flows named in the quote. From ₹5,999. The Business API connection is a separate service.',
+    long_description:
+      'This is the bot. If the number is not already on the WhatsApp Business API, that connection is quoted from the API setup service at ₹14,999. Meta still approves templates.',
+    price: 5999,
+    duration_days: 21,
+    features: [
+      'Conversation flows named in the quote',
+      'One WhatsApp number named in the quote',
+      'Handover notes for the bot',
+      'A test conversation',
+    ],
+    target_industries: ['Astrology', 'Vastu', 'All industries'],
+    image_url: '/images/services/ai-automation.jpg',
+    meta_title: 'WhatsApp Chatbot for Business',
+    meta_description:
+      'WhatsApp chatbot for business worldwide. Flows from ₹5,999. API setup is separate. Written quote, ₹0 advance.',
+  }),
+  service({
+    name: 'n8n Workflow Automation',
+    slug: 'n8n-workflow-automation',
+    category: 'AI Automation',
+    sub_category: 'Workflows',
+    description:
+      'Workflows built in n8n for the apps and steps named in the quote. From ₹14,999. Not an n8n partnership or licence.',
+    long_description:
+      'n8n is the tool when the quote says so. Hosting, credentials, and which apps connect are decided before build. We do not sell n8n licences and we do not claim a partner badge.',
+    price: 14999,
+    duration_days: 21,
+    features: [
+      'Workflows named in the quote',
+      'Connections to the apps named in the quote',
+      'A written runbook',
+      'Handover of the workflow access',
+    ],
+    target_industries: ['Astrology', 'Vastu', 'All industries'],
+    image_url: '/images/services/ai-automation.jpg',
+    meta_title: 'n8n Automation',
+    meta_description:
+      'n8n automation for the workflows named in a written quote. From ₹14,999. Not a partner badge. ₹0 advance.',
+  }),
+  service({
+    name: 'Astrology App Development',
+    slug: 'astrology-app-development',
+    category: 'App Development',
+    sub_category: 'Practice apps',
+    description:
+      'A mobile app for an astrology practice, with the screens named in the quote. From ₹12,000. Store approval is not included as a promise.',
+    long_description:
+      'The floor matches the published simple business app. Kundli features are the separate horoscope API. A website is the separate five-page package.',
+    price: 12000,
+    duration_days: 30,
+    features: [
+      'Screens named in the quote',
+      'A way for a client to request a consultation',
+      'iOS, Android, or both, as the quote states',
+      'Handover notes',
+    ],
+    target_industries: ['Astrology', 'Spiritual practices'],
+    image_url: '/images/services/software-development.jpg',
+    meta_title: 'Astrology App Development',
+    meta_description:
+      'Astrology app development worldwide. From ₹12,000, written scope, ₹0 advance. Store approval is the store’s decision.',
   }),
 ]

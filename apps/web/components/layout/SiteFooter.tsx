@@ -16,6 +16,10 @@ const PRACTICES: { label: string; href: string }[] = [
   { label: 'Omnichannel CRM', href: serviceHref({ category: 'Development', slug: 'omnichannel-dm-crm' }) },
   { label: 'AEO and GEO', href: serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' }) },
   { label: 'YouTube for astrologers', href: serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' }) },
+  { label: 'Astrology apps', href: serviceHref({ category: 'App Development', slug: 'astrology-app-development' }) },
+  { label: 'WhatsApp chatbot', href: serviceHref({ category: 'AI Chatbots', slug: 'whatsapp-chatbot-for-business' }) },
+  { label: 'n8n automation', href: serviceHref({ category: 'AI Automation', slug: 'n8n-workflow-automation' }) },
+  { label: 'Custom AI agents', href: serviceHref({ category: 'AI', slug: 'custom-ai-development' }) },
   { label: 'Notes', href: '/insights' },
 ];
 
@@ -42,6 +46,7 @@ const LEGAL = [
   { label: 'Terms of Service', href: '/terms' },
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'llms.txt', href: '/llms.txt' },
+  { label: 'llms-full.txt', href: '/llms-full.txt' },
   { label: 'Sitemap', href: '/sitemap.xml' },
 ];
 
