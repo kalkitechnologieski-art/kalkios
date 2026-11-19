@@ -99,7 +99,7 @@ export function buildBrandKnowledgePanel(): EntityData {
       'KALKI Intelligence is a leading enterprise AI platform based in Indore, India, providing comprehensive digital services including web development, SEO, AI chatbots, lead generation, and business automation solutions.',
     attributes: {
       Founded: '2025',
-      Founder: 'Nikhil Singh',
+      'Founder & CEO': 'Nikhil Singh',
       Headquarters: 'Indore, Madhya Pradesh, India',
       'Service area': 'Worldwide',
       Industry: 'Artificial Intelligence, Digital Services',

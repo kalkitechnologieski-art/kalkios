@@ -45,7 +45,7 @@ These articles answer the question and link to the primary service. They are not
 
 ## Citeable facts
 
-The facts block on `/about` is the page an answer engine should cite for who the company is. It matches the Organization JSON-LD: legal name KALKI Intelligence LLP, founded 2025, founder Nikhil Singh, office in Indore, `areaServed` worldwide.
+The facts block on `/about` is the page an answer engine should cite for who the company is. It matches the Organization JSON-LD: legal name KALKI Intelligence LLP, founded 2025, Founder & CEO Nikhil Singh, office in Indore, `areaServed` worldwide.
 
 ## Pages that must not compete
 

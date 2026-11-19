@@ -9,7 +9,7 @@ import { AppLayout } from '@/components/ui/AppLayout';
 import { GlobalLoader } from '@/components/ui/GlobalLoader';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
-import { organizationSchema, localBusinessSchema } from '@/lib/seo/schema';
+import { organizationSchema, localBusinessSchema, founderSchema } from '@/lib/seo/schema';
 import { buildRootMetadata } from '@/lib/seo/metadata';
 import '@/styles/globals.css';
 
@@ -72,6 +72,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
 
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(founderSchema()) }}
+        />
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
