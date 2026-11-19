@@ -36,6 +36,17 @@ function supabaseConfigured(): boolean {
 
 const MOCK = servicesData as unknown as Service[]
 
+// Buyer-facing names on URLs that already exist. The slug stays so indexed
+// pages do not move. A second page for the same query is not added.
+const EXACT_NAMES: Record<string, string> = {
+  'landing-page-5-pages': 'Landing Page Design',
+  'premium-logo-design': 'Logo & Brand Identity Design',
+  'ppc-google-ads': 'Google Ads Management',
+  'mobile-app-development': 'Mobile App Development (Flutter / React Native)',
+  'ui-ux-design': 'UI/UX Design',
+  'email-marketing-automation': 'Email Marketing Automation',
+}
+
 function sanitizeRow(row: Service): Service {
   const extra = row as Service & { aeo_summary?: string | null }
   let features = row.features
@@ -51,8 +62,11 @@ function sanitizeRow(row: Service): Service {
     }
     features = cleaned
   }
+  const exactName = EXACT_NAMES[norm(row.slug)]
   const next: Service = {
     ...row,
+    name: exactName ?? row.name,
+    meta_title: exactName ?? row.meta_title,
     description: row.description ? publicCopy(row.description) : row.description,
     meta_description: row.meta_description ? publicCopy(row.meta_description) : row.meta_description,
     long_description: row.long_description ? publicCopy(row.long_description) : row.long_description,

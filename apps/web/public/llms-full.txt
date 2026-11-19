@@ -30,6 +30,35 @@ Every catalog figure is a starting price in INR. The written quote is the price 
 - Vastu consultant marketing: /marketplace/marketing/vastu-consultant-marketing (from ₹19,999)
 - YouTube content for astrologers: /marketplace/media/youtube-content-for-astrologers (from ₹9,999)
 
+Names buyers search, each on one URL. A second page is not published for the same query.
+
+- Shopify Store Development: /marketplace/web-development/shopify-store-development
+- WordPress Website Development: /marketplace/web-development/wordpress-website-development
+- Landing Page Design: /marketplace/web-development/landing-page-5-pages
+- Website Maintenance: /marketplace/web-development/website-maintenance
+- Google Ads Management: /marketplace/marketing/ppc-google-ads
+- Meta Ads Management: /marketplace/marketing/meta-ads-management
+- Local SEO Services: /marketplace/marketing/local-seo-services
+- Technical SEO Audit: /marketplace/marketing/technical-seo-audit
+- Email Marketing Automation: /marketplace/marketing/email-marketing-automation
+- Lead Generation Services: /marketplace/marketing/lead-generation-services
+- Voice AI Agent Development (also the page for “AI Voice Calling Agent”): /marketplace/ai-automation/voice-ai-agent-development
+- RAG Chatbot Development: /marketplace/ai/rag-chatbot-development
+- CRM Integration (HubSpot/Zoho): /marketplace/development/crm-integration-hubspot-zoho
+- API Integration Services: /marketplace/development/api-integration-services
+- Instagram DM Automation: /marketplace/ai-automation/instagram-dm-automation
+- UI/UX Design: /marketplace/development/ui-ux-design
+- Logo & Brand Identity Design: /marketplace/design/premium-logo-design
+- Mobile App Development (Flutter / React Native): /marketplace/development/mobile-app-development
+- SaaS MVP Development: /marketplace/development/saas-mvp-development
+- Online Puja Booking System: /marketplace/web-development/online-puja-booking-system
+- Kundali Matching Software: /marketplace/ai-automation/kundali-matching-software
+- Tarot Reading Website: /marketplace/web-development/tarot-reading-website
+- Numerology Software: /marketplace/ai-automation/numerology-software
+- Vastu Consultation App: /marketplace/app-development/vastu-consultation-app
+
+The full product list, with starting prices, is https://www.kalki-intelligence.in/llms.txt.
+
 ## How to read the site
 
 The facts an answer engine should cite are on /about. Notes that explain a scope are on /insights. The keyword map for editors is in the repository at docs/seo/keyword-map.md and is not a public ranking.

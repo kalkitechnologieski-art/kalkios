@@ -607,17 +607,25 @@ const EXISTING_LINKS: Record<string, { category: string; label: string }> = {
   'custom-ai-development': { category: 'AI', label: 'Custom AI agent development' },
   'ai-chatbot-development': { category: 'AI', label: 'AI chatbot development' },
   'nlp-sentiment-analysis': { category: 'AI', label: 'NLP and sentiment analysis' },
-  'landing-page-5-pages': { category: 'Web Development', label: 'Landing page (5 pages)' },
+  'landing-page-5-pages': { category: 'Web Development', label: 'Landing Page Design' },
+  'astrology-website-development': { category: 'Web Development', label: 'Astrology website development' },
+  'vastu-consultant-website': { category: 'Web Development', label: 'Vastu consultant website' },
+  'premium-logo-design': { category: 'Design', label: 'Logo & Brand Identity Design' },
   'ecommerce-website-development': { category: 'Development', label: 'Ecommerce website development' },
-  'mobile-app-development': { category: 'Development', label: 'Mobile app development' },
+  'mobile-app-development': { category: 'Development', label: 'Mobile App Development (Flutter / React Native)' },
+  'enterprise-seo': { category: 'Marketing', label: 'Enterprise SEO' },
+  'omnichannel-dm-crm': { category: 'Development', label: 'Omnichannel CRM' },
+  'ai-horoscope-kundali-api': { category: 'AI Automation', label: 'Kundali software' },
+  'astrology-app-development': { category: 'App Development', label: 'Astrology app development' },
+  'whatsapp-chatbot-for-business': { category: 'AI Chatbots', label: 'WhatsApp chatbot for business' },
   'devops-automation': { category: 'Development', label: 'DevOps automation' },
   'cloud-migration': { category: 'Development', label: 'Cloud migration' },
   'standard-admin-dashboard': { category: 'Development', label: 'Standard admin dashboard' },
-  'ui-ux-design': { category: 'Development', label: 'UI/UX design' },
+  'ui-ux-design': { category: 'Development', label: 'UI/UX Design' },
   'simple-business-app': { category: 'App Development', label: 'Simple business app' },
   'whatsapp-business-api-setup': { category: 'AI Automation', label: 'WhatsApp API integration' },
-  'email-marketing-automation': { category: 'Marketing', label: 'Email marketing automation' },
-  'ppc-google-ads': { category: 'Marketing', label: 'PPC and Google Ads' },
+  'email-marketing-automation': { category: 'Marketing', label: 'Email Marketing Automation' },
+  'ppc-google-ads': { category: 'Marketing', label: 'Google Ads Management' },
   'custom-software-development': { category: 'Development', label: 'Custom software development' },
 }
 
@@ -637,20 +645,40 @@ function contentFromPhase3(row: Phase3Service): ServicePageContent {
     { href: '/industries', label: 'Industries' },
     { href: '/contact', label: 'Contact' },
   ]
+  const price = inr(row.price)
+  const first = row.lede.split(/(?<=\.)\s/)[0]?.replace(/\.$/, '') || row.name
   return {
     sections: [
-      { heading: 'What this is', paragraphs: [row.lede] },
-      { heading: 'Who it is for', paragraphs: [row.audience] },
-      { heading: 'What the quote does not include', paragraphs: [row.notIncluded] },
+      {
+        heading: first,
+        paragraphs: [
+          row.lede,
+          `${row.name} is listed from ${price}. ${row.days} days is the listed typical duration for this scope. The written quote is the price you approve, and nothing is charged to receive it.`,
+        ],
+      },
+      { heading: `Who asks for ${row.name}`, paragraphs: [row.audience] },
+      { heading: `What ${row.name} leaves out`, paragraphs: [row.notIncluded] },
     ],
     deliverables: row.features,
     prerequisites: row.prerequisites,
-    process: [],
+    process: [
+      {
+        name: 'Name the list',
+        text: `A ${row.name} quote is built from this page’s deliverables: ${row.features.join('; ')}. ${row.prerequisites[0] ?? 'Send the brief first.'}`,
+      },
+      ...standardProcess(row.name, row.days).slice(1),
+    ],
     faqs: [
-      { question: `What is ${row.name}?`, answer: row.lede },
-      { question: 'What does the starting price mean?', answer: `${row.name} starts at ₹${row.price.toLocaleString('en-IN')}. That is a floor. The written quote is the price, and nothing is charged to receive it.` },
-      { question: 'What is not included?', answer: row.notIncluded },
-      { question: 'Do you promise a business result?', answer: 'No. The quote lists the work. It does not promise revenue, rankings, leads, uptime, or citations.' },
+      {
+        question: `What does ${row.name} include?`,
+        answer: `${row.lede} When the quote lists them, the deliverables are: ${row.features.join('; ')}.`,
+      },
+      { question: `Who is ${row.name} for?`, answer: row.audience },
+      { question: `What sits outside ${row.name}?`, answer: row.notIncluded },
+      {
+        question: `What is the starting price of ${row.name}?`,
+        answer: `${row.name} starts at ${price}. That figure is a floor. The written quote is the price, and it does not promise revenue, rankings, leads, uptime, or citations. ${row.days} days is the listed typical duration.`,
+      },
     ],
     links,
   }
