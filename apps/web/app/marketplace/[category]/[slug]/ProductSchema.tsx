@@ -1,12 +1,7 @@
-// == KALKI B5 LAUNCH ==
-// Rich JSON-LD for a service detail page: Product (with indexable premium
-// image) + FAQPage (AEO) + BreadcrumbList. Server-only, no client JS.
-// -----------------------------------------------------------------------------
-
 import type { Database } from '@/lib/supabase/types';
 import { getServiceImageUrl } from '@/lib/services/service-image';
-import { faqSchema, breadcrumbSchema } from '@/lib/seo/schema';
-import { buildFaqs } from '@/lib/aeo/answer-blocks';
+import { faqSchema, breadcrumbSchema, howToSchema } from '@/lib/seo/schema';
+import { categoryHref, serviceHref } from '@/lib/services/href';
 import { siteOrigin } from '@/lib/seo/site-url';
 
 type Service = Database['public']['Tables']['services']['Row'] & {
@@ -20,28 +15,33 @@ function absoluteImage(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `${SITE}${url}`;
 }
 
-export function ProductSchema({ service }: { service: Service }) {
+export function ProductSchema({
+  service,
+  faqs,
+  process,
+}: {
+  service: Service;
+  faqs: { question: string; answer: string }[];
+  process: { name: string; text: string }[];
+}) {
   const image = absoluteImage(getServiceImageUrl(service));
-  const catPath = `/marketplace/${encodeURIComponent(service.category)}`;
-  const url = `${catPath}/${encodeURIComponent(service.slug)}`;
-
-  const features = Array.isArray(service.features)
-    ? (service.features as unknown[]).filter((f): f is string => typeof f === 'string')
-    : [];
+  const path = serviceHref(service);
+  const url = `${SITE}${path}`;
+  const description = service.aeo_summary ?? service.description ?? '';
 
   const product = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: service.name,
-    description: service.aeo_summary ?? service.description ?? '',
+    description,
     image: [image],
     sku: service.slug,
-    url: `${SITE}${url}`,
-    brand: { '@type': 'Brand', name: 'KALKI OS' },
+    url,
+    brand: { '@type': 'Brand', name: 'KALKI Intelligence' },
     category: service.category,
     offers: {
       '@type': 'Offer',
-      url: `${SITE}${url}`,
+      url,
       priceCurrency: 'INR',
       price: service.price ?? 0,
       availability: 'https://schema.org/InStock',
@@ -50,33 +50,42 @@ export function ProductSchema({ service }: { service: Service }) {
     },
   };
 
-  const faqs = faqSchema(
-    buildFaqs({
-      name: service.name,
-      category: service.category,
-      description: service.description,
-      long_description: null,
-      price: service.price,
-      duration_days: service.duration_days,
-      features,
-      target_industries: service.target_industries ?? null,
-    })
-  );
+  const serviceLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: service.name,
+    description,
+    url,
+    provider: { '@id': `${SITE}/#organization` },
+    areaServed: { '@type': 'Place', name: 'Worldwide' },
+    offers: {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'INR',
+      price: service.price ?? 0,
+      availability: 'https://schema.org/InStock',
+    },
+  };
 
   const crumbs = breadcrumbSchema([
     { name: 'Home', url: '/' },
     { name: 'Marketplace', url: '/marketplace' },
-    { name: service.category, url: catPath },
-    { name: service.name, url },
+    { name: service.category, url: categoryHref(service.category) },
+    { name: service.name, url: path },
   ]);
+
+  const howTo = howToSchema({
+    name: `How ${service.name} is scoped`,
+    description: `The written-quote process for ${service.name}.`,
+    steps: process,
+  });
 
   return (
     <>
-      {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(product) }} />
-      {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqs) }} />
-      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema(faqs)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }} />
     </>
   );

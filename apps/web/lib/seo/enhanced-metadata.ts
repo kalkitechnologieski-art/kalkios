@@ -4,9 +4,10 @@
 
 import type { Metadata } from 'next';
 import { siteOrigin } from '@/lib/seo/site-url';
+import { categoryHref, normKey, serviceHref } from '@/lib/services/href';
 
 const SITE = siteOrigin();
-const SITE_NAME = 'KALKI OS';
+const SITE_NAME = 'KALKI Intelligence';
 const DEFAULT_LOCALE = 'en_IN';
 
 export interface EnhancedMetadataOptions {
@@ -124,11 +125,7 @@ export function buildEnhancedMetadata(options: EnhancedMetadataOptions): Metadat
       // Content freshness signals
       'last-modified': options.modifiedTime || new Date().toISOString(),
       
-      // Audience targeting
-      audience: 'Indian businesses, enterprises, startups',
-      'geo.region': 'IN-MP',
-      'geo.placename': 'Indore, Madhya Pradesh, India',
-      'geo.position': '22.7196;75.8577',
+      audience: 'Astrologers, vastu consultants, spiritual practitioners, and businesses worldwide',
       
       // Industry classification
       industry: 'Artificial Intelligence, Digital Services, SaaS',
@@ -215,24 +212,22 @@ export function buildServiceMetadata(service: {
   slug: string;
   category: string;
   price: number;
+  title?: string;
   rating?: number;
   reviewCount?: number;
 }): Metadata {
   return buildEnhancedMetadata({
-    title: `${service.name} Services in Indore | From ₹${service.price}`,
-    description: `Professional ${service.name.toLowerCase()} services from KALKI Intelligence, an AI tech company in Indore. ${service.description} Serving Indore and businesses across India.`,
-    path: `/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
+    title: service.title || service.name,
+    description: service.description,
+    path: serviceHref({ category: service.category, slug: service.slug }),
     keywords: [
       service.name,
-      `${service.name} services`,
-      `${service.name} Indore`,
-      `${service.name} India`,
-      `${service.name} price`,
-      `${service.name} cost`,
-      'tech company Indore',
-      'AI tech company India',
-      'professional',
-      'enterprise',
+      service.category,
+      'KALKI Intelligence',
+      'astrology website development',
+      'AI development company',
+      'AI automation agency',
+      'worldwide',
     ],
     category: 'Service',
     entities: ['Product', 'Service', 'Offer'],
@@ -247,20 +242,31 @@ export function buildCategoryMetadata(
   count: number,
   description?: string
 ): Metadata {
-  const solutionLabel = count === 1 ? 'AI-Powered Solution' : 'AI-Powered Solutions';
+  const titles: Record<string, string> = {
+    'web-development': 'Web Development for Astrologers and Businesses',
+    marketing: 'Marketing for Astrologers, Vastu Consultants and Brands',
+    'ai-automation': 'AI Automation Agency Services',
+    ai: 'AI Development Company Services',
+    development: 'Software Development for Every Industry',
+    media: 'YouTube and Video Production Services',
+    'app-development': 'App Development for Practices and Businesses',
+    'ai-chatbots': 'AI Chatbot Development Services',
+    design: 'Design Services for Practices and Brands',
+    consulting: 'AI and Technology Consulting',
+  };
+  const key = normKey(category);
   return buildEnhancedMetadata({
-    title: `${category} Services in India | ${count} ${solutionLabel}`,
-    description: description || `Browse ${count} professional ${category.toLowerCase()} services from an Indore-based tech company serving all of India. Transparent INR pricing, written scope, quote within 24 hours.`,
-    path: `/marketplace/${encodeURIComponent(category)}`,
+    title: titles[key] || `${category} Services`,
+    description: description || `${count} ${category} services from KALKI Intelligence for astrologers, vastu consultants and businesses worldwide. Written scope, fixed price, quote in 24 hours.`,
+    path: categoryHref(category),
     keywords: [
       category,
       `${category} services`,
-      `${category} India`,
-      `${category} company Indore`,
-      'AI services',
-      'tech company India',
-      'digital solutions',
-      'business automation',
+      'KALKI Intelligence',
+      'astrology',
+      'vastu',
+      'AI development company',
+      'worldwide',
     ],
     category: 'Category',
     entities: ['CollectionPage', 'ItemList'],
@@ -271,28 +277,25 @@ export function buildCategoryMetadata(
  * Build homepage metadata with maximum keyword density
  */
 export function buildHomepageMetadata(): Metadata {
-  const title = 'AI Tech Company in Indore, India | KALKI OS';
+  const title = 'AI & Development Partner for Astrologers | KALKI Intelligence';
   return {
     ...buildEnhancedMetadata({
       title,
       description:
-        'KALKI Intelligence is a tech company in Indore building AI-powered websites, SEO, chatbots and business automation for Indian businesses. Transparent INR pricing, written scope, quote within 24 hours.',
+        'AI and development partner for astrologers, vastu consultants and every industry. Written scope, fixed price, ₹0 advance. KALKI Intelligence.',
       keywords: [
-        'tech company',
-        'tech company in Indore',
-        'AI tech company India',
-        'technology company India',
-        'KALKI OS',
         'KALKI Intelligence',
-        'AI platform India',
-        'AI concierge',
-        'Siddhi chatbot',
-        'SETU lead generation',
-        'web development Indore',
-        'SEO services India',
-        'digital marketing',
-        'business automation',
-        'SaaS India',
+        'AI development company',
+        'AI automation agency',
+        'astrology website development',
+        'SEO for astrologers',
+        'AI automation for astrologers',
+        'vastu consultant marketing',
+        'WhatsApp API setup',
+        'omnichannel CRM development',
+        'AEO GEO services',
+        'YouTube content for astrologers',
+        'Temple of technology',
       ],
       entities: ['SoftwareApplication', 'Organization', 'LocalBusiness'],
       brandAuthority: true,

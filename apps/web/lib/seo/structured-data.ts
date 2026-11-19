@@ -216,7 +216,7 @@ export function softwareApplicationSchema() {
     ],
     screenshot: `${SITE}/images/platform-screenshot.jpg`,
     softwareVersion: '3.0.0',
-    datePublished: '2024-01-01',
+    datePublished: '2025-01-01',
     dateModified: new Date().toISOString(),
     author: {
       '@type': 'Organization',

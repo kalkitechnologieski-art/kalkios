@@ -3,43 +3,27 @@
 // -----------------------------------------------------------------------------
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { fetchServices } from '@/lib/services';
+import { serviceHref } from '@/lib/services/href';
 import { siteOrigin } from '@/lib/seo/site-url';
 
 const SITE = siteOrigin();
 
 export async function GET() {
-  const supabase = await createClient();
+  const services = (await fetchServices())
+    .slice()
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .slice(0, 50);
 
-  // Fetch latest services
-  const { data: services } = await supabase
-    .from('services')
-    .select('id, name, slug, category, description, price, created_at, updated_at')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(50);
-
-  interface ServiceRow {
-    id: string;
-    name: string;
-    slug: string;
-    category: string;
-    description: string | null;
-    price: number | null;
-    created_at: string;
-    updated_at: string | null;
-  }
-
-  // Build RSS 2.0 feed
   const rss = buildRSS({
-    title: 'KALKI OS - Latest AI Services & Updates',
-    description: 'Discover the latest AI-powered digital services from KALKI Intelligence. Web development, SEO, chatbots, automation, and more.',
+    title: 'KALKI Intelligence — services and notes',
+    description: 'Services from KALKI Intelligence for astrologers, vastu consultants and businesses in every industry. Written scope, fixed price, ₹0 advance.',
     link: SITE,
     language: 'en-IN',
-    items: ((services as ServiceRow[]) || []).map((service) => ({
+    items: services.map((service) => ({
       title: `${service.name} - ${service.category}`,
       description: service.description || '',
-      link: `${SITE}/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}`,
+      link: `${SITE}${serviceHref(service)}`,
       guid: service.id,
       pubDate: new Date(service.created_at).toUTCString(),
       lastBuildDate: new Date(service.updated_at || service.created_at).toUTCString(),

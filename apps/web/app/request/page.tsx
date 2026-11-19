@@ -10,7 +10,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Request a Service — No Payment Needed',
   description:
-    'Tell us what you need — no payment now. KALKI Intelligence, an AI tech company in Indore, sends a written scope and fixed quote within 24 hours.',
+    'Tell us what you need. No payment now. KALKI Intelligence sends a written scope and fixed quote within 24 hours, for practices and every industry.',
   alternates: { canonical: '/request' },
 }
 

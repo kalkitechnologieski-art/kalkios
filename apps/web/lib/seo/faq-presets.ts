@@ -10,34 +10,34 @@ export interface FAQItem {
 export const FAQ_PRESETS = {
   aiServices: [
     {
-      question: 'What is KALKI OS and who runs it?',
+      question: 'What is KALKI Intelligence?',
       answer:
-        'KALKI OS is the platform of KALKI Intelligence, a tech company based in Indore, Madhya Pradesh. It brings together a service marketplace, an AI concierge (Siddhi), a lead generation engine (SETU) and project management tools, so Indian businesses can buy websites, automation and marketing from one place.',
+        'KALKI Intelligence LLP is an AI and development tech partner. The tagline is Temple of technology. The studio is in Indore, India, and delivery is remote and worldwide. The commercial terms are a written scope, a fixed price and ₹0 advance. AI is used in the work, and a person is accountable for the quote.',
     },
     {
-      question: 'Who is KALKI Intelligence?',
+      question: 'Who do you work with?',
       answer:
-        'KALKI Intelligence LLP is an AI tech company in Indore, Madhya Pradesh, founded in 2025. It builds websites, AI chatbots, SEO and lead generation systems for businesses across India, and gives every project a written scope and fixed price before work starts.',
+        'Two groups. Astrologers, vastu consultants and other spiritual practitioners, with services such as astrology websites, SEO for astrologers, vastu websites and marketing, YouTube production and a horoscope API. And businesses in every other industry, using the same catalog of websites, apps, automation and marketing.',
     },
     {
-      question: 'How much do KALKI services cost?',
+      question: 'Do you guarantee rankings, views, or AI citations?',
       answer:
-        'Each service page lists its own starting price in INR, and most projects are quoted individually. Submit the request form and you get a written scope and fixed price within 24 hours. Nothing is charged until you accept that quote, and there are no hidden fees.',
+        'No. A report can include numbers that were measured. A ranking, a view count, a viral outcome, or a citation in an AI answer is not part of the quote.',
     },
     {
-      question: 'Is KALKI OS suitable for small businesses?',
+      question: 'How does pricing work?',
       answer:
-        'Yes. KALKI OS is designed for businesses of all sizes—from startups to enterprises. The modular approach means you can start with a single service, such as lead generation or chatbot integration, and scale as you grow.',
+        'Each service page lists a starting price in INR. Most projects are quoted individually. You receive a written scope and fixed price within 24 hours of the brief. Nothing is charged until you accept that quote.',
     },
     {
-      question: 'How quickly can I get started?',
+      question: 'Where do you deliver?',
       answer:
-        'Set up takes minutes and our AI concierge Siddhi guides you through it. After you accept a quote, most digital services are delivered in 30–60 days, with a live project timeline you can follow from your dashboard.',
+        'Worldwide, remotely. The office is 52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India. English is the default. Hindi is available when the quote says so.',
     },
     {
-      question: 'Do you provide support in Hindi?',
+      question: 'How do I start?',
       answer:
-        'Yes! KALKI OS supports both English and Hindi. Our team is based in Indore, Madhya Pradesh, and we understand the needs of Indian businesses. Customer support is available in multiple languages.',
+        'Send a brief through the request form or the contact page. There is no checkout and no advance to start the conversation.',
     },
   ],
 

@@ -1,16 +1,18 @@
 // == KALKI B4 EXPERIENCE ==
 import type { Metadata } from 'next';
 import { fetchServiceBySlug, fetchServices, fetchServicesByCategory } from '@/lib/services';
-import { categoryHref, decodeSegment, normKey, serviceHref } from '@/lib/services/href';
+import { categoryHref, categorySlug, decodeSegment, normKey, serviceHref } from '@/lib/services/href';
 import { getServiceImageUrl } from '@/lib/services/service-image';
 import { buildServiceMetadata } from '@/lib/seo/enhanced-metadata';
+import { serviceMeta } from '@/lib/seo/service-meta';
+import { buildServicePageContent } from '@/lib/services/service-details';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { LuxuryButton } from '@/components/ui/LuxuryButton';
 import { CheckCircle, Clock, Award, Users, ChevronRight, ArrowRight, FileText } from 'lucide-react';
 import { ProductReviewsMount } from './ProductReviewsMount';
 import { ProductSchema } from './ProductSchema';
-import { findNichePage, nicheMetadata, NicheServicePage } from './NicheServicePage';
+import { ServiceDepth } from '@/components/services/ServiceDepth';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { fetchTestimonials } from '@/lib/testimonials';
 import { Testimonials } from '@/components/trust/Testimonials';
@@ -56,7 +58,7 @@ export async function generateStaticParams() {
     const key = `${normKey(category)}/${normKey(slug)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    params.push({ category, slug });
+    params.push({ category: categorySlug(category), slug });
   }
   return params;
 }
@@ -67,33 +69,27 @@ async function getService(category: string, slug: string): Promise<Service | nul
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const routeParams = await params;
-  const niche = findNichePage(routeParams.category, routeParams.slug);
-  if (niche) return nicheMetadata(niche);
   const service = await getService(
     decodeSegment(routeParams.category),
     decodeSegment(routeParams.slug),
   );
   if (!service) return {};
-  const metadata = buildServiceMetadata({
+  const override = serviceMeta(service.slug);
+  const price = isEnterpriseSeo(service.slug) ? 49999 : service.price ?? 0;
+  const description = override?.description
+    || (isEnterpriseSeo(service.slug) ? ENTERPRISE_SEO_META : null)
+    || service.meta_description
+    || service.aeo_summary
+    || service.description
+    || `${service.name} from KALKI Intelligence. Written scope, fixed price, ₹0 advance.`;
+  return buildServiceMetadata({
     name: service.name,
-    description: isEnterpriseSeo(service.slug)
-      ? ENTERPRISE_SEO_LEAD
-      : service.aeo_summary || service.description || '',
+    title: override?.title || service.meta_title || service.name,
+    description,
     slug: service.slug,
     category: service.category,
-    price: isEnterpriseSeo(service.slug) ? 49999 : service.price ?? 0,
+    price,
   });
-  if (!isEnterpriseSeo(service.slug)) return metadata;
-  return {
-    ...metadata,
-    description: ENTERPRISE_SEO_META,
-    openGraph: metadata.openGraph
-      ? { ...metadata.openGraph, description: ENTERPRISE_SEO_META }
-      : metadata.openGraph,
-    twitter: metadata.twitter
-      ? { ...metadata.twitter, description: ENTERPRISE_SEO_META }
-      : metadata.twitter,
-  };
 }
 
 interface Related {
@@ -111,8 +107,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const routeParams = await params;
   const category = decodeSegment(routeParams.category);
   const slug = decodeSegment(routeParams.slug);
-  const niche = findNichePage(category, slug);
-  if (niche) return <NicheServicePage page={niche} />;
 
   const [service, testimonials] = await Promise.all([
     getService(category, slug),
@@ -141,10 +135,19 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     : service.aeo_summary ?? service.description ?? '';
 
   const related = await getRelatedServices(service.category, service.id);
+  const content = buildServicePageContent({
+    name: shown.name,
+    slug: shown.slug,
+    category: shown.category,
+    description: shown.description,
+    price: shown.price,
+    duration_days: shown.duration_days,
+    features: shown.features,
+  });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <ProductSchema service={shown} />
+      <ProductSchema service={shown} faqs={content.faqs} process={content.process} />
 
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-sm text-white/40 mb-6">
@@ -261,6 +264,8 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         </div>
       </div>
 
+      <ServiceDepth content={content} />
+
       {/* Reviews + proof */}
       <section className="mt-12">
         <div className="mb-4">
@@ -272,37 +277,6 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           <Testimonials items={testimonials} compact />
         </div>
       </section>
-
-      {/* FAQ */}
-      <div className="mt-12 bg-white/5 border border-cyan-500/10 rounded-xl p-6">
-        <AnimatedHeadline as="h2" text="Frequently asked" className="text-xl font-bold text-white mb-4" inView />
-        <div className="space-y-4">
-          <details className="border-b border-white/5 pb-3">
-            <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
-              How long does delivery take?
-            </summary>
-            <p className="text-white/65 mt-2 text-sm">
-              Typically {service.duration_days ?? 30} days depending on complexity.
-            </p>
-          </details>
-          <details className="border-b border-white/5 pb-3">
-            <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
-              What happens after I request?
-            </summary>
-            <p className="text-white/65 mt-2 text-sm">
-              No payment is taken now. We review your brief, share a tailored quote, and once approved your project appears live on your client dashboard for real-time tracking.
-            </p>
-          </details>
-          <details>
-            <summary className="text-white font-medium cursor-pointer hover:text-cyan-400 transition">
-              Can I customise this?
-            </summary>
-            <p className="text-white/65 mt-2 text-sm">
-              Absolutely. Reach out via support and we can tailor the service.
-            </p>
-          </details>
-        </div>
-      </div>
 
       {related.length > 0 && (
         <section className="mt-12">
@@ -321,7 +295,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               >
                 <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-cyan-900/20 to-purple-900/20">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getServiceImageUrl(r)} alt={`${r.name} — ${r.category} service by KALKI OS`} loading="lazy" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
+                  <img src={getServiceImageUrl(r)} alt={`${r.name} — ${r.category} service by KALKI Intelligence`} loading="lazy" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
                 </div>
                 <div className="p-3">
                   <h3 className="text-white text-sm font-medium line-clamp-1 group-hover:text-cyan-300 transition">{r.name}</h3>

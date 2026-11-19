@@ -12,6 +12,7 @@ import {
   localBusinessSchema,
 } from '@/lib/seo/schema';
 import { buildFaqs } from '@/lib/aeo/answer-blocks';
+import { categoryHref, serviceHref } from '@/lib/services/href';
 
 type Service = Database['public']['Tables']['services']['Row'] & {
   aeo_summary?: string | null;
@@ -47,8 +48,8 @@ export function ServiceSchema({ service }: { service: Service }) {
     breadcrumbSchema([
       { name: 'Home', url: '/' },
       { name: 'Marketplace', url: '/marketplace' },
-      { name: service.category, url: `/marketplace?category=${encodeURIComponent(service.category)}` },
-      { name: service.name, url: `/marketplace/${encodeURIComponent(service.category)}/${encodeURIComponent(service.slug)}` },
+      { name: service.category, url: categoryHref(service.category) },
+      { name: service.name, url: serviceHref(service) },
     ]),
   ];
 

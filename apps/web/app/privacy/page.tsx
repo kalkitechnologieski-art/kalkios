@@ -4,14 +4,14 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal'
 export const metadata = {
   title: 'Privacy Policy',
   description:
-    'How KALKI Intelligence LLP collects, uses, and protects your personal data across KALKI OS. India-based, DP Act compliant.',
+    'How KALKI Intelligence LLP collects, uses, and protects personal data on this site.',
   alternates: { canonical: '/privacy' },
 }
 
 const SECTIONS: { h: string; p: string }[] = [
   {
     h: 'Who we are',
-    p: 'KALKI OS is operated by KALKI Intelligence LLP, 51 MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India. For any privacy question write to team@kalki-intelligence.in.',
+    p: 'This website is operated by KALKI Intelligence LLP, 52, MOG Lines, Swastik Nagar, Indore, Madhya Pradesh 452002, India. For any privacy question write to team@kalki-intelligence.in.',
   },
   {
     h: 'What we collect',

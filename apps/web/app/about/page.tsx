@@ -5,15 +5,18 @@ import { AnimatedEyebrow } from '@/components/motion/AnimatedEyebrow'
 import { LuxuryButton } from '@/components/ui/LuxuryButton'
 import { Clock, Zap, Award, Shield, Code, Rocket } from 'lucide-react'
 import Link from 'next/link'
+import { serviceHref } from '@/lib/services/href'
 import { fetchTestimonials } from '@/lib/testimonials'
 import { Testimonials } from '@/components/trust/Testimonials'
 
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'About KALKI Intelligence — AI Tech Company in Indore',
-  description: 'KALKI Intelligence is a tech company in Indore delivering websites, AI automation, data analytics and growth marketing for Indian businesses — written scope, fixed price, no payment to start.',
-  keywords: 'about KALKI Intelligence, tech company Indore, AI tech company India, technology company, web development Indore, AI automation, digital marketing India',
+  title: 'About KALKI Intelligence',
+  description:
+    'KALKI Intelligence is an AI and development partner for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Written scope, fixed price, ₹0 advance.',
+  keywords:
+    'KALKI Intelligence, Temple of technology, astrology website development, vastu consultant, AI development company, AI automation agency',
   alternates: { canonical: '/about' },
 }
 
@@ -24,7 +27,7 @@ export default async function AboutPage() {
       <ScrollReveal direction="up">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <AnimatedEyebrow label="Indore, Madhya Pradesh" />
+            <AnimatedEyebrow label="Temple of technology" />
           </div>
           <AnimatedHeadline
             as="h1"
@@ -33,7 +36,7 @@ export default async function AboutPage() {
             gradient
           />
           <p className="text-cyan-400/80 text-lg mt-4 max-w-2xl mx-auto font-mono">
-            A tech company in Indore building measurable digital systems for Indian businesses
+            An AI and development tech partner for astrologers, vastu consultants, and businesses in every industry
           </p>
         </div>
       </ScrollReveal>
@@ -44,11 +47,9 @@ export default async function AboutPage() {
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-white font-mono">What we do</h2>
               <p className="text-white/65 text-lg mt-4 leading-relaxed">
-                KALKI Intelligence is an Indore-based studio of engineers and designers. We build and run
-                <span className="text-cyan-400"> Digital Marketing</span>,
-                <span className="text-purple-400"> AI Automation</span>,
-                <span className="text-pink-400"> Data Analytics</span> and
-                <span className="text-blue-400"> Development</span> work for businesses across India.
+                KALKI Intelligence is a studio of engineers and designers. The office is in Indore. Delivery is remote and worldwide.
+                The work is websites, marketing, AI automation and software for two audiences at once: astrologers, vastu consultants and other spiritual practitioners, and businesses in every other industry.
+                The terms do not change with the industry: a written scope, a fixed price, ₹0 advance, and a person accountable for the quote.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-white/60 text-sm">Digital Marketing</span>
@@ -94,10 +95,9 @@ export default async function AboutPage() {
         <div className="bg-white/5 border border-cyan-500/10 rounded-2xl p-8 backdrop-blur-sm">
           <h2 className="text-2xl font-bold text-white font-mono text-center mb-3">What we will not claim</h2>
           <p className="text-white/60 text-center max-w-3xl mx-auto leading-relaxed">
-            KALKI Intelligence is a small Indore-based studio, not a 500-person agency. So there are no
-            invented client counts, no unverifiable ratings, and no &ldquo;award-winning&rdquo; badges on this site.
-            What we do publish is the working method: a written scope, one direct line, a fixed price, and
-            reviews collected from real accounts on the pages where the work shipped.
+            KALKI Intelligence does not publish invented client counts, unverifiable ratings, award badges,
+            ranking promises, or view counts. The studio is small, the office is in Indore, and the method is the
+            thing we will put in writing: a scope, one owner, a fixed price, and reviews only from accounts on work that shipped.
           </p>
           <div className="mt-6 flex justify-center">
             <Link href="/request">
@@ -147,6 +147,28 @@ export default async function AboutPage() {
           </div>
         </div>
       </ScrollReveal>
+
+      <section>
+        <h2 className="text-2xl font-bold text-white font-mono text-center mb-6">Work you can open</h2>
+        <ul className="grid sm:grid-cols-2 gap-3 max-w-3xl mx-auto text-sm">
+          {[
+            ['Astrology website development', serviceHref({ category: 'Web Development', slug: 'astrology-website-development' })],
+            ['SEO for astrologers', serviceHref({ category: 'Marketing', slug: 'seo-for-astrologers' })],
+            ['Vastu consultant website', serviceHref({ category: 'Web Development', slug: 'vastu-consultant-website' })],
+            ['Vastu consultant marketing', serviceHref({ category: 'Marketing', slug: 'vastu-consultant-marketing' })],
+            ['WhatsApp Business API setup', serviceHref({ category: 'AI Automation', slug: 'whatsapp-business-api-setup' })],
+            ['Omnichannel DM CRM', serviceHref({ category: 'Development', slug: 'omnichannel-dm-crm' })],
+            ['AEO and GEO services', serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' })],
+            ['YouTube content for astrologers', serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' })],
+            ['AI automation for astrologers and businesses', serviceHref({ category: 'AI Automation', slug: 'ai-chatbot-automation' })],
+            ['Notes and articles', '/insights'],
+          ].map(([label, href]) => (
+            <li key={href}>
+              <Link href={href} className="text-cyan-300 hover:text-cyan-200">{label}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section id="testimonials" className="scroll-mt-24">
         <ScrollReveal direction="up">

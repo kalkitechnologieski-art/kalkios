@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Zap, Shield, Globe, Brain, Building2, TrendingUp, Clock, CheckCircle2, Sparkles, MapPin } from 'lucide-react'
 import { fetchServices } from '@/lib/services'
+import { categoryHref, serviceHref } from '@/lib/services/href'
 import { fetchTestimonials } from '@/lib/testimonials'
 import ServiceCard from '@/components/ui/ServiceCard'
 import { Testimonials } from '@/components/trust/Testimonials'
@@ -32,7 +33,20 @@ export const revalidate = 3600
 export default async function Homepage() {
   const services = await fetchServices()
   const testimonials = await fetchTestimonials()
-  const featured = services.slice(0, 6)
+  const prioritySlugs = [
+    'astrology-website-development',
+    'seo-for-astrologers',
+    'vastu-consultant-website',
+    'vastu-consultant-marketing',
+    'whatsapp-business-api-setup',
+    'omnichannel-dm-crm',
+    'aeo-geo-services',
+    'youtube-content-for-astrologers',
+  ]
+  const featured = prioritySlugs
+    .map((slug) => services.find((service) => service.slug === slug))
+    .filter((service): service is (typeof services)[number] => Boolean(service))
+  const shownServices = featured.length > 0 ? featured : services.slice(0, 8)
   const categories = Array.from(new Set(services.map((s) => s.category).filter(Boolean))).sort()
 
   return (
@@ -44,9 +58,9 @@ export default async function Homepage() {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           '@id': 'https://www.kalki-intelligence.in/#website',
-          name: 'KALKI OS',
+          name: 'KALKI Intelligence',
           url: siteOrigin(),
-          description: 'KALKI OS by KALKI Intelligence, a tech company in Indore: AI-assisted web development, SEO and lead generation services for Indian businesses.',
+          description: 'KALKI Intelligence is an AI and development tech partner for astrologers, vastu consultants, spiritual practitioners, and businesses in every industry. Studio in Indore. Delivery worldwide.',
           publisher: { '@id': 'https://www.kalki-intelligence.in/#organization' },
           potentialAction: {
             '@type': 'SearchAction',
@@ -67,27 +81,26 @@ export default async function Homepage() {
         <div className="relative z-10 text-center max-w-5xl mx-auto">
           {/* Brand badge */}
           <div className="flex justify-center mb-8">
-            <AnimatedEyebrow label="KALKI Intelligence" icon={<Sparkles className="w-3.5 h-3.5" />} />
+            <AnimatedEyebrow label="Temple of technology" icon={<Sparkles className="w-3.5 h-3.5" />} />
           </div>
 
-          {/* Main headline - SEO keyword rich + AEO question format */}
           <AnimatedHeadline
             as="h1"
-            text="AI Tech Company for Indian Businesses"
-            className="text-5xl sm:text-6xl md:text-8xl font-bold text-white font-mono leading-[1.05] tracking-tight"
+            text="AI and development tech partner for astrologers and every industry"
+            className="text-4xl sm:text-5xl md:text-7xl font-bold text-white font-mono leading-[1.05] tracking-tight"
             delay={0.1}
           />
 
           <AnimatedHeadline
             as="p"
-            text="Web Development, SEO & Lead Generation Services in Indore, Madhya Pradesh"
+            text="KALKI Intelligence builds for vastu consultants, spiritual practitioners, and businesses in any field"
             className="text-cyan-400/85 text-lg sm:text-xl md:text-2xl mt-4 md:mt-6 font-light max-w-3xl mx-auto"
             delay={0.42}
             stagger={0.03}
           />
 
           <p className="text-white/65 text-sm sm:text-base mt-3 max-w-2xl mx-auto">
-            Websites, AI automation and growth marketing for Indian businesses. Quote in 24 hours — ₹0 to start.
+            Written scope, fixed price, ₹0 advance. AI-assisted, with a person accountable for the quote. Delivery is worldwide.
           </p>
 
           {/* CTA buttons with structured intent */}
@@ -128,8 +141,8 @@ export default async function Homepage() {
             </div>
             <div className="flex flex-col items-center gap-1">
               <MapPin className="w-5 h-5 text-green-400/80" />
-              <span className="font-semibold text-white">🇮🇳 Indore, MP</span>
-              <span>Made in India, Serving Nationally</span>
+              <span className="font-semibold text-white">Worldwide</span>
+              <span>Remote delivery from Indore</span>
             </div>
           </div>
         </div>
@@ -153,7 +166,7 @@ export default async function Homepage() {
           </span>
           <span className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-purple-400/80" />
-            Indore-based team, IST working hours
+            A person owns the quote
           </span>
           <span className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-green-400/80" />
@@ -181,7 +194,7 @@ export default async function Homepage() {
           />
           <p className="text-white/50 text-base md:text-lg mt-3 max-w-2xl mx-auto">
             {testimonials.length > 0
-              ? 'Reviews from projects delivered for Indian businesses.'
+              ? 'Reviews left on projects that shipped.'
               : 'Everything below is something you can hold us to before you spend a rupee.'}
           </p>
         </div>
@@ -192,15 +205,15 @@ export default async function Homepage() {
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="text-center mb-10 md:mb-14">
           <div className="flex justify-center mb-4">
-            <AnimatedEyebrow label="Why KALKI OS" />
+            <AnimatedEyebrow label="Why KALKI Intelligence" />
           </div>
           <AnimatedHeadline
             as="h2"
-            text="Why Choose KALKI OS for Your Business?"
+            text="Why teams hire KALKI Intelligence"
             className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono"
             inView
           />
-          <p className="text-cyan-400/70 text-base md:text-lg mt-3 max-w-2xl mx-auto">AI-assisted delivery, human accountability — built for Indian businesses, startups, and enterprises</p>
+          <p className="text-cyan-400/70 text-base md:text-lg mt-3 max-w-2xl mx-auto">AI-assisted delivery and a named owner, for spiritual practices and for every other industry</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -242,8 +255,8 @@ export default async function Homepage() {
             },
             {
               icon: Building2,
-              title: 'End-to-End Support in Hindi & English',
-              desc: 'Dedicated project managers, 24/7 technical support in Hindi and English, comprehensive documentation, video tutorials, and knowledge base. Local team based in Indore.',
+              title: 'A named owner, in English or Hindi',
+              desc: 'One person is accountable from the quote to handover. The studio is in Indore and the work is remote. English is the default. Hindi is included when the quote says so.',
               color: 'blue',
               keywords: ['customer support', 'Hindi support', 'project management', 'Indore team'],
             },
@@ -283,7 +296,7 @@ export default async function Homepage() {
           </div>
           <AnimatedHeadline
             as="h2"
-            text="AI-Powered Digital Services for India"
+            text="Services for practices and every industry"
             className="text-3xl md:text-4xl lg:text-5xl font-bold text-white font-mono"
             inView
           />
@@ -291,7 +304,7 @@ export default async function Homepage() {
         </div>
         <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 gap-4"><div className="animate-pulse bg-white/5 rounded-xl h-48" /></div>}>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {featured.map(service => (
+            {shownServices.map(service => (
               <div key={service.id} className="hover:scale-105 transition-transform duration-300">
                 <ServiceCard service={service} />
               </div>
@@ -324,14 +337,14 @@ export default async function Homepage() {
               inView
             />
             <p className="text-cyan-400/70 text-sm md:text-base mt-2 max-w-2xl mx-auto">
-              Jump straight to the {categories.length} service categories KALKI OS delivers for Indian businesses.
+              {categories.length} categories, counted from the catalog, for practitioners and for every other industry.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2 md:gap-3">
             {categories.map((c) => (
               <Link
                 key={c}
-                href={`/marketplace/${encodeURIComponent(c)}`}
+                href={categoryHref(c)}
                 className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-cyan-500/10 hover:border-cyan-500/40 text-sm text-white/70 hover:text-cyan-200 transition"
               >
                 {c} Services
@@ -341,37 +354,35 @@ export default async function Homepage() {
         </section>
       )}
 
-      {/* Local SEO Section - Indore Focus for GEO */}
       <section className="max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="grid md:grid-cols-2 gap-12 items-start">
           <div>
             <AnimatedHeadline
               as="h2"
-              text="AI & Web Development Tech Company in Indore, Madhya Pradesh"
+              text="For astrologers, vastu consultants, and every other business"
               className="text-3xl font-bold text-white mb-4"
               inView
               stagger={0.035}
             />
             <p className="text-white/70 mb-6">
-              KALKI Intelligence is a tech company based in the heart of Indore's tech hub, serving businesses across Madhya Pradesh and all of India. Our local presence means personalized service, face-to-face consultations, and a deep understanding of Indian market dynamics.
+              KALKI Intelligence keeps both offers on the same site. A practice can start with a website, search work, WhatsApp, or a video package. A business in any other field uses the same quote process and the rest of the catalog. The office is in Indore. The work is delivered remotely, worldwide.
             </p>
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-start gap-2 text-white/70">
-                <CheckCircle2 className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <span>Local team based in Indore, MP - Available for in-person meetings</span>
-              </li>
-              <li className="flex items-start gap-2 text-white/70">
-                <CheckCircle2 className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <span>Serving all major cities: Mumbai, Delhi, Bangalore, Pune, Hyderabad</span>
-              </li>
-              <li className="flex items-start gap-2 text-white/70">
-                <CheckCircle2 className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <span>Hindi and English support - We speak your language</span>
-              </li>
-              <li className="flex items-start gap-2 text-white/70">
-                <CheckCircle2 className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <span>Transparent INR pricing on every service page - No hidden fees</span>
-              </li>
+            <ul className="space-y-2 mb-6 text-sm">
+              {[
+                ['Astrology website development', serviceHref({ category: 'Web Development', slug: 'astrology-website-development' })],
+                ['SEO for astrologers', serviceHref({ category: 'Marketing', slug: 'seo-for-astrologers' })],
+                ['Vastu consultant website', serviceHref({ category: 'Web Development', slug: 'vastu-consultant-website' })],
+                ['Vastu consultant marketing', serviceHref({ category: 'Marketing', slug: 'vastu-consultant-marketing' })],
+                ['WhatsApp Business API setup', serviceHref({ category: 'AI Automation', slug: 'whatsapp-business-api-setup' })],
+                ['Omnichannel DM CRM', serviceHref({ category: 'Development', slug: 'omnichannel-dm-crm' })],
+                ['AEO and GEO services', serviceHref({ category: 'Marketing', slug: 'aeo-geo-services' })],
+                ['YouTube content for astrologers', serviceHref({ category: 'Media', slug: 'youtube-content-for-astrologers' })],
+                ['Notes and articles', '/insights'],
+              ].map(([label, href]) => (
+                <li key={href}>
+                  <Link href={href} className="text-cyan-300 hover:text-cyan-200">{label}</Link>
+                </li>
+              ))}
             </ul>
             <div className="mb-6 text-white/70 text-sm leading-relaxed">
               <p className="text-white font-semibold">KALKI INTELLIGENCE</p>
@@ -391,7 +402,7 @@ export default async function Homepage() {
             </div>
             <Link href="/contact">
               <button className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 rounded-xl font-semibold text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all">
-                Schedule Free Consultation in Indore
+                Contact the studio
               </button>
             </Link>
           </div>

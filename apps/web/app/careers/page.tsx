@@ -6,9 +6,9 @@ import { Briefcase, MapPin, Clock, DollarSign, Users } from 'lucide-react'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Careers at an AI Tech Company in Indore',
+  title: 'Careers at KALKI Intelligence',
   description:
-    'Open roles at KALKI Intelligence, an AI tech company in Indore: engineering, design, SEO and growth. See current openings and apply.',
+    'Open roles at KALKI Intelligence: engineering, design, SEO and growth. The studio is in Indore and works with clients worldwide.',
   alternates: { canonical: '/careers' },
 }
 
@@ -52,7 +52,7 @@ export default async function CareersPage() {
             Join the Temple of Technology
           </h1>
           <p className="text-cyan-400/40 text-lg mt-4 max-w-2xl mx-auto font-mono">
-            Build the future with KALKI OS.
+            Build with KALKI Intelligence.
           </p>
         </div>
       </ScrollReveal>

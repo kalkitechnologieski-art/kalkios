@@ -117,7 +117,7 @@ function RegisterForm() {
             <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-2xl animate-pulse" />
             <Image
               src="/images/logo.svg"
-              alt="KALKI OS"
+              alt="KALKI Intelligence"
               width={96}
               height={96}
               className="object-contain relative z-10"
@@ -128,7 +128,7 @@ function RegisterForm() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-mono">
           Create Account
         </h1>
-        <p className="text-cyan-400/40 text-sm font-mono tracking-wider">JOIN KALKI OS</p>
+        <p className="text-cyan-400/40 text-sm font-mono tracking-wider">JOIN KALKI INTELLIGENCE</p>
 
         <CyberpunkForm onSubmit={handleRegister}>
           <CyberpunkInput

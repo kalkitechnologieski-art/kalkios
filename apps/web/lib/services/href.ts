@@ -15,8 +15,13 @@ export function normKey(value: unknown): string {
     .replace(/^-|-$/g, '')
 }
 
+export function categorySlug(category: unknown): string {
+  return normKey(category)
+}
+
 export function categoryHref(category: unknown): string {
-  return `/marketplace/${encodeURIComponent(trim(category))}`
+  const slug = categorySlug(category)
+  return `/marketplace/${slug || encodeURIComponent(trim(category))}`
 }
 
 // Dynamic segments arrive still percent-encoded on the standalone server, so a

@@ -5,11 +5,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { normKey } from '@/lib/services/href';
 
 const PUBLIC_ROUTES = [
   '/chat', '/', '/login', '/register', '/auth/callback', '/contact', '/careers',
   '/services', '/explore', '/marketplace', '/about', '/terms', '/support', '/unauthorized',
-  '/request', '/privacy',
+  '/request', '/privacy', '/insights',
   '/api/health', '/api/services/request', '/api/inquiries', '/api/reviews',
   // Social cards are fetched by Googlebot and crawlers that have no session.
   '/api/og',
@@ -33,8 +34,31 @@ function withSecurityHeaders<T extends NextResponse>(response: T): T {
   return response;
 }
 
+function canonicalMarketplacePath(pathname: string): string | null {
+  const parts = pathname.split('/');
+  if (parts[1] !== 'marketplace' || !parts[2]) return null;
+  let decoded = parts[2];
+  try {
+    decoded = decodeURIComponent(parts[2]);
+  } catch {
+    decoded = parts[2];
+  }
+  const slug = normKey(decoded);
+  if (!slug || parts[2] === slug) return null;
+  const next = [...parts];
+  next[2] = slug;
+  return next.join('/') || '/marketplace';
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  const canonical = canonicalMarketplacePath(pathname);
+  if (canonical) {
+    const url = request.nextUrl.clone();
+    url.pathname = canonical;
+    return withSecurityHeaders(NextResponse.redirect(url, 301));
+  }
 
   // Files under public/ are world-readable by design; gating them on a session
   // made every product image 307 to /login for signed-out visitors.

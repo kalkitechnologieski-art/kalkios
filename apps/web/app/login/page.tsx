@@ -88,7 +88,7 @@ function LoginForm() {
             <div className="absolute inset-0 rounded-full bg-cyan-500/30 blur-2xl animate-pulse" />
             <Image
               src="/images/logo.svg"
-              alt="KALKI OS"
+              alt="KALKI Intelligence"
               width={96}
               height={96}
               className="object-contain relative z-10"
@@ -97,7 +97,7 @@ function LoginForm() {
           </div>
         </div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-mono">
-          KALKI OS
+          KALKI Intelligence
         </h1>
         <p className="text-cyan-400/40 text-sm font-mono tracking-wider">SECURE ACCESS</p>
 
@@ -152,7 +152,7 @@ function LoginForm() {
         </button>
 
         <p className="text-sm text-white/50">
-          New to KALKI OS?{' '}
+          New to KALKI Intelligence?{' '}
           <Link href="/register" className="text-cyan-400 hover:text-cyan-300 font-medium">
             Create an account
           </Link>
