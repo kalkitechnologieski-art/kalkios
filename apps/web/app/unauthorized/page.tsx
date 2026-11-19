@@ -9,7 +9,7 @@ export default function UnauthorizedPage() {
       </div>
       <h1 className="text-3xl font-bold text-white font-mono">Access Denied</h1>
       <p className="text-cyan-400/40 text-sm max-w-md mt-2">
-        You don't have permission to access this page.
+        You don&apos;t have permission to access this page.
       </p>
       <Link href="/" className="mt-6 flex items-center gap-2 text-cyan-400 hover:text-cyan-300 transition">
         <Home className="w-4 h-4" /> Return Home

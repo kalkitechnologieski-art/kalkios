@@ -78,7 +78,7 @@ function ApplyContent() {
       <div className="max-w-md mx-auto text-center py-20">
         <div className="text-6xl mb-4">✅</div>
         <h2 className="text-2xl font-bold text-white">Application Submitted!</h2>
-        <p className="text-cyan-400/40 mt-2">We'll be in touch shortly.</p>
+        <p className="text-cyan-400/40 mt-2">We&apos;ll be in touch shortly.</p>
         <Link href="/careers" className="text-cyan-400 hover:text-cyan-300 text-sm font-mono mt-6 inline-block">
           ← Back to Careers
         </Link>

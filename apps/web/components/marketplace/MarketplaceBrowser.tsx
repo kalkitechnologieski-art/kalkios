@@ -102,7 +102,7 @@ export function MarketplaceBrowser({ services, online }: Props) {
           <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-30" />
           <p>No services match your criteria.</p>
           <Link href="/request" className="inline-block mt-3 text-cyan-300 hover:text-cyan-200 underline">
-            Describe what you need instead — we'll quote it
+            Describe what you need instead — we&apos;ll quote it
           </Link>
         </div>
       ) : (

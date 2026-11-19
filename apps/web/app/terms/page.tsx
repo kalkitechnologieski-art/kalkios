@@ -17,7 +17,7 @@ export default function TermsPage() {
         <div className="mt-8 space-y-6 text-cyan-400/60 font-mono text-sm leading-relaxed">
           <p>By using KALKI OS, you agree to the following terms...</p>
           <p>1. You are responsible for maintaining the security of your account.</p>
-          <p>2. All services are provided "as is" with no warranty.</p>
+          <p>2. All services are provided &quot;as is&quot; with no warranty.</p>
           <p>3. We reserve the right to update these terms at any time.</p>
           <p className="text-cyan-400/30 text-xs mt-8">For full terms, please contact team@kalki-intelligence.in</p>
         </div>

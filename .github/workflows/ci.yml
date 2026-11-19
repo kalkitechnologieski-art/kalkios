@@ -1,12 +1,23 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # The build reads these public variables. CI has no Supabase project, so
+      # the catalog falls back to the committed mock. Production builds on
+      # Vercel use the real values.
+      NEXT_PUBLIC_SUPABASE_URL: https://invalid.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-ci-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: 'npm' }
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci
       - run: npm run build
       - run: npm run type-check
