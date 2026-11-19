@@ -227,9 +227,9 @@ export function RequestForm({
             <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-4 text-amber-200/80 text-sm flex items-start gap-2">
               <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div>
-                We couldn't load the catalog right now. You can still describe your needs —{' '}
+                We couldn&apos;t load the catalog right now. You can still describe your needs —{' '}
                 <Link href="/chat" className="underline text-cyan-300">ask Siddhi AI</Link> or{' '}
-                <Link href="/contact" className="underline text-cyan-300">contact us</Link> and we'll help you directly.
+                <Link href="/contact" className="underline text-cyan-300">contact us</Link> and we&apos;ll help you directly.
               </div>
             </div>
           ) : (
@@ -374,7 +374,7 @@ export function RequestForm({
         </button>
         <p className="text-center text-white/40 text-xs flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4" />
-          No payment, no card required. We'll never share your details.
+          No payment, no card required. We&apos;ll never share your details.
         </p>
       </form>
 

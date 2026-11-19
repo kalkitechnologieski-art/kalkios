@@ -36,6 +36,115 @@ interface TraceStep {
   provider?: string;
 }
 
+function QueueStatus({
+  queueStatus,
+}: {
+  queueStatus: { pending: number; active: number; completed: number; failed: number };
+}) {
+  const total = queueStatus.pending + queueStatus.active + queueStatus.completed + queueStatus.failed;
+  if (total === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-cyan-500/10 rounded-full text-[10px] font-mono"
+    >
+      <span className="flex items-center gap-1 text-white/40">
+        <Clock className="w-3 h-3" />
+        Queue
+      </span>
+      {queueStatus.pending > 0 && (
+        <span className="text-yellow-400">{queueStatus.pending} pending</span>
+      )}
+      {queueStatus.active > 0 && (
+        <span className="text-cyan-400 flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          {queueStatus.active} active
+        </span>
+      )}
+      {queueStatus.completed > 0 && (
+        <span className="text-green-400 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          {queueStatus.completed}
+        </span>
+      )}
+      {queueStatus.failed > 0 && (
+        <span className="text-red-400 flex items-center gap-1">
+          <XCircle className="w-3 h-3" />
+          {queueStatus.failed}
+        </span>
+      )}
+    </motion.div>
+  );
+}
+
+function VideoQueuePanel({ phase, position, pending, etaSeconds }: {
+  phase: string;
+  position: number;
+  pending: number;
+  etaSeconds: number;
+}) {
+  const mins = Math.max(1, Math.round(etaSeconds / 60));
+  const isActive = phase === 'processing' || position === 0;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md
+        bg-gradient-to-r from-purple-600/15 via-fuchsia-600/10 to-cyan-600/15 border-purple-500/25"
+    >
+      <div className="relative shrink-0">
+        <div className={`w-9 h-9 rounded-full grid place-items-center ${isActive ? 'bg-cyan-500/20' : 'bg-amber-500/20'}`}>
+          {isActive ? (
+            <Video className="w-4 h-4 text-cyan-300 animate-pulse" />
+          ) : (
+            <Clock className="w-4 h-4 text-amber-300" />
+          )}
+        </div>
+        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse ring-2 ring-black" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-mono uppercase tracking-wider text-purple-300/80">Video queue</p>
+        {isActive ? (
+          <p className="text-sm text-white/90 font-medium">Now rendering your clip…</p>
+        ) : (
+          <p className="text-sm text-white/90 font-medium">
+            You&apos;re <span className="text-cyan-300 font-bold">#{position}</span> in line
+            <span className="text-white/50"> · about {mins} min wait</span>
+          </p>
+        )}
+        <p className="text-[10px] text-white/40 mt-0.5">
+          {pending > 1 ? `${pending - 1} other ${pending - 1 === 1 ? 'render' : 'renders'} ahead. ` : ''}Free tier renders one video per minute — keep this tab open.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+function DeepThinkIndicator() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-1.5 px-2 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full"
+    >
+      <motion.div
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+      >
+        <Brain className="w-3.5 h-3.5 text-purple-400" />
+      </motion.div>
+      <span className="text-[9px] font-mono text-purple-400/80 tracking-wider">DEEPTHINK</span>
+      <motion.span
+        className="w-1.5 h-1.5 rounded-full bg-purple-400"
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1.2, repeat: Infinity }}
+      />
+    </motion.div>
+  );
+}
+
 interface LeadProgressState {
   step: 'idle' | 'searching' | 'search_done' | 'scraping' | 'extracting' | 'expansion' | 'done' | 'error' | 'aborted';
   percent: number;
@@ -388,108 +497,6 @@ export default function ChatClient() {
     );
   };
 
-  const QueueStatus = () => {
-    const total = queueStatus.pending + queueStatus.active + queueStatus.completed + queueStatus.failed;
-    if (total === 0) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-cyan-500/10 rounded-full text-[10px] font-mono"
-      >
-        <span className="flex items-center gap-1 text-white/40">
-          <Clock className="w-3 h-3" />
-          Queue
-        </span>
-        {queueStatus.pending > 0 && (
-          <span className="text-yellow-400">{queueStatus.pending} pending</span>
-        )}
-        {queueStatus.active > 0 && (
-          <span className="text-cyan-400 flex items-center gap-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            {queueStatus.active} active
-          </span>
-        )}
-        {queueStatus.completed > 0 && (
-          <span className="text-green-400 flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" />
-            {queueStatus.completed}
-          </span>
-        )}
-        {queueStatus.failed > 0 && (
-          <span className="text-red-400 flex items-center gap-1">
-            <XCircle className="w-3 h-3" />
-            {queueStatus.failed}
-          </span>
-        )}
-      </motion.div>
-    );
-  };
-
-  const VideoQueuePanel = ({ phase, position, pending, etaSeconds }: {
-    phase: NonNullable<typeof queueStatus.phase>;
-    position: number;
-    pending: number;
-    etaSeconds: number;
-  }) => {
-    const mins = Math.max(1, Math.round(etaSeconds / 60));
-    const isActive = phase === 'processing' || position === 0;
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md
-          bg-gradient-to-r from-purple-600/15 via-fuchsia-600/10 to-cyan-600/15 border-purple-500/25"
-      >
-        <div className="relative shrink-0">
-          <div className={`w-9 h-9 rounded-full grid place-items-center ${isActive ? 'bg-cyan-500/20' : 'bg-amber-500/20'}`}>
-            {isActive ? (
-              <Video className="w-4 h-4 text-cyan-300 animate-pulse" />
-            ) : (
-              <Clock className="w-4 h-4 text-amber-300" />
-            )}
-          </div>
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse ring-2 ring-black" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-mono uppercase tracking-wider text-purple-300/80">Video queue</p>
-          {isActive ? (
-            <p className="text-sm text-white/90 font-medium">Now rendering your clip…</p>
-          ) : (
-            <p className="text-sm text-white/90 font-medium">
-              You&apos;re <span className="text-cyan-300 font-bold">#{position}</span> in line
-              <span className="text-white/50"> · about {mins} min wait</span>
-            </p>
-          )}
-          <p className="text-[10px] text-white/40 mt-0.5">
-            {pending > 1 ? `${pending - 1} other ${pending - 1 === 1 ? 'render' : 'renders'} ahead. ` : ''}Free tier renders one video per minute — keep this tab open.
-          </p>
-        </div>
-      </motion.div>
-    );
-  };
-
-  const DeepThinkIndicator = () => (    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex items-center gap-1.5 px-2 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full"
-    >
-      <motion.div
-        animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-      >
-        <Brain className="w-3.5 h-3.5 text-purple-400" />
-      </motion.div>
-      <span className="text-[9px] font-mono text-purple-400/80 tracking-wider">DEEPTHINK</span>
-      <motion.span
-        className="w-1.5 h-1.5 rounded-full bg-purple-400"
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1.2, repeat: Infinity }}
-      />
-    </motion.div>
-  );
-
   return (
     <div className="chat-fullscreen relative z-30 kalki-hero min-h-screen overflow-hidden">
       {/* Premium ambient background */}
@@ -544,7 +551,7 @@ export default function ChatClient() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <QueueStatus />
+          <QueueStatus queueStatus={queueStatus} />
           <DeepThinkIndicator />
           {mode !== 'chat' && (
             <motion.span
