@@ -98,7 +98,7 @@ export function buildBrandKnowledgePanel(): EntityData {
     description:
       'KALKI Intelligence is a leading enterprise AI platform based in Indore, India, providing comprehensive digital services including web development, SEO, AI chatbots, lead generation, and business automation solutions.',
     attributes: {
-      Founded: '2024',
+      Founded: '2025',
       Headquarters: 'Indore, Madhya Pradesh, India',
       CEO: 'KALKI Team',
       Employees: '50-100',
