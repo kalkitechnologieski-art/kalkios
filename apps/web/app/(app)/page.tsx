@@ -52,6 +52,7 @@ export default async function Homepage() {
 
   return (
     <>
+      <link rel="canonical" href={`${siteOrigin()}/`} />
       {/* JSON-LD Structured Data for Search Engines */}
       <script
         type="application/ld+json"
