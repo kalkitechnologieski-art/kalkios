@@ -2,7 +2,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal'
 
 export const metadata = {
   title: 'Terms & Conditions',
-  description: 'Terms and conditions for using KALKI OS services.',
+  description: 'Terms and conditions for using KALKI Intelligence websites and quoted services, including scope, payment, and the limits of our work.',
   alternates: { canonical: '/terms' },
 }
 

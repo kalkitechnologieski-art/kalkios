@@ -4,7 +4,7 @@ import { fetchServiceBySlug, fetchServices, fetchServicesByCategory } from '@/li
 import { categoryHref, categorySlug, decodeSegment, normKey, serviceHref } from '@/lib/services/href';
 import { getServiceImageUrl } from '@/lib/services/service-image';
 import { buildServiceMetadata } from '@/lib/seo/enhanced-metadata';
-import { serviceMeta } from '@/lib/seo/service-meta';
+import { ensureMetaDescription, serviceMeta } from '@/lib/seo/service-meta';
 import { buildServicePageContent } from '@/lib/services/service-details';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -76,12 +76,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!service) return {};
   const override = serviceMeta(service.slug);
   const price = isEnterpriseSeo(service.slug) ? 49999 : service.price ?? 0;
-  const description = override?.description
-    || (isEnterpriseSeo(service.slug) ? ENTERPRISE_SEO_META : null)
-    || service.meta_description
-    || service.aeo_summary
-    || service.description
-    || `${service.name} from KALKI Intelligence. Written scope, fixed price, ₹0 advance.`;
+  const description = ensureMetaDescription(
+    service.name,
+    override?.description
+      || (isEnterpriseSeo(service.slug) ? ENTERPRISE_SEO_META : null)
+      || service.meta_description
+      || service.aeo_summary
+      || service.description
+      || `${service.name} from KALKI Intelligence. Written scope, fixed price, ₹0 advance.`,
+  );
   return buildServiceMetadata({
     name: service.name,
     title: override?.title || service.meta_title || service.name,

@@ -279,6 +279,7 @@ export function buildHomepageMetadata(): Metadata {
   return {
     ...buildEnhancedMetadata({
       title,
+      path: '/',
       description:
         'AI development, automation, commerce, data, and marketing for businesses in every industry. Written scope, fixed price, ₹0 advance.',
       keywords: [
