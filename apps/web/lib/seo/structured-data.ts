@@ -114,7 +114,7 @@ export function productSchema(service: {
 }) {
   return {
     '@context': 'https://schema.org',
-    '@type': 'Product',
+    '@type': 'Service',
     name: service.name,
     description: service.description,
     image: service.image,

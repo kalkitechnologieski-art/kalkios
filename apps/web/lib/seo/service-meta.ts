@@ -64,8 +64,120 @@ export const SERVICE_META: Record<string, { title: string; description: string }
     description:
       'Content marketing for astrologers, vastu consultants and other businesses worldwide. Written scope, fixed price, ₹0 advance.',
   },
+
+  'single-graphic-design': {
+    title: 'Single Graphic Design',
+    description:
+      'One social post, banner, or thumbnail, designed to the brief in the quote. Starting price on the page. Written scope, ₹0 advance.',
+  },
+  'custom-ai-support-bot': {
+    title: 'Custom AI Support Bot',
+    description:
+      'A custom AI support bot trained on the answers you approve and placed on your website. Written scope, starting price pending a quote, ₹0 advance.',
+  },
+  'simple-business-app': {
+    title: 'Simple Business App',
+    description:
+      'A cross-platform business app with the screens and workflow named in the quote. Starting price on the page. Written scope, ₹0 advance.',
+  },
+  'standard-admin-dashboard': {
+    title: 'Standard Admin Dashboard',
+    description:
+      'A custom admin dashboard for the operations named in the quote. Starting price on the page. Written scope, ₹0 advance. KALKI Intelligence.',
+  },
+  'social-media-marketing': {
+    title: 'Social Media Marketing',
+    description:
+      'Social media marketing for the channels and campaigns named in the quote. Reported in writing. No follower or sales promise. ₹0 advance.',
+  },
+  'influencer-marketing': {
+    title: 'Influencer Marketing',
+    description:
+      'Influencer marketing with the creators and deliverables named in the quote. No view or sales promise. Written scope, ₹0 advance.',
+  },
+  'devops-automation': {
+    title: 'DevOps Automation',
+    description:
+      'DevOps automation for the CI/CD pipelines and infrastructure named in the quote. Starting price on the page. Written scope, ₹0 advance.',
+  },
+  'nlp-sentiment-analysis': {
+    title: 'NLP & Sentiment Analysis',
+    description:
+      'NLP and sentiment analysis on the text sources named in the quote, with a written report of what the model labelled. ₹0 advance.',
+  },
+  'ai-strategy-roadmapping': {
+    title: 'AI Strategy & Roadmapping',
+    description:
+      'AI strategy and roadmapping for the systems and decisions named in the quote. Advisory only; no result promise. Written scope, ₹0 advance.',
+  },
+  'cloud-migration': {
+    title: 'Cloud Migration',
+    description:
+      'Cloud migration of the systems named in the quote, including the cutover steps we will run. Starting price on the page. Written scope, ₹0 advance.',
+  },
+  'predictive-analytics': {
+    title: 'Predictive Analytics',
+    description:
+      'Predictive analytics on the data sources named in the quote, with the forecasts and limits written down. No revenue promise. ₹0 advance.',
+  },
+  'digital-transformation-consulting': {
+    title: 'Digital Transformation Consulting',
+    description:
+      'Digital transformation consulting for the processes named in the quote. Written recommendations, no outcome promise. ₹0 advance.',
+  },
+  'ecommerce-website-development': {
+    title: 'Ecommerce Website Development',
+    description:
+      'Ecommerce website development with the catalog, cart, and payment method named in the quote. Written scope, starting price, ₹0 advance.',
+  },
+  'blockchain-web3-development': {
+    title: 'Blockchain & Web3 Development',
+    description:
+      'Blockchain or web3 development for the contracts or app named in the quote. Audit and launch approvals are separate. Written scope, ₹0 advance.',
+  },
+  'custom-software-development': {
+    title: 'Custom Software Development',
+    description:
+      'Custom software development for the workflows named in the quote. Fixed scope, starting price on the page, ₹0 advance. KALKI Intelligence.',
+  },
+  'ai-multivendor-ecommerce': {
+    title: 'AI Multivendor Ecommerce',
+    description:
+      'A multi-vendor store with the vendor tools and catalog named in the quote. AI features only if the quote lists them. Written scope, ₹0 advance.',
+  },
+  'ai-enterprise-dashboard-suite': {
+    title: 'AI Enterprise Dashboard Suite',
+    description:
+      'An analytics dashboard suite with the metrics named in the quote. Predictive features only if the quote lists them. Written scope, ₹0 advance.',
+  },
+  'fully-managed-ai-app': {
+    title: 'Fully Managed AI App',
+    description:
+      'A managed AI app with the features and support window named in the quote. Later months are later quotes. Written scope, ₹0 advance.',
+  },
+  'shopify-store-development': {
+    title: 'Shopify Store Development',
+    description:
+      'Shopify store development with the theme, pages, and payment method named in the quote. Products loaded for the count the quote states. ₹0 advance.',
+  },
 }
+
 
 export function serviceMeta(slug: string): { title: string; description: string } | undefined {
   return SERVICE_META[slug]
+}
+
+/** Keep meta descriptions in the 70–160 character band without inventing claims. */
+export function ensureMetaDescription(name: string, raw: string): string {
+  let description = (raw || '').replace(/\s+/g, ' ').trim()
+  if (description.length < 70) {
+    const extra = `${name} from KALKI Intelligence. Written scope, starting price pending a written quote, ₹0 advance.`
+    description = description ? `${description} ${extra}` : extra
+  }
+  if (description.length > 160) {
+    const cut = description.slice(0, 157)
+    const space = cut.lastIndexOf(' ')
+    description = `${(space > 80 ? cut.slice(0, space) : cut).trim()}…`
+  }
+  return description
 }

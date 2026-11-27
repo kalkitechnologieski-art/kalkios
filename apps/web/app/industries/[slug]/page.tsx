@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params
   const hub = INDUSTRY_HUBS.find((item) => item.slug === slug)
   if (!hub) return {}
+  const description = [hub.lede, hub.body].filter(Boolean).join(' ')
   return {
     title: `${hub.name} services`,
-    description: hub.lede,
+    description: description.length > 160 ? description.slice(0, 157).replace(/\s+\S*$/, '') + '…' : description,
     alternates: languageAlternates(`/industries/${hub.slug}`),
   }
 }

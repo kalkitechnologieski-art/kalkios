@@ -29,32 +29,12 @@ export function ProductSchema({
   const url = `${SITE}${path}`;
   const description = service.aeo_summary ?? service.description ?? '';
 
-  const product = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: service.name,
-    description,
-    image: [image],
-    sku: service.slug,
-    url,
-    brand: { '@type': 'Brand', name: 'KALKI Intelligence' },
-    category: service.category,
-    offers: {
-      '@type': 'Offer',
-      url,
-      priceCurrency: 'INR',
-      price: service.price ?? 0,
-      availability: 'https://schema.org/InStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: { '@type': 'Organization', name: 'KALKI Intelligence', url: SITE },
-    },
-  };
-
   const serviceLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: service.name,
     description,
+    image: [image],
     url,
     provider: { '@id': `${SITE}/#organization` },
     areaServed: { '@type': 'Place', name: 'Worldwide' },
@@ -82,7 +62,6 @@ export function ProductSchema({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(product) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema(faqs)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }} />

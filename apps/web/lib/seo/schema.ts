@@ -38,29 +38,25 @@ export interface ProductInput {
 }
 
 export function productSchema(p: ProductInput) {
+  // Service (not Product): Product+Offer is treated as a Merchant listing and
+  // flags missing shipping/returns. These are scoped services, not shipped goods.
+  const url = `${SITE}${serviceHref({ category: p.category, slug: p.slug })}`;
   return {
     '@context': 'https://schema.org',
-    '@type': 'Product',
+    '@type': 'Service',
     name: p.name,
     description: p.description,
-    sku: p.slug,
-    mpn: p.slug,
+    url,
     image: p.image_url ? [p.image_url] : undefined,
-    brand: { '@type': 'Brand', name: ORG_NAME },
-    category: p.category,
+    serviceType: p.category,
+    provider: { '@id': `${SITE}/#organization` },
+    areaServed: { '@type': 'Place', name: 'Worldwide' },
     offers: {
       '@type': 'Offer',
-      url: `${SITE}${serviceHref({ category: p.category, slug: p.slug })}`,
+      url,
       priceCurrency: 'INR',
       price: p.price ?? 0,
-      priceValidUntil: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
       availability: 'https://schema.org/InStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: {
-        '@type': 'Organization',
-        name: ORG_NAME,
-        url: SITE,
-      },
     },
   };
 }
@@ -147,12 +143,17 @@ export function breadcrumbSchema(items: BreadcrumbItem[]) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: items.map((it, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: it.name,
-      item: it.url.startsWith('http') ? it.url : `${SITE}${it.url}`,
-    })),
+    itemListElement: items.map((it, i) => {
+      const name = (it.name || '').trim() || 'Page';
+      let href = it.url.startsWith('http') ? it.url : `${SITE}${it.url || '/'}`;
+      if (href === SITE) href = `${SITE}/`;
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        name,
+        item: { '@id': href, name },
+      };
+    }),
   };
 }
 

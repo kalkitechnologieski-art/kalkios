@@ -276,28 +276,35 @@ export function buildCategoryMetadata(
  */
 export function buildHomepageMetadata(): Metadata {
   const title = 'AI Development Company for Every Industry | KALKI Intelligence';
+  const built = buildEnhancedMetadata({
+    title,
+    path: '/',
+    description:
+      'AI development, automation, commerce, data, and marketing for businesses in every industry. Written scope, fixed price, ₹0 advance.',
+    keywords: [
+      'KALKI Intelligence',
+      'AI development company',
+      'AI automation agency',
+      'astrology website development',
+      'SEO for astrologers',
+      'AI automation for astrologers',
+      'vastu consultant marketing',
+      'WhatsApp API setup',
+      'omnichannel CRM development',
+      'AEO GEO services',
+      'YouTube content for astrologers',
+      'Temple of technology',
+    ],
+    entities: ['SoftwareApplication', 'Organization', 'LocalBusiness'],
+    brandAuthority: true,
+  });
+  // Next.js rewrites a root canonical of `${origin}/` to `origin` (no slash).
+  // The page emits the trailing-slash tag itself so only one canonical remains.
+  const alternates = { ...(built.alternates ?? {}) };
+  delete alternates.canonical;
   return {
-    ...buildEnhancedMetadata({
-      title,
-      description:
-        'AI development, automation, commerce, data, and marketing for businesses in every industry. Written scope, fixed price, ₹0 advance.',
-      keywords: [
-        'KALKI Intelligence',
-        'AI development company',
-        'AI automation agency',
-        'astrology website development',
-        'SEO for astrologers',
-        'AI automation for astrologers',
-        'vastu consultant marketing',
-        'WhatsApp API setup',
-        'omnichannel CRM development',
-        'AEO GEO services',
-        'YouTube content for astrologers',
-        'Temple of technology',
-      ],
-      entities: ['SoftwareApplication', 'Organization', 'LocalBusiness'],
-      brandAuthority: true,
-    }),
+    ...built,
+    alternates,
     // The "/" route re-exports this object, so the root title template never
     // reaches it; the brand has to be part of the absolute title.
     title: { absolute: title },
